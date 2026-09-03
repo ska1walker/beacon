@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Clock, FileClock, MessageSquareOff, Sparkles, Target } from "lucide-react";
+import { AlertTriangle, Clock, FileClock, Inbox, MessageSquareOff, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { anzahl, euro } from "@/lib/format";
@@ -39,6 +39,12 @@ const GRUPPEN: {
     erklaerung: "Offene Geschäfte, bei denen seit über drei Wochen nichts passiert ist.",
   },
   {
+    schluessel: "offener_eingang",
+    titel: "Im Eingang",
+    Zeichen: Inbox,
+    erklaerung: "Protokolle und Post, die noch niemandem zugeordnet sind.",
+  },
+  {
     schluessel: "ohne_naechsten_schritt",
     titel: "Ohne nächsten Schritt",
     Zeichen: Target,
@@ -47,7 +53,7 @@ const GRUPPEN: {
 ];
 
 function PostenZeile({ p }: { p: Posten }) {
-  const ziel = p.deal_id ? `/deals/${p.deal_id}` : p.company_id ? `/firmen/${p.company_id}` : null;
+  const ziel = p.deal_id ? `/deals/${p.deal_id}` : p.company_id ? `/firmen/${p.company_id}` : p.art === "eingang" ? "/eingang" : null;
   const inhalt = (
     <>
       <span className="haupt">{p.titel}</span>

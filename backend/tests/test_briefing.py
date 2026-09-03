@@ -180,3 +180,26 @@ async def test_briefingtext_bei_leerer_lage_ruft_kein_modell(datenbank, monkeypa
 
     assert antwort.status_code == 200
     assert "Nichts liegt an" in antwort.json()["text"]
+
+
+async def test_offener_eingang_steht_im_briefing(datenbank):
+    """Was niemandem zugeordnet ist, darf morgens nicht unsichtbar sein."""
+    import hashlib
+    import hmac
+    import json
+    from uuid import uuid4
+
+    from httpx import ASGITransport, AsyncClient
+
+    from app.main import app
+
+    async with klient_fuer("brief-eingang") as klient:
+        q = (await klient.post("/api/quellen", json={"name": "Insilo"})).json()
+        body = json.dumps({"id": uuid4().hex, "event": "meeting.ready", "meeting": {"id": "m", "title": "Ohne Firma", "tags": []}, "markdown": "#"}).encode()
+        sig = "sha256=" + hmac.new(q["secret"].encode(), body, hashlib.sha256).hexdigest()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as maschine:
+            await maschine.post(f"/api/eingang/{q['id']}", content=body, headers={"X-Insilo-Event": "meeting.ready", "X-Insilo-Delivery-ID": uuid4().hex, "X-Insilo-Signature": sig})
+        b = (await klient.get("/api/briefing")).json()
+
+    assert [p["titel"] for p in b["offener_eingang"]] == ["Ohne Firma"]
+    assert b["gesamt"] == 1

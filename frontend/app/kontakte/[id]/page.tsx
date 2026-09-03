@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react";
 import { use, useState } from "react";
 import { api } from "@/lib/api";
 import { datum, personName } from "@/lib/format";
-import type { Contact, KIErgebnis, KIStatus } from "@/lib/typen";
+import type { Activity, Contact, KIErgebnis, KIStatus } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Stufenpille } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
@@ -33,6 +33,13 @@ function Entwurfsblock({ kontaktId }: { kontaktId: string }) {
   });
   const [text, setText] = useState("");
   const [betreff, setBetreff] = useState("");
+  // Die letzte eingegangene Mail dieses Kontakts — der häufigste Anlass
+  // für einen Entwurf ist eine Antwort, nicht ein Kaltstart.
+  const letzteMail = useQuery({
+    queryKey: ["aktivitaeten", { contact_id: kontaktId }],
+    queryFn: () => api.get<Activity[]>(`/api/activities?contact_id=${kontaktId}`),
+    select: (liste) => liste.find((a) => a.kind === "email" && a.payload?.richtung === "eingehend") ?? null,
+  });
   const post = useQuery({ queryKey: ["post-status"], queryFn: () => api.get<{ eingerichtet: boolean; hinweis: string | null }>("/api/post/status") });
   const senden = useMutation({
     mutationFn: () => api.post("/api/post/senden", { contact_id: kontaktId, subject: betreff || anlass, text }),
@@ -64,6 +71,20 @@ function Entwurfsblock({ kontaktId }: { kontaktId: string }) {
           />
         </div>
 
+        {letzteMail.data && (
+          <button
+            type="button"
+            className="btn btn-still btn-klein"
+            style={{ marginBottom: "var(--am-raum-2)" }}
+            onClick={() => {
+              const m = letzteMail.data!;
+              setAnlass(`Antwort auf „${(m.subject ?? "").replace(/^Von [^:]+: /, "")}“: ${(m.body ?? "").slice(0, 400)}`);
+              setBetreff(`AW: ${(m.subject ?? "").replace(/^Von [^:]+: /, "")}`);
+            }}
+          >
+            Auf letzte Mail antworten
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-sekundaer btn-klein"

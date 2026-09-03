@@ -28,6 +28,7 @@ export default function EingangSeite() {
   const client = useQueryClient();
   const [offenerPosten, setOffenerPosten] = useState<string | null>(null);
   const [ziel, setZiel] = useState("");
+  const [ansicht, setAnsicht] = useState<{ titel: string | null; markdown: string } | null>(null);
 
   const posten = useQuery({
     queryKey: ["eingang"],
@@ -78,6 +79,18 @@ export default function EingangSeite() {
             : `${posten.data!.length} ohne eindeutige Zuordnung`
         }
       />
+
+      {ansicht && (
+        <div className="dialog-schicht" role="dialog" aria-modal="true" aria-label="Inhalt">
+          <div className="karte" style={{ maxWidth: "720px", width: "100%", maxHeight: "85vh", overflow: "auto" }}>
+            <h2 style={{ fontSize: "1.125rem", marginBottom: "var(--am-raum-4)" }}>{ansicht.titel ?? "Inhalt"}</h2>
+            <pre style={{ whiteSpace: "pre-wrap", fontFamily: "var(--am-schrift-sans)", fontSize: "0.875rem", lineHeight: 1.6 }}>{ansicht.markdown}</pre>
+            <div className="btn-reihe" style={{ marginTop: "var(--am-raum-4)" }}>
+              <button type="button" className="btn btn-still" onClick={() => setAnsicht(null)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="liste">
         {posten.data!.length === 0 && (
@@ -170,6 +183,11 @@ export default function EingangSeite() {
                   >
                     Zuordnen
                   </button>
+                  {p.markdown_laenge > 0 && (
+                    <button type="button" className="btn btn-sekundaer btn-klein" onClick={async () => setAnsicht(await api.get(`/api/eingang/${p.id}/markdown`))}>
+                      Ansehen
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-still btn-klein"

@@ -43,6 +43,7 @@ class Briefing(BaseModel):
     verstummte_geschaefte: list[Posten] = []
     ablaufende_angebote: list[Posten] = []
     ohne_naechsten_schritt: list[Posten] = []
+    offener_eingang: list[Posten] = []
     # Wie viele Punkte insgesamt anstehen. Eine Zahl, die man morgens
     # ansieht und die einem sagt, ob es ein ruhiger Tag wird.
     gesamt: int = 0
@@ -110,6 +111,12 @@ async def _sammeln(user: CurrentUser) -> Briefing:
             heute,
             heute + timedelta(days=7),
         )
+        eingang = await conn.fetch(
+            """
+            select e.id, e.event, e.titel, e.created_at, e.zuordnung_grund
+            from public.eingang e where e.status = 'offen' order by e.created_at desc limit 20
+            """
+        )
         ohne_schritt = await conn.fetch(
             """
             select d.id, d.name, d.amount_cents, d.company_id, f.name as firma, s.name as stufe
@@ -171,6 +178,15 @@ async def _sammeln(user: CurrentUser) -> Briefing:
             )
             for z in angebote
         ],
+        offener_eingang=[
+            Posten(
+                art="eingang",
+                titel=z["titel"] or z["event"],
+                hinweis=z["zuordnung_grund"],
+                tage=(datetime.now(z["created_at"].tzinfo) - z["created_at"]).days,
+            )
+            for z in eingang
+        ],
         ohne_naechsten_schritt=[
             Posten(
                 art="ohne_schritt",
@@ -189,6 +205,7 @@ async def _sammeln(user: CurrentUser) -> Briefing:
         + len(briefing.verstummte_geschaefte)
         + len(briefing.ablaufende_angebote)
         + len(briefing.ohne_naechsten_schritt)
+        + len(briefing.offener_eingang)
     )
     return briefing
 
@@ -234,6 +251,7 @@ async def briefing_text(
             *zeilen(f"Seit über {STILLE_TAGE} Tagen ohne ein Wort", daten.verstummte_geschaefte),
             *zeilen("Angebote, deren Bindefrist abläuft", daten.ablaufende_angebote),
             *zeilen("Fortgeschritten, aber ohne nächsten Schritt", daten.ohne_naechsten_schritt),
+            *zeilen("Im Eingang, noch niemandem zugeordnet", daten.offener_eingang),
         ]
     )
 

@@ -14,6 +14,9 @@ import { Notizkasten } from "@/components/notizkasten";
 import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
 import { KontaktAnlegen } from "@/components/kontakt-anlegen";
+import { DealAnlegen } from "@/components/deal-anlegen";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Pipeline } from "@/lib/typen";
 import { STUFEN_TEXT } from "@/lib/format";
 import { useState } from "react";
 import { Fehler, Laedt } from "@/components/zustaende";
@@ -30,6 +33,10 @@ function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
 export default function FirmaSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [kontaktOffen, setKontaktOffen] = useState(false);
+  const [dealOffen, setDealOffen] = useState(false);
+  const client = useQueryClient();
+  const pipelines = useQuery({ queryKey: ["pipelines"], queryFn: () => api.get<Pipeline[]>("/api/pipelines") });
+  const standard = pipelines.data?.find((p) => p.is_default) ?? pipelines.data?.[0];
 
   const firma = useQuery({
     queryKey: ["firma", id],
@@ -60,6 +67,16 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
           invalidiert={["firma", id]}
         />
       </Seitenkopf>
+
+      {dealOffen && standard && (
+        <DealAnlegen
+          pipelineId={standard.id}
+          stufen={standard.stages}
+          firmaId={id}
+          beiSchliessen={() => setDealOffen(false)}
+          beiErfolg={() => { setDealOffen(false); client.invalidateQueries({ queryKey: ["firma-deals", id] }); client.invalidateQueries({ queryKey: ["firma", id] }); }}
+        />
+      )}
 
       {kontaktOffen && (
         <KontaktAnlegen firmaId={id} beiSchliessen={() => setKontaktOffen(false)} beiErfolg={() => { setKontaktOffen(false); kontakte.refetch(); }} />
@@ -118,7 +135,7 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
           <section className="block">
             <div className="block-kopf">
               <h2>Deals</h2>
-              <span className="board-spalte-anzahl">{deals.data?.length ?? 0}</span>
+              <button type="button" className="btn btn-still btn-klein" onClick={() => setDealOffen(true)} disabled={!standard}>Anlegen</button>
             </div>
             <div className="block-inhalt">
               {deals.data?.length === 0 && (

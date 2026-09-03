@@ -411,6 +411,7 @@ export interface Briefing {
   verstummte_geschaefte: Posten[];
   ablaufende_angebote: Posten[];
   ohne_naechsten_schritt: Posten[];
+  offener_eingang: Posten[];
   gesamt: number;
 }
 
