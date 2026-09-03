@@ -51,7 +51,8 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Anreicherung | Firmen und Kontakte aus Website, Suchdienst und LinkedIn-Treffern; jeder Wert mit Quelle, Kontaktdaten nur wörtlich belegt, nie überschreiben; leere Felder von selbst, Rest als Vorschlag |
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
 | Tests | 162 Backend, 8 Frontend |
-| Olares-Chart | lintet und rendert, **nie auf einer echten Box installiert** |
+| Olares-Chart | lintet (`helm` und `olares-cli chart lint`), rendert, **nie auf einer echten Box installiert** |
+| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag als Branch `aicrm-0.1.0` auf Kais Fork von `aimighty-market` — PR erst nach Box-Installation |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
 E-Mail-Versand aus der Anwendung, Kampagnen und Sequenzen, Kalender-
@@ -214,7 +215,25 @@ der Lieferung und liest die Token über `var(--am-*)`.
    Absenders achten. Zugeordnet wird nur, was eindeutig ist — ein
    Protokoll am falschen Kunden ist schlimmer als eines im Eingangskorb.
 
-8. **Bei Unsicherheit:** stoppen und Kai fragen.
+8. **Bei der Anreicherung** (`app/anreicherung.py`) kommt eine fünfte
+   KI-Regel dazu: **Kontaktdaten nur wörtlich belegt.** E-Mail, Telefon,
+   LinkedIn, Website, Straße, PLZ und Beschäftigtenzahl müssen in der
+   gelesenen Quelle stehen, sonst fallen sie weg — egal, wie sicher das
+   Modell klingt. Vorhandene Werte werden nie überschrieben, nur zum
+   Vorschlag. LinkedIn wird nie direkt abgerufen; was Suchtreffer von
+   öffentlichen Profilen zeigen, ist die Quelle. Ein nachdenkendes Modell
+   braucht Platz: 6.000 Token für die Zuordnung, sonst kommt nur das
+   Nachdenken an.
+
+9. **Beim Veröffentlichen:** `docs/BETRIEB.md`, Abschnitt
+   „Veröffentlichen". Version an drei Stellen, Tag `vX.Y.Z` baut die
+   Abbilder (`release.yml`), das Chart wird immer als Paket geprüft
+   (`olares-cli chart lint dist/aicrm-X.Y.Z.tgz`), und **erst nach einer
+   laufenden Installation auf einer Box** geht der Eintrag per PR in
+   `bayerhazard/aimighty-market`. Die Regeln dahinter stehen im Skill
+   `insilo/.claude/skills/olares-release/SKILL.md`.
+
+10. **Bei Unsicherheit:** stoppen und Kai fragen.
 
 ---
 
