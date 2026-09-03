@@ -13,6 +13,7 @@ import { KiKnopf } from "@/components/ki-knopf";
 import { Notizkasten } from "@/components/notizkasten";
 import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
+import { Anreicherungsblock } from "@/components/anreicherung";
 import { KontaktAnlegen } from "@/components/kontakt-anlegen";
 import { DealAnlegen } from "@/components/deal-anlegen";
 import { useQueryClient } from "@tanstack/react-query";
@@ -102,11 +103,15 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
               { key: "postal_code", text: "PLZ" },
               { key: "city", text: "Ort" },
               { key: "phone", text: "Telefon" },
+              { key: "website", text: "Website", zeige: (v) => <a href={String(v)} target="_blank" rel="noreferrer noopener" style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>{String(v).replace(/^https?:\/\//, "")}</a> },
+              { key: "linkedin_url", text: "LinkedIn", zeige: (v) => <a href={String(v)} target="_blank" rel="noreferrer noopener" style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>{String(v).replace(/^https?:\/\/(www\.)?/, "")}</a> },
               { key: "lifecycle_stage", text: "Stufe", art: "select", optionen: Object.entries(STUFEN_TEXT).map(([wert, text]) => ({ wert, text })) },
               { key: "source", text: "Herkunft" },
               { key: "description", text: "Beschreibung", art: "textarea" },
             ]}
           />
+
+          <Anreicherungsblock entity="companies" id={id} werte={f as unknown as Record<string, unknown>} abfrageSchluessel={["firma", id]} />
 
           <Eigenschaftswerteblock entity="companies" id={id} werte={f.custom} abfrageSchluessel={["firma", id]} />
 

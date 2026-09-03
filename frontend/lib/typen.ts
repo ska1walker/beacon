@@ -38,6 +38,7 @@ export interface Company {
   country: string | null;
   phone: string | null;
   website: string | null;
+  linkedin_url: string | null;
   lifecycle_stage: LifecycleStage;
   source: string | null;
   description: string | null;
@@ -181,8 +182,36 @@ export interface OrgSettings extends Absender {
   llm_model: string;
   llm_api_key_set: boolean;
   llm_ready: boolean;
+  suche_endpoint_url: string | null;
+  suche_api_key_set: boolean;
+  anreicherung_automatisch: boolean;
+  anreicherung_uebernahme: "leere_felder" | "vorschlag";
   default_currency: string;
   locale: string;
+}
+
+/** Ein Lauf der Anreicherung — was gelesen, vorgeschlagen, geschrieben wurde. */
+export interface Anreicherung {
+  id: string;
+  entity: "companies" | "contacts";
+  entity_id: string;
+  status: "laeuft" | "vorschlag" | "uebernommen" | "verworfen" | "leer" | "fehler";
+  quellen: { url: string; titel: string; bytes: number; art: "seite" | "suche"; anfrage?: string }[];
+  vorschlag: Record<string, { wert: string | number; quelle: string; belegt: boolean; lage: "neu" | "abweichend" }>;
+  uebernommen: Record<string, string | number>;
+  fehler: string | null;
+  modell: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnreicherungStatus {
+  llm_ready: boolean;
+  suche_eingerichtet: boolean;
+  suche_art: string;
+  automatisch: boolean;
+  uebernahme: "leere_felder" | "vorschlag";
+  hint: string;
 }
 
 export interface KIStatus {

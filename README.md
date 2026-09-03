@@ -22,6 +22,10 @@ Der Weg vom ersten Kontakt bis zum Abschluss, durchgängig:
   frei geordneten Stufen, Kontakte mit mehreren Firmen.
 - **Post** — E-Mail hinein und hinaus über Relay, nach einem kleinen
   signierten Vertrag; der Entwurf kommt vom Modell, gesendet wird von Hand.
+- **Angereichert** — neue Firmen und Kontakte werden aus der Firmen-Website,
+  einem Suchdienst und den LinkedIn-Treffern darin ergänzt. Jeder Wert
+  nennt seine Quelle, Kontaktdaten müssen dort wörtlich stehen, und was
+  schon eingetragen ist, wird nie überschrieben.
 
 Und die KI liegt nicht obendrauf, sondern an den Stellen, wo sie Arbeit
 abnimmt: eine hingetippte Gesprächsnotiz wird zu Notiz, Aufgaben,
@@ -45,6 +49,15 @@ hinaus, und die Oberfläche sagt das offen, statt in einen
 Verbindungsfehler zu laufen. Steht dort eine fremde Adresse, nennt die
 Seite „Wohin Daten gehen" sie beim Namen.
 
+Die Anreicherung ist die zweite: Sie liest die Website der Firma (das
+verrät nur der Firma selbst, dass sich jemand für sie interessiert) und
+fragt einen Suchdienst, **wenn** unter `/einstellungen` einer steht —
+eine SearXNG-Instanz auf der Box oder Brave Search. Erst dann verlassen
+Firmen- und Personennamen die Box, und auch das steht auf derselben
+Seite. LinkedIn selbst wird nie abgerufen: Was Suchmaschinen von
+öffentlichen Profilen zeigen, reicht für Profiladresse, Position und
+Branche, und es lässt sich vor einem Kunden erklären.
+
 ## Aufbau
 
 ```
@@ -64,7 +77,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 149
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 162
 Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
 Was fehlt, ist die Box. Das Olares-Chart lintet, rendert und bringt das

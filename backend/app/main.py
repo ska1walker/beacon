@@ -12,12 +12,14 @@ import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app import anreicherung as anreicherung_kern
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
 from app.routers import (
     activities,
     angebote,
+    anreicherung,
     briefing,
     companies,
     contacts,
@@ -118,6 +120,9 @@ async def lifespan(app: FastAPI):
     schleife.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await schleife
+    # Ein Anreicherungslauf, der gerade eine Website liest, soll sein
+    # Ergebnis noch ablegen dürfen — sonst bleibt eine Zeile auf „läuft".
+    await anreicherung_kern.hintergrund_abwarten()
     await close_pool()
 
 
@@ -147,6 +152,7 @@ app.include_router(eigenschaften.router)
 app.include_router(pipelines.router)
 app.include_router(post.router)
 app.include_router(sicherung_router.router)
+app.include_router(anreicherung.router)
 
 
 # Doppelte E-Mail, doppelte Domain: Das ist kein Serverfehler, sondern

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app import audit
+from app import anreicherung, audit
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -89,8 +89,10 @@ async def create_company(
             """
             insert into public.companies
               (org_id, name, domain, industry, employee_count, city, country, phone,
-               website, lifecycle_stage, source, description, owner_id, created_by, custom)
-            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14,$15::jsonb)
+               website, lifecycle_stage, source, description, owner_id, created_by, custom,
+               street, postal_code, linkedin_url)
+            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14,$15::jsonb,
+                    $16,$17,$18)
             returning id
             """,
             user.org_id,
@@ -108,6 +110,9 @@ async def create_company(
             payload.owner_id or user.user_id,
             user.user_id,
             await _custom_pruefen(conn, 'companies', payload.custom),
+            payload.street,
+            payload.postal_code,
+            payload.linkedin_url,
         )
         await audit.log_fuer(
             conn,
@@ -118,6 +123,9 @@ async def create_company(
             diff=payload.model_dump(mode="json"),
         )
         full = await conn.fetchrow(LIST_SQL + " and c.id = $1", row["id"])
+    # Was über die Firma öffentlich zu finden ist, wird jetzt gesucht —
+    # ohne dass jemand darauf wartet.
+    anreicherung.im_hintergrund(user, "companies", row["id"])
     return Company(**dict(full))
 
 

@@ -40,6 +40,7 @@ TABELLEN: list[str] = [
     "loss_reasons",
     "webhook_sources",
     "contacts",
+    "anreicherungen",
     "deals",
     "deal_contacts",
     "contact_companies",

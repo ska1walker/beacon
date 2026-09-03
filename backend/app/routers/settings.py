@@ -34,6 +34,10 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         # ob einer da ist, um „hinterlegt" statt eines leeren Feldes zu zeigen.
         llm_api_key_set=bool(cfg.api_key),
         llm_ready=cfg.eingerichtet,
+        suche_endpoint_url=(row["suche_endpoint_url"] if row else None),
+        suche_api_key_set=bool(row and row["suche_api_key"]),
+        anreicherung_automatisch=(row["anreicherung_automatisch"] if row else True),
+        anreicherung_uebernahme=(row["anreicherung_uebernahme"] if row else "leere_felder"),
         default_currency=(row["default_currency"] if row else "EUR"),
         locale=(row["locale"] if row else "de"),
     )
@@ -55,7 +59,7 @@ async def update_settings(
             # versehentlich: Die Oberfläche zeigt ihn nie an, also käme er
             # bei jedem Speichern leer zurück und wäre nach dem ersten
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
-            if name in ("llm_api_key", "mail_endpoint_secret") and wert == "":
+            if name in ("llm_api_key", "mail_endpoint_secret", "suche_api_key") and wert == "":
                 continue
             await conn.execute(
                 f"update public.org_settings set {name} = $1, updated_at = now(), updated_by = $2 "

@@ -54,6 +54,7 @@ class CompanyIn(MitEigenschaften):
     country: str | None = "DE"
     phone: str | None = None
     website: str | None = None
+    linkedin_url: str | None = None
     lifecycle_stage: LifecycleStage = "lead"
     source: str | None = None
     description: str | None = None
@@ -71,6 +72,7 @@ class CompanyPatch(BaseModel):
     country: str | None = None
     phone: str | None = None
     website: str | None = None
+    linkedin_url: str | None = None
     lifecycle_stage: LifecycleStage | None = None
     source: str | None = None
     description: str | None = None
@@ -300,6 +302,10 @@ class OrgSettingsIn(Absender):
     llm_base_url: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = None
+    suche_endpoint_url: str | None = None
+    suche_api_key: str | None = None
+    anreicherung_automatisch: bool | None = None
+    anreicherung_uebernahme: Literal["leere_felder", "vorschlag"] | None = None
     default_currency: str | None = None
     locale: str | None = None
 
@@ -314,6 +320,12 @@ class OrgSettings(Absender):
     # ob einer hinterlegt ist.
     llm_api_key_set: bool = False
     llm_ready: bool = False
+    # Der Suchdienst für die Anreicherung — gleiches Muster: Adresse
+    # sichtbar, Schlüssel nur als „hinterlegt".
+    suche_endpoint_url: str | None = None
+    suche_api_key_set: bool = False
+    anreicherung_automatisch: bool = True
+    anreicherung_uebernahme: str = "leere_felder"
     default_currency: str = "EUR"
     locale: str = "de"
 

@@ -13,6 +13,7 @@ import { Zeitleiste } from "@/components/zeitleiste";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
+import { Anreicherungsblock } from "@/components/anreicherung";
 import { KontaktFirmen } from "@/components/kontakt-firmen";
 import { STUFEN_TEXT } from "@/lib/format";
 
@@ -163,6 +164,8 @@ export default function KontaktSeite({ params }: { params: Promise<{ id: string 
               { key: "notes", text: "Notizen", art: "textarea" },
             ]}
           />
+
+          <Anreicherungsblock entity="contacts" id={id} werte={k as unknown as Record<string, unknown>} abfrageSchluessel={["kontakt", id]} />
 
           <KontaktFirmen kontaktId={id} />
 

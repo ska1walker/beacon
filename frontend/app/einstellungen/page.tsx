@@ -14,6 +14,7 @@ import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
 import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
 import { Postausgangblock } from "@/components/postausgang";
+import { AnreicherungEinstellungen } from "@/components/anreicherung-einstellungen";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -140,6 +141,8 @@ export default function EinstellungenSeite() {
           </div>
         </section>
 
+        <AnreicherungEinstellungen einstellungen={e} />
+
         <Mitgliederblock />
 
         <Pipelinesblock />
@@ -171,6 +174,14 @@ export default function EinstellungenSeite() {
               <div className="eigenschaft">
                 <dt>Sprachmodell</dt>
                 <dd>{e.llm_ready ? adresse : "nicht eingerichtet — keine Anfragen"}</dd>
+              </div>
+              <div className="eigenschaft">
+                <dt>Anreicherung</dt>
+                <dd>
+                  {e.suche_endpoint_url
+                    ? `Firmen- und Personennamen an ${e.suche_endpoint_url}; Websites der Firmen`
+                    : "nur die Websites der Firmen — kein Suchdienst eingetragen"}
+                </dd>
               </div>
               <div className="eigenschaft">
                 <dt>Telemetrie</dt>

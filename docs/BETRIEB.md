@@ -176,3 +176,50 @@ entwirft, ein Mensch drückt auf Senden.
 > kleiner Übersetzer auf Relay-Seite oder eine Anpassung in `post.py`
 > nötig — der Vertrag hier ist bewusst so schmal, dass beides ein
 > Nachmittag ist.
+
+## Anreicherung anschließen — Suchdienst
+
+Neue Firmen und Kontakte werden von selbst aus öffentlichen Quellen
+ergänzt (`backend/app/anreicherung.py`). Ohne Einrichtung liest die
+Anreicherung nur die **Website der Firma**: Startseite, Impressum,
+Kontakt-, Team- und Über-uns-Seiten, dazu die intern verlinkten Seiten
+mit solchen Namen. Das genügt für Anschrift, Telefon, Branche und
+Beschreibung — und für Ansprechpartner, die auf der Team-Seite stehen.
+
+Für alles darüber hinaus braucht sie einen **Suchdienst** unter
+*Einstellungen → Anreicherung*:
+
+| Dienst | Adresse | Schlüssel |
+|---|---|---|
+| SearXNG (empfohlen, läuft auf der Box) | `https://<searxng-route>.<user>.olares.com` — aicrm hängt `/search?format=json` an | meist keiner; sonst als `Authorization: Bearer` |
+| Brave Search | `https://api.search.brave.com/res/v1/web/search` | Pflicht, geht als `X-Subscription-Token` |
+
+Mit Suchdienst findet die Anreicherung die Website, wenn nur der Name
+bekannt ist, und holt die **LinkedIn-Treffer**: Unternehmensseite
+(`linkedin.com/company/…`) und Personenprofile (`linkedin.com/in/…`) aus
+Titel und Kurztext der Suchergebnisse. LinkedIn selbst wird nie
+abgerufen — das ließe die Seite ohne Anmeldung nicht zu und die
+Nutzungsbedingungen verbieten es. Bei SearXNG muss das JSON-Format
+freigeschaltet sein (`search.formats: [html, json]` in der
+`settings.yml`).
+
+**Was das Modell darf.** Es ordnet Fundstellen den Feldern zu und nennt
+zu jedem Wert die Quelle. Kontaktdaten (E-Mail, Telefon, LinkedIn,
+Website, Straße, PLZ, Beschäftigtenzahl) müssen **wörtlich** in der
+Quelle stehen, sonst fallen sie weg. Branche, Position und Beschreibung
+dürfen gefolgert sein und sind so gekennzeichnet. Ein Modell, das vor
+der Antwort nachdenkt, bekommt 6.000 Token — mit weniger kam auf der
+Box nur das Nachdenken an.
+
+**Was geschrieben wird.** Vorgabe ist *Leere Felder füllen*: Was am
+Datensatz leer war und belegt ist, steht nach dem Lauf drin, mit
+Protokolleintrag (`enrich`) und Verlaufseintrag. Abweichungen zu
+vorhandenen Werten und die Beschreibung bleiben ein Vorschlag mit
+Quelle, den ein Mensch am Datensatz übernimmt oder verwirft. Wer nichts
+ohne Klick geschrieben haben will, stellt auf *Nichts* um; wer keinen
+Lauf beim Anlegen will, schaltet *Beim Anlegen von selbst anreichern*
+ab — der Knopf am Datensatz bleibt.
+
+Jeder Lauf liegt in `anreicherungen`: gelesene Adressen mit Bytes,
+gestellte Suchanfragen, Vorschlag, Übernommenes. Das ist der Nachweis,
+was die Box verlassen hat.

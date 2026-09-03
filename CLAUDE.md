@@ -33,8 +33,8 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 
 | Teil | Zustand |
 |---|---|
-| Schema + Zeilensicherheit | 9 Migrationen, alle Fachtabellen unter FORCE |
-| Backend | rund 85 API-Pfade, FastAPI + asyncpg |
+| Schema + Zeilensicherheit | 11 Migrationen, alle Fachtabellen unter FORCE |
+| Backend | rund 92 API-Pfade, FastAPI + asyncpg |
 | Oberfläche | Start, Board, Angebote, Prognose, Firmen, Kontakte, Aufgaben, Fragen, Eingang, Einstellungen |
 | Angebote | Katalog, Positionen, Summen, Druckfassung mit Briefkopf |
 | Qualifizierung | sechs Felder, gerechnete Punktzahl, Verlustgründe |
@@ -48,8 +48,9 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Stammdaten | Firma, Kontakt, Geschäft, Angebot: ein Bearbeiten-Schalter, Löschen mit Rückfrage |
 | Katalog, Verlustgründe, Aufgaben, Verlauf | vollständig pflegbar; Systemeinträge bleiben Geschichte |
 | Post | Vertrag für Relay: signiert hinein und hinaus, Entwurf → Senden nur durch Menschen |
+| Anreicherung | Firmen und Kontakte aus Website, Suchdienst und LinkedIn-Treffern; jeder Wert mit Quelle, Kontaktdaten nur wörtlich belegt, nie überschreiben; leere Felder von selbst, Rest als Vorschlag |
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
-| Tests | 149 Backend, 8 Frontend |
+| Tests | 162 Backend, 8 Frontend |
 | Olares-Chart | lintet und rendert, **nie auf einer echten Box installiert** |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),

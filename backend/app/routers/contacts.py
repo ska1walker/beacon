@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app import audit
+from app import anreicherung, audit
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -119,6 +119,7 @@ async def create_contact(
             diff=payload.model_dump(mode="json"),
         )
         row = await conn.fetchrow(LIST_SQL + " and k.id = $1", new_id)
+    anreicherung.im_hintergrund(user, "contacts", new_id)
     return Contact(**dict(row))
 
 
