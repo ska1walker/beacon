@@ -1,13 +1,25 @@
 """Aktivitäten — die Zeitleiste an Firma, Kontakt und Deal."""
 
+from datetime import datetime
 from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.schemas import Activity, ActivityIn
+
+# Nur, was ein Mensch geschrieben hat, lässt sich ändern oder zurücknehmen.
+# Stufenwechsel, KI-Ergebnisse und Systemeinträge sind Geschichte.
+MENSCHLICH = ("note", "call", "email", "meeting", "task")
+
+
+class ActivityPatch(BaseModel):
+    subject: str | None = None
+    body: str | None = None
+    occurred_at: datetime | None = None
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
@@ -30,7 +42,7 @@ async def list_activities(
     select a.*, u.display_name as created_by_name
     from public.activities a
     left join public.users u on u.id = a.created_by
-    where true
+    where a.deleted_at is null
     """
     args: list[object] = []
     if company_id:
@@ -87,3 +99,33 @@ async def create_activity(
     return Activity(
         **{**dict(row), "payload": orjson.loads(row["payload"]), "created_by_name": user.display_name}
     )
+
+
+@router.patch("/{activity_id}", response_model=Activity)
+async def aendern(activity_id: UUID, payload: ActivityPatch, user: CurrentUser = Depends(get_current_user)) -> Activity:
+    felder = payload.model_dump(exclude_unset=True)
+    if not felder:
+        raise HTTPException(400, "Keine Änderung übergeben")
+    zuw = ", ".join(f"{k} = ${i + 1}" for i, k in enumerate(felder))
+    async with acquire_as(user.user_id) as conn:
+        art = await conn.fetchval("select kind from public.activities where id = $1 and deleted_at is null", activity_id)
+        if art is None:
+            raise HTTPException(404, "Eintrag nicht gefunden")
+        if art not in MENSCHLICH:
+            raise HTTPException(409, "Dieser Eintrag ist Geschichte und lässt sich nicht ändern.")
+        row = await conn.fetchrow(
+            f"update public.activities set {zuw}, updated_at = now() where id = ${len(felder) + 1} returning *",
+            *felder.values(), activity_id,
+        )
+    return Activity(**{**dict(row), "payload": orjson.loads(row["payload"]), "created_by_name": user.display_name})
+
+
+@router.delete("/{activity_id}", status_code=204)
+async def zuruecknehmen(activity_id: UUID, user: CurrentUser = Depends(get_current_user)) -> None:
+    async with acquire_as(user.user_id) as conn:
+        art = await conn.fetchval("select kind from public.activities where id = $1 and deleted_at is null", activity_id)
+        if art is None:
+            raise HTTPException(404, "Eintrag nicht gefunden")
+        if art not in MENSCHLICH:
+            raise HTTPException(409, "Dieser Eintrag ist Geschichte und lässt sich nicht zurücknehmen.")
+        await conn.execute("update public.activities set deleted_at = now() where id = $1", activity_id)

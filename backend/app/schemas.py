@@ -265,6 +265,8 @@ class TaskPatch(BaseModel):
 class Task(TaskIn):
     id: UUID
     status: Literal["open", "done", "cancelled"]
+    deal_name: str | None = None
+    company_name: str | None = None
     completed_at: datetime | None = None
     created_at: datetime
 
@@ -292,6 +294,9 @@ class Absender(BaseModel):
 
 
 class OrgSettingsIn(Absender):
+    mail_endpoint_url: str | None = None
+    mail_endpoint_secret: str | None = None
+    mail_absender: str | None = None
     llm_base_url: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = None
@@ -300,6 +305,9 @@ class OrgSettingsIn(Absender):
 
 
 class OrgSettings(Absender):
+    mail_endpoint_url: str | None = None
+    mail_absender: str | None = None
+    mail_endpoint_secret_set: bool = False
     llm_base_url: str = ""
     llm_model: str = ""
     # Der Schlüssel geht nie zurück an die Oberfläche. Sie erfährt nur,

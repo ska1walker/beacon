@@ -9,6 +9,7 @@ import { ANGEBOT_STATUS_ART, ANGEBOT_STATUS_TEXT, datum, datumZeit, euroGenau } 
 import type { Product, Quote, QuoteItemIn, QuoteStatus } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Stammdaten } from "@/components/stammdaten";
 
 /** Eine Zeile im Bearbeitungszustand. */
 type Zeile = QuoteItemIn & { schluessel: string };
@@ -344,6 +345,22 @@ export default function AngebotSeite({ params }: { params: Promise<{ id: string 
               )}
             </div>
           </section>
+
+          <Stammdaten
+            titel="Kopfdaten"
+            pfad={`/api/quotes/${id}`}
+            abfrageSchluessel={["angebot", id]}
+            zurueckNach="/angebote"
+            loeschtext="Das Angebot verschwindet aus der Liste. Die Nummer wird nicht neu vergeben."
+            werte={q as unknown as Record<string, unknown>}
+            felder={[
+              { key: "title", text: "Titel" },
+              { key: "valid_until", text: "Bindefrist", art: "date", zeige: (v) => datum(String(v)) },
+              { key: "discount_cents", text: "Nachlass auf die Summe", art: "number", skala: 100, zeige: (v) => euroGenau(Number(v)) },
+              { key: "intro_text", text: "Anschreiben", art: "textarea" },
+              { key: "terms_text", text: "Bedingungen", art: "textarea" },
+            ]}
+          />
 
           <section className="block">
             <div className="block-kopf">

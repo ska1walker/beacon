@@ -20,6 +20,8 @@ Der Weg vom ersten Kontakt bis zum Abschluss, durchgängig:
   und Protokoll je Person, ohne zweites Konto.
 - **Anpassbar** — eigene Eigenschaften je Objekt, mehrere Pipelines mit
   frei geordneten Stufen, Kontakte mit mehreren Firmen.
+- **Post** — E-Mail hinein und hinaus über Relay, nach einem kleinen
+  signierten Vertrag; der Entwurf kommt vom Modell, gesendet wird von Hand.
 
 Und die KI liegt nicht obendrauf, sondern an den Stellen, wo sie Arbeit
 abnimmt: eine hingetippte Gesprächsnotiz wird zu Notiz, Aufgaben,
@@ -62,7 +64,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 140
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 149
 Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
 Was fehlt, ist die Box. Das Olares-Chart lintet, rendert und bringt das

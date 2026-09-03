@@ -145,3 +145,34 @@ das eine Minute wartet.
 > OlaresManifest, die `^/api/eingang/` öffentlich stellt; die Signatur
 > trägt die Authentifizierung an dieser Stelle ohnehin. Geprüft ist das
 > nicht, und es lässt sich nur auf einer Box prüfen.
+
+
+## Post anschließen — Relay oder ein anderer Dienst
+
+E-Mails gehen nicht aus aicrm selbst hinaus und kommen nicht direkt
+herein. Beides läuft über einen Dienst auf der Box — Marcs Relay, die
+Outlook-Alternative. Weil dessen Schnittstelle beim Bau nicht vorlag,
+gilt ein **eigener, kleiner Vertrag**, denselben Bauplan wie beim
+Insilo-Eingang: signierter POST, HMAC-SHA256 über den rohen Body,
+Idempotenzschlüssel. Er steht in `backend/app/routers/post.py`.
+
+**Hinein** — der Dienst ruft `POST /api/post/eingang/<Quelle>` mit den
+Kopfzeilen `X-Post-Event: mail.received`, `X-Post-Delivery-ID`,
+`X-Post-Signature: sha256=…` und dem Body
+`{"message_id","from","to":[…],"subject","text","received_at"}`. Die
+Quelle wird unter *Einstellungen → Eingehende Quellen* angelegt (Art
+`relay`), das Geheimnis einmalig gezeigt. Kennt das CRM die
+Absenderadresse, liegt die Mail als Verlaufseintrag am Kontakt; sonst
+wartet sie im Eingang.
+
+**Hinaus** — aicrm schickt an die unter *Einstellungen → Postausgang*
+eingetragene Adresse einen signierten POST mit
+`{"to","from","subject","text","in_reply_to","sent_at"}` und der
+Kopfzeile `X-Post-Signature`. Der Dienst verschickt; aicrm hält die
+Nachricht im Verlauf fest. Nichts geht von allein hinaus — das Modell
+entwirft, ein Mensch drückt auf Senden.
+
+> **Offen:** Relays tatsächliche Schnittstelle. Liegt sie vor, ist ein
+> kleiner Übersetzer auf Relay-Seite oder eine Anpassung in `post.py`
+> nötig — der Vertrag hier ist bewusst so schmal, dass beides ein
+> Nachmittag ist.

@@ -21,6 +21,7 @@ import { Fehler, Laedt } from "@/components/zustaende";
 import { AngebotAnlegen } from "@/components/angebot-anlegen";
 import { Qualifizierungsblock } from "@/components/qualifizierung";
 import { Eigenschaftswerteblock } from "@/components/eigenschaften";
+import { Stammdaten } from "@/components/stammdaten";
 import { Notizkasten } from "@/components/notizkasten";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
@@ -182,91 +183,27 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
 
       <div className="datensatz">
         <div>
-          <section className="block">
-            <div className="block-kopf">
-              <h2>Über dieses Geschäft</h2>
-              <Dealstufe name={d.stage_name} art={d.stage_kind} />
-            </div>
-            <div className="block-inhalt">
-              <dl>
-                <div className="eigenschaft">
-                  <dt>Firma</dt>
-                  <dd>
-                    {d.company_id ? (
-                      <Link
-                        href={`/firmen/${d.company_id}`}
-                        style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
-                      >
-                        {d.company_name}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Betrag netto</dt>
-                  <dd>{euro(d.amount_cents)}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Wahrscheinlichkeit</dt>
-                  <dd>{prozent(d.probability)}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Gewichtet</dt>
-                  <dd>{euro(Math.round(d.amount_cents * (d.probability ?? 0)))}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Abschluss geplant</dt>
-                  <dd style={ueberfaellig ? { color: "var(--am-fehler)" } : undefined}>
-                    {datum(d.close_date)}
-                    {ueberfaellig && " · überfällig"}
-                  </dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Servicetage</dt>
-                  <dd>{d.service_days ?? "—"}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Zuständig</dt>
-                  <dd>
-                    {(mitglieder.data?.length ?? 0) > 1 ? (
-                      <select
-                        className="input"
-                        aria-label="Zuständig"
-                        value={d.owner_id ?? ""}
-                        onChange={(e) => zustaendig.mutate(e.target.value || null)}
-                        disabled={zustaendig.isPending}
-                      >
-                        <option value="">— niemand —</option>
-                        {mitglieder.data?.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.display_name ?? m.olares_username}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      (mitglieder.data?.find((m) => m.id === d.owner_id)?.display_name ?? "—")
-                    )}
-                  </dd>
-                </div>
-                {d.lost_reason && (
-                  <div className="eigenschaft">
-                    <dt>Grund für die Absage</dt>
-                    <dd>{d.lost_reason}</dd>
-                  </div>
-                )}
-              </dl>
-
-              {d.next_step && (
-                <div className="hinweis" style={{ marginTop: "var(--am-raum-4)" }}>
-                  <span>
-                    <strong>Nächster Schritt:</strong> {d.next_step}
-                  </span>
-                </div>
-              )}
-            </div>
-          </section>
+          <Stammdaten
+            titel="Über dieses Geschäft"
+            pfad={`/api/deals/${id}`}
+            abfrageSchluessel={["deal", id]}
+            zurueckNach="/deals"
+            loeschtext="Das Geschäft verschwindet vom Board und aus der Prognose. Verlauf und Angebote bleiben 30 Tage wiederherstellbar."
+            kopfrechts={<Dealstufe name={d.stage_name} art={d.stage_kind} />}
+            werte={d as unknown as Record<string, unknown>}
+            felder={[
+              { key: "name", text: "Bezeichnung" },
+              { key: "company_name", text: "Firma", zeige: () => d.company_id ? <Link href={`/firmen/${d.company_id}`} style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>{d.company_name}</Link> : "—" },
+              { key: "product", text: "Produkt", art: "select", optionen: Object.entries(PRODUKT_TEXT).map(([wert, text]) => ({ wert, text })) },
+              { key: "amount_cents", text: "Betrag netto", art: "number", skala: 100, zeige: (v) => euro(Number(v)) },
+              { key: "probability", text: "Wahrscheinlichkeit", zeige: (v) => prozent(Number(v)) },
+              { key: "close_date", text: "Abschluss geplant", art: "date", zeige: (v) => <span style={ueberfaellig ? { color: "var(--am-fehler)" } : undefined}>{datum(String(v))}{ueberfaellig && " · überfällig"}</span> },
+              { key: "service_days", text: "Servicetage", art: "number" },
+              { key: "next_step", text: "Nächster Schritt", art: "textarea" },
+              { key: "owner_id", text: "Zuständig", art: "select", optionen: (mitglieder.data ?? []).map((m) => ({ wert: m.id, text: m.display_name ?? m.olares_username })) },
+              { key: "lost_reason", text: "Grund für die Absage", art: "textarea" },
+            ]}
+          />
 
           <Eigenschaftswerteblock entity="deals" id={id} werte={d.custom} abfrageSchluessel={["deal", id]} />
 

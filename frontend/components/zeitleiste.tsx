@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { Pencil, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { AKTIVITAET_TEXT, datumZeit } from "@/lib/format";
@@ -19,6 +19,17 @@ export function Zeitleiste({
   const schluessel = ["aktivitaeten", bezug];
   const [text, setText] = useState("");
   const [art, setArt] = useState<ActivityKind>("note");
+  const [bearbeite, setBearbeite] = useState<{ id: string; body: string } | null>(null);
+  const MENSCHLICH: ActivityKind[] = ["note", "call", "email", "meeting", "task"];
+
+  const aendern = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => api.patch(`/api/activities/${id}`, { body }),
+    onSuccess: () => { setBearbeite(null); client.invalidateQueries({ queryKey: schluessel }); },
+  });
+  const zuruecknehmen = useMutation({
+    mutationFn: (id: string) => api.del(`/api/activities/${id}`),
+    onSuccess: () => client.invalidateQueries({ queryKey: schluessel }),
+  });
 
   const abfrage = useQuery({
     queryKey: schluessel,
@@ -97,7 +108,23 @@ export function Zeitleiste({
                     {a.subject && <span className="zeitleiste-betreff">{a.subject}</span>}
                     <span className="zeitleiste-zeit">{datumZeit(a.occurred_at)}</span>
                   </div>
-                  {a.body && <p className="zeitleiste-text">{a.body}</p>}
+                  {bearbeite?.id === a.id ? (
+                    <div className="notiz-feld">
+                      <textarea rows={3} value={bearbeite.body} onChange={(e) => setBearbeite({ id: a.id, body: e.target.value })} aria-label="Eintrag bearbeiten" />
+                      <div className="btn-reihe" style={{ marginTop: "var(--am-raum-2)" }}>
+                        <button type="button" className="btn btn-primaer btn-klein" onClick={() => aendern.mutate(bearbeite)} disabled={aendern.isPending}>Speichern</button>
+                        <button type="button" className="btn btn-still btn-klein" onClick={() => setBearbeite(null)}>Abbrechen</button>
+                      </div>
+                    </div>
+                  ) : (
+                    a.body && <p className="zeitleiste-text">{a.body}</p>
+                  )}
+                  {MENSCHLICH.includes(a.kind) && bearbeite?.id !== a.id && (
+                    <div className="btn-reihe" style={{ marginTop: "var(--am-raum-1)" }}>
+                      <button type="button" className="btn btn-still btn-klein" aria-label="Eintrag bearbeiten" onClick={() => setBearbeite({ id: a.id, body: a.body ?? "" })}><Pencil size={12} aria-hidden="true" /></button>
+                      <button type="button" className="btn btn-still btn-klein" aria-label="Eintrag zurücknehmen" onClick={() => zuruecknehmen.mutate(a.id)}><Trash2 size={12} aria-hidden="true" /></button>
+                    </div>
+                  )}
                   {a.kind === "ai" && typeof a.payload?.modell === "string" && (
                     <p className="zeitleiste-text" style={{ color: "var(--am-text-deaktiviert)" }}>
                       Modell: {a.payload.modell}

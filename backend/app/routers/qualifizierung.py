@@ -5,6 +5,7 @@ from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app import audit, qualifizierung
 from app.auth import CurrentUser, get_current_user
@@ -117,6 +118,44 @@ async def verlustgruende(user: CurrentUser = Depends(get_current_user)) -> list[
             "select * from public.loss_reasons where is_active order by position, name"
         )
     return [Verlustgrund(**dict(z)) for z in zeilen]
+
+
+class VerlustgrundIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class VerlustgrundPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    position: int | None = None
+    is_active: bool | None = None
+
+
+@router.post("/verlustgruende", response_model=Verlustgrund, status_code=201)
+async def verlustgrund_anlegen(payload: VerlustgrundIn, user: CurrentUser = Depends(get_current_user)) -> Verlustgrund:
+    async with acquire_as(user.user_id) as conn:
+        anzahl = await conn.fetchval("select count(*) from public.loss_reasons where org_id = $1", user.org_id)
+        z = await conn.fetchrow(
+            "insert into public.loss_reasons (org_id, name, position) values ($1,$2,$3) "
+            "on conflict (org_id, name) do update set is_active = true returning *",
+            user.org_id, payload.name.strip(), anzahl,
+        )
+    return Verlustgrund(**dict(z))
+
+
+@router.patch("/verlustgruende/{grund_id}", response_model=Verlustgrund)
+async def verlustgrund_aendern(grund_id: UUID, payload: VerlustgrundPatch, user: CurrentUser = Depends(get_current_user)) -> Verlustgrund:
+    felder = payload.model_dump(exclude_unset=True)
+    if not felder:
+        raise HTTPException(400, "Keine Änderung übergeben")
+    zuw = ", ".join(f"{k} = ${i + 1}" for i, k in enumerate(felder))
+    async with acquire_as(user.user_id) as conn:
+        z = await conn.fetchrow(
+            f"update public.loss_reasons set {zuw} where id = ${len(felder) + 1} returning *",
+            *felder.values(), grund_id,
+        )
+    if z is None:
+        raise HTTPException(404, "Verlustgrund nicht gefunden")
+    return Verlustgrund(**dict(z))
 
 
 @router.post("/deals/{deal_id}/verloren", response_model=dict)

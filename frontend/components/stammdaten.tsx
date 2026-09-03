@@ -14,6 +14,8 @@ export interface Stammfeld {
   optionen?: { wert: string; text: string }[];
   /** Für die Anzeige, wenn nicht bearbeitet wird. */
   zeige?: (wert: unknown) => React.ReactNode;
+  /** Gespeichert wird wert × skala — Cent in der API, Euro im Feld. */
+  skala?: number;
 }
 
 /**
@@ -55,7 +57,7 @@ export function Stammdaten({
       for (const [k, v] of Object.entries(entwurf)) {
         const f = felder.find((x) => x.key === k);
         if (v === "") patch[k] = null;
-        else if (f?.art === "number") patch[k] = Number(v);
+        else if (f?.art === "number") patch[k] = Math.round(Number(v) * (f.skala ?? 1));
         else patch[k] = v;
       }
       return api.patch(pfad, patch);
@@ -79,7 +81,9 @@ export function Stammdaten({
   function wert(key: string): string {
     if (key in entwurf) return entwurf[key];
     const v = werte[key];
-    return v === null || v === undefined ? "" : String(v);
+    const f = felder.find((x) => x.key === key);
+    if (v === null || v === undefined) return "";
+    return f?.skala && typeof v === "number" ? String(v / f.skala) : String(v);
   }
 
   return (

@@ -29,6 +29,14 @@ function Entwurfsblock({ kontaktId }: { kontaktId: string }) {
   const entwurf = useMutation({
     mutationFn: () =>
       api.post<KIErgebnis>("/api/ki/entwurf", { contact_id: kontaktId, anlass, kanal: "email" }),
+    onSuccess: (e) => setText(e.text),
+  });
+  const [text, setText] = useState("");
+  const [betreff, setBetreff] = useState("");
+  const post = useQuery({ queryKey: ["post-status"], queryFn: () => api.get<{ eingerichtet: boolean; hinweis: string | null }>("/api/post/status") });
+  const senden = useMutation({
+    mutationFn: () => api.post("/api/post/senden", { contact_id: kontaktId, subject: betreff || anlass, text }),
+    onSuccess: () => { setText(""); setBetreff(""); },
   });
 
   const bereit = status.data?.ready ?? false;
@@ -68,19 +76,20 @@ function Entwurfsblock({ kontaktId }: { kontaktId: string }) {
 
         {entwurf.isError && <Fehler text={(entwurf.error as Error).message} />}
 
-        {entwurf.data && (
+        {(entwurf.data || text) && (
           <div className="ki-block" style={{ marginTop: "var(--am-raum-4)" }}>
-            <div className="ki-block-kopf">Entwurf · {entwurf.data.model}</div>
-            <p className="ki-block-text">{entwurf.data.text}</p>
+            <div className="ki-block-kopf">Entwurf{entwurf.data ? ` · ${entwurf.data.model}` : ""} — ein Mensch schickt</div>
+            <div className="feld"><label htmlFor="mail-betreff">Betreff</label><input id="mail-betreff" value={betreff} onChange={(e) => setBetreff(e.target.value)} placeholder={anlass} /></div>
+            <div className="notiz-feld"><textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} aria-label="Nachricht" /></div>
+            {senden.isError && <Fehler text={(senden.error as Error).message} />}
+            {senden.isSuccess && <p style={{ fontSize: "0.8125rem", color: "var(--am-erfolg)" }}>Übergeben — steht im Verlauf.</p>}
             <div className="btn-reihe" style={{ marginTop: "var(--am-raum-3)" }}>
-              <button
-                type="button"
-                className="btn btn-still btn-klein"
-                onClick={() => navigator.clipboard.writeText(entwurf.data!.text)}
-              >
-                In die Zwischenablage
+              <button type="button" className="btn btn-primaer btn-klein" disabled={!post.data?.eingerichtet || !text.trim() || senden.isPending} title={post.data?.hinweis ?? undefined} onClick={() => senden.mutate()}>
+                {senden.isPending ? "Übergibt …" : "Senden"}
               </button>
+              <button type="button" className="btn btn-still btn-klein" onClick={() => navigator.clipboard.writeText(text)}>In die Zwischenablage</button>
             </div>
+            {!post.data?.eingerichtet && post.data?.hinweis && <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", marginTop: "var(--am-raum-2)" }}>{post.data.hinweis}</p>}
           </div>
         )}
       </div>

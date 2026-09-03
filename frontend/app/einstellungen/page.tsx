@@ -12,6 +12,8 @@ import { Quellenblock } from "@/components/quellen";
 import { Mitgliederblock } from "@/components/mitglieder";
 import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
+import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
+import { Postausgangblock } from "@/components/postausgang";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -143,6 +145,12 @@ export default function EinstellungenSeite() {
         <Pipelinesblock />
 
         <Eigenschaftenblock />
+
+        <Katalogblock />
+
+        <Verlustgruendeblock />
+
+        <Postausgangblock />
 
         <Absenderblock />
 

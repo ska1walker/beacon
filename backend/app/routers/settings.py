@@ -25,6 +25,9 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
     }
     return OrgSettings(
         **absender,
+        mail_endpoint_url=(row["mail_endpoint_url"] if row else None),
+        mail_absender=(row["mail_absender"] if row else None),
+        mail_endpoint_secret_set=bool(row and row["mail_endpoint_secret"]),
         llm_base_url=cfg.base_url,
         llm_model=cfg.model,
         # Der Schlüssel geht nie zurück — die Oberfläche muss nur wissen,
@@ -52,7 +55,7 @@ async def update_settings(
             # versehentlich: Die Oberfläche zeigt ihn nie an, also käme er
             # bei jedem Speichern leer zurück und wäre nach dem ersten
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
-            if name == "llm_api_key" and wert == "":
+            if name in ("llm_api_key", "mail_endpoint_secret") and wert == "":
                 continue
             await conn.execute(
                 f"update public.org_settings set {name} = $1, updated_at = now(), updated_by = $2 "

@@ -29,6 +29,7 @@ from app.routers import (
     mitglieder,
     notiz,
     pipelines,
+    post,
     tasks,
 )
 from app.routers import qualifizierung as qualifizierung_router
@@ -144,6 +145,7 @@ app.include_router(eingang.quellen_router)
 app.include_router(mitglieder.router)
 app.include_router(eigenschaften.router)
 app.include_router(pipelines.router)
+app.include_router(post.router)
 app.include_router(sicherung_router.router)
 
 

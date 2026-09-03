@@ -151,6 +151,8 @@ export interface Task {
   assigned_to: string | null;
   completed_at: string | null;
   created_at: string;
+  deal_name: string | null;
+  company_name: string | null;
 }
 
 export interface Absender {
@@ -172,6 +174,9 @@ export interface Absender {
 }
 
 export interface OrgSettings extends Absender {
+  mail_endpoint_url: string | null;
+  mail_absender: string | null;
+  mail_endpoint_secret_set: boolean;
   llm_base_url: string;
   llm_model: string;
   llm_api_key_set: boolean;

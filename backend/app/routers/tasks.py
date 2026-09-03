@@ -21,16 +21,19 @@ async def list_tasks(
     contact_id: UUID | None = Query(None),
     limit: int = Query(100, le=300),
 ) -> list[Task]:
-    sql = "select * from public.tasks where status = $1::public.task_status"
+    sql = ("select t.*, d.name as deal_name, f.name as company_name from public.tasks t "
+           "left join public.deals d on d.id = t.deal_id "
+           "left join public.companies f on f.id = t.company_id "
+           "where t.status = $1::public.task_status")
     args: list[object] = [status]
     for spalte, wert in (("deal_id", deal_id), ("company_id", company_id), ("contact_id", contact_id)):
         if wert:
             args.append(wert)
-            sql += f" and {spalte} = ${len(args)}"
+            sql += f" and t.{spalte} = ${len(args)}"
     args.append(limit)
     # Aufgaben ohne Frist zuletzt: NULLS FIRST würde die undatierten oben
     # einsortieren, und dort steht, was heute fällig ist.
-    sql += f" order by due_at asc nulls last limit ${len(args)}"
+    sql += f" order by t.due_at asc nulls last limit ${len(args)}"
 
     async with acquire_as(user.user_id) as conn:
         rows = await conn.fetch(sql, *args)
