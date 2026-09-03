@@ -80,8 +80,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 162
 Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
-Was fehlt, ist die Box. Das Olares-Chart lintet, rendert und bringt das
-SQL unversehrt durch — installiert war es nie. Alles, was erst zur
-Laufzeit auffällt, ist damit ungeprüft; besonders der Weg, auf dem
-Insilo den Empfangspfad erreicht (siehe
+Seit dem 3. September 2026 läuft aicrm auf einer echten Olares-Box und
+steht im AImighty-Markt. Offen ist nur noch der Weg, auf dem Insilo und
+Relay die Empfangspfade hinter dem Envoy-Sidecar erreichen (siehe
 [docs/BETRIEB.md](docs/BETRIEB.md)).
