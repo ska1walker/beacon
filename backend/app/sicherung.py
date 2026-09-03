@@ -36,6 +36,7 @@ TABELLEN: list[str] = [
     "pipelines",
     "pipeline_stages",
     "products",
+    "loss_reasons",
     "contacts",
     "deals",
     "deal_contacts",

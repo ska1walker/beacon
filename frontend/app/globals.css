@@ -1436,6 +1436,28 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline-offset: 1px;
   }
 
+  /* ── Balken ───────────────────────────────────────────────────────
+     Sechs Balken rechtfertigen keine Diagrammbibliothek. Eine Breite in
+     Prozent sagt dasselbe und kostet nichts. */
+  .balken {
+    height: 8px;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-flaeche-2);
+    overflow: hidden;
+  }
+
+  .balken-fuell {
+    height: 100%;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-blau-500);
+  }
+
+  /* Verlustgründe tragen die Auszeichnungsfarbe, nicht Rot: Sie sind kein
+     Fehler, sondern das Wichtigste auf der Seite. */
+  .balken-fuell[data-betont="true"] {
+    background: var(--am-gold-500);
+  }
+
   /* ── Bearbeitbare Tabelle ─────────────────────────────────────────
      Zahlenfelder in einer engen Spalte zeigen sonst nichts an: Der
      Drehregler des Browsers frisst die Breite, und übrig bleibt ein

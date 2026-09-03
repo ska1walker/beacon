@@ -406,3 +406,85 @@ class Quote(BaseModel):
 class QuoteStatusIn(BaseModel):
     status: QuoteStatus
     decision_note: str | None = None
+
+
+# ── Qualifizierung ──────────────────────────────────────────────────────
+
+class Qualifizierung(BaseModel):
+    """Die sechs Fragen, die ein Geschäft tragen.
+
+    Nicht sechzig. Was ein Zwei-Mann-Vertrieb tatsächlich unterscheidet:
+    wofür, warum jetzt, wer entscheidet, ist Geld da, bis wann — und ob
+    die Hardware ins Haus passt. Der letzte Punkt ist bei einem Gerät im
+    Serverraum kein Detail, sondern der häufigste späte Stolperstein.
+    """
+
+    bedarf: str | None = None
+    ausloeser: str | None = None
+    entscheider: str | None = None
+    budget_geklaert: bool = False
+    zeitrahmen: str | None = None
+    standort_geklaert: bool = False
+
+
+class QualifizierungAntwort(Qualifizierung):
+    punkte: int
+    qualifikation_am: datetime | None = None
+    # Was noch fehlt, im Klartext. Eine Punktzahl allein sagt niemandem,
+    # was als Nächstes zu fragen ist.
+    offen: list[str] = []
+
+
+class Verlustgrund(BaseModel):
+    id: UUID
+    name: str
+    position: int
+    is_active: bool
+
+
+class DealVerloren(BaseModel):
+    lost_reason_id: UUID | None = None
+    lost_reason: str | None = None
+
+
+# ── Prognose ────────────────────────────────────────────────────────────
+
+class Monatswert(BaseModel):
+    monat: str           # 2026-09
+    offen_cents: int
+    gewichtet_cents: int
+    anzahl: int
+
+
+class Verlustanteil(BaseModel):
+    grund: str
+    anzahl: int
+    summe_cents: int
+
+
+class Produktanteil(BaseModel):
+    produkt: str
+    gewonnen: int
+    verloren: int
+    gewonnen_cents: int
+
+
+class Prognose(BaseModel):
+    offen_cents: int
+    gewichtet_cents: int
+    anzahl_offen: int
+    gewonnen_cents: int
+    anzahl_gewonnen: int
+    verloren_cents: int
+    anzahl_verloren: int
+    # None statt 0, wenn es noch nichts Entschiedenes gibt: Eine
+    # Trefferquote von 0 % und „noch kein Abschluss" sind zwei sehr
+    # verschiedene Nachrichten.
+    trefferquote: float | None = None
+    durchschnittsdauer_tage: float | None = None
+    durchschnittswert_cents: int | None = None
+    monate: list[Monatswert] = []
+    verlustgruende: list[Verlustanteil] = []
+    produkte: list[Produktanteil] = []
+    ueberfaellig_anzahl: int = 0
+    ueberfaellig_cents: int = 0

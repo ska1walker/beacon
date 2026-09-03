@@ -12,18 +12,24 @@ import {
   PRODUKT_TEXT,
   prozent,
 } from "@/lib/format";
-import type { Board, Deal, Quote } from "@/lib/typen";
+import type { Board, Deal, Quote, Verlustgrund } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { KiKnopf } from "@/components/ki-knopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { AngebotAnlegen } from "@/components/angebot-anlegen";
+import { Qualifizierungsblock } from "@/components/qualifizierung";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const client = useQueryClient();
   const [angebotOffen, setAngebotOffen] = useState(false);
+  // Beim Verlieren wird nach dem Grund gefragt. Ohne ihn ist die
+  // Verlustanalyse in der Prognose eine Liste aus „ohne Kategorie".
+  const [verlorenStufe, setVerlorenStufe] = useState<string | null>(null);
+  const [grund, setGrund] = useState("");
+  const [grundText, setGrundText] = useState("");
 
   const deal = useQuery({
     queryKey: ["deal", id],
@@ -38,6 +44,30 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
   const board = useQuery({
     queryKey: ["board"],
     queryFn: () => api.get<Board>("/api/board"),
+  });
+
+  const verlustgruende = useQuery({
+    queryKey: ["verlustgruende"],
+    queryFn: () => api.get<Verlustgrund[]>("/api/verlustgruende"),
+  });
+
+  const verlorenMelden = useMutation({
+    mutationFn: async (stageId: string) => {
+      await api.post<Deal>(`/api/deals/${id}/stage`, { stage_id: stageId });
+      await api.post(`/api/deals/${id}/verloren`, {
+        lost_reason_id: grund || null,
+        lost_reason: grundText || null,
+      });
+    },
+    onSuccess: () => {
+      setVerlorenStufe(null);
+      setGrund("");
+      setGrundText("");
+      client.invalidateQueries({ queryKey: ["deal", id] });
+      client.invalidateQueries({ queryKey: ["aktivitaeten"] });
+      client.invalidateQueries({ queryKey: ["board"] });
+      client.invalidateQueries({ queryKey: ["prognose"] });
+    },
   });
 
   const verschieben = useMutation({
@@ -72,6 +102,67 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
 
       {angebotOffen && (
         <AngebotAnlegen dealId={id} beiSchliessen={() => setAngebotOffen(false)} />
+      )}
+
+      {verlorenStufe && (
+        <div className="dialog-schicht" role="dialog" aria-modal="true" aria-label="Verlustgrund">
+          <div className="karte" style={{ maxWidth: "440px", width: "100%" }}>
+            <h2 style={{ marginBottom: "var(--am-raum-4)", fontSize: "1.125rem" }}>
+              Woran ist es gescheitert?
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-6)" }}>
+              Der Grund ist die einzige Frage, die aus einem verlorenen Geschäft noch etwas
+              macht. Er steht später in der Prognose.
+            </p>
+
+            <div className="feld">
+              <label htmlFor="verlustgrund">Grund</label>
+              <select id="verlustgrund" value={grund} onChange={(e) => setGrund(e.target.value)}>
+                <option value="">— noch offen —</option>
+                {verlustgruende.data?.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="feld">
+              <label htmlFor="verlusttext">
+                Was genau <span className="optional">optional</span>
+              </label>
+              <textarea
+                id="verlusttext"
+                rows={3}
+                value={grundText}
+                onChange={(e) => setGrundText(e.target.value)}
+                placeholder="20 % über dem Mitbewerber, Entscheidung im Vorstand gekippt …"
+              />
+            </div>
+
+            {verlorenMelden.isError && (
+              <Fehler text={(verlorenMelden.error as Error).message} />
+            )}
+
+            <div className="btn-reihe">
+              <button
+                type="button"
+                className="btn btn-primaer"
+                onClick={() => verlorenMelden.mutate(verlorenStufe)}
+                disabled={verlorenMelden.isPending}
+              >
+                {verlorenMelden.isPending ? "Speichert …" : "Als verloren vermerken"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-still"
+                onClick={() => setVerlorenStufe(null)}
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="datensatz">
@@ -139,6 +230,8 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
             </div>
           </section>
 
+          <Qualifizierungsblock dealId={id} />
+
           <section className="block">
             <div className="block-kopf">
               <h2>Stufe wechseln</h2>
@@ -151,7 +244,9 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
                     type="button"
                     className={`btn btn-klein ${s.id === d.stage_id ? "btn-primaer" : "btn-sekundaer"}`}
                     disabled={s.id === d.stage_id || verschieben.isPending}
-                    onClick={() => verschieben.mutate(s.id)}
+                    onClick={() =>
+                      s.kind === "lost" ? setVerlorenStufe(s.id) : verschieben.mutate(s.id)
+                    }
                   >
                     {s.name}
                   </button>

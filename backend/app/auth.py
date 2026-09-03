@@ -59,6 +59,21 @@ STANDARD_PRODUKTE: list[dict[str, object]] = [
     },
 ]
 
+# Die Gründe, aus denen ein Geschäft bei AImighty verloren geht. Sie
+# stehen hier als Startpunkt, nicht als Wahrheit — der Vertrieb ergänzt
+# sie, sobald er einen neuen kennenlernt.
+STANDARD_VERLUSTGRUENDE: list[str] = [
+    "Preis",
+    "Kein Budget",
+    "Zeitpunkt passt nicht",
+    "Widerstand aus der IT",
+    "Cloud-Lösung gewählt",
+    "Kein Bedarf erkannt",
+    "Entscheider nicht erreicht",
+    "Projekt verschoben",
+    "Kontakt abgebrochen",
+]
+
 STANDARD_STUFEN: list[tuple[str, str, float]] = [
     ("Erstkontakt", "open", 0.05),
     ("Qualifiziert", "open", 0.20),
@@ -98,6 +113,17 @@ async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
             name,
             kind,
             probability,
+            position,
+        )
+
+
+async def _seed_verlustgruende(conn: asyncpg.Connection, org_id: UUID) -> None:
+    for position, grund in enumerate(STANDARD_VERLUSTGRUENDE):
+        await conn.execute(
+            "insert into public.loss_reasons (org_id, name, position) values ($1,$2,$3) "
+            "on conflict (org_id, name) do nothing",
+            org_id,
+            grund,
             position,
         )
 
@@ -164,6 +190,12 @@ async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> 
     )
     if not katalog:
         await _seed_produkte(conn, org_id)
+
+    gruende = await conn.fetchval(
+        "select count(*) from public.loss_reasons where org_id = $1", org_id
+    )
+    if not gruende:
+        await _seed_verlustgruende(conn, org_id)
 
 
 async def _ensure_user_and_org(olares_username: str) -> CurrentUser:

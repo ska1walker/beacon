@@ -8,6 +8,7 @@ import {
   FileText,
   Handshake,
   LayoutDashboard,
+  TrendingUp,
   Settings,
   Users,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const ZIELE = [
   { pfad: "/", text: "Start", Zeichen: LayoutDashboard },
   { pfad: "/deals", text: "Deals", Zeichen: Handshake },
   { pfad: "/angebote", text: "Angebote", Zeichen: FileText },
+  { pfad: "/prognose", text: "Prognose", Zeichen: TrendingUp },
   { pfad: "/firmen", text: "Firmen", Zeichen: Building2 },
   { pfad: "/kontakte", text: "Kontakte", Zeichen: Users },
   { pfad: "/aufgaben", text: "Aufgaben", Zeichen: CheckSquare },

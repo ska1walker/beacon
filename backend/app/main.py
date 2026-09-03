@@ -16,12 +16,13 @@ from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
 from app.routers import activities, angebote, companies, contacts, deals, ki, tasks
+from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
 
 
-async def _katalog_nachziehen() -> None:
-    """Sät den Produktkatalog in Organisationen, die noch keinen haben.
+async def _stammdaten_nachziehen() -> None:
+    """Sät Produktkatalog und Verlustgründe, wo sie fehlen.
 
     Läuft einmal beim Start. Die Aussaat beim Anlegen einer Organisation
     deckt nur neue ab — eine Box, die vor dieser Ausbaustufe installiert
@@ -29,28 +30,33 @@ async def _katalog_nachziehen() -> None:
     Angebot schreiben. Für jede spätere Erweiterung des Katalogs greift
     derselbe Weg.
     """
-    from app.auth import _seed_produkte
+    from app.auth import _seed_produkte, _seed_verlustgruende
 
+    aufgaben = (
+        ("products", _seed_produkte, "Produktkatalog"),
+        ("loss_reasons", _seed_verlustgruende, "Verlustgründe"),
+    )
     try:
-        async with acquire() as conn:
-            orgs = await conn.fetch(
-                """
-                select o.id, r.user_id
-                from public.orgs o
-                join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
-                where o.deleted_at is null
-                  and not exists (select 1 from public.products p where p.org_id = o.id)
-                """
-            )
-        for org in orgs:
-            async with acquire_as(org["user_id"]) as conn:
-                await _seed_produkte(conn, org["id"])
-        if orgs:
-            print(f"Produktkatalog für {len(orgs)} Organisation(en) nachgezogen.", flush=True)
+        for tabelle, saeen, bezeichnung in aufgaben:
+            async with acquire() as conn:
+                orgs = await conn.fetch(
+                    f"""
+                    select o.id, r.user_id
+                    from public.orgs o
+                    join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
+                    where o.deleted_at is null
+                      and not exists (select 1 from public.{tabelle} t where t.org_id = o.id)
+                    """
+                )
+            for org in orgs:
+                async with acquire_as(org["user_id"]) as conn:
+                    await saeen(conn, org["id"])
+            if orgs:
+                print(f"{bezeichnung} für {len(orgs)} Organisation(en) nachgezogen.", flush=True)
     except Exception as exc:
-        # Ein fehlender Katalog ist ärgerlich, aber kein Grund, die
+        # Fehlende Stammdaten sind ärgerlich, aber kein Grund, die
         # Anwendung nicht zu starten.
-        print(f"Katalog konnte nicht nachgezogen werden: {exc}", flush=True)
+        print(f"Stammdaten konnten nicht nachgezogen werden: {exc}", flush=True)
 
 
 async def _sicherungsschleife() -> None:
@@ -90,7 +96,7 @@ async def _sicherungsschleife() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
-    await _katalog_nachziehen()
+    await _stammdaten_nachziehen()
     schleife = asyncio.create_task(_sicherungsschleife())
     yield
     schleife.cancel()
@@ -108,6 +114,7 @@ app = FastAPI(
 
 app.include_router(companies.router)
 app.include_router(angebote.router)
+app.include_router(qualifizierung_router.router)
 app.include_router(contacts.router)
 app.include_router(deals.router)
 app.include_router(activities.router)

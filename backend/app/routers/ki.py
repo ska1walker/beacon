@@ -16,9 +16,11 @@ import orjson
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app import qualifizierung
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.llm import LLMNichtEingerichtet, chat, json_aus_antwort, load_llm_config
+from app.schemas import Qualifizierung
 
 router = APIRouter(prefix="/api/ki", tags=["ki"])
 
@@ -456,5 +458,167 @@ async def angebotsvorschlag(
         anschreiben=str(roh.get("anschreiben") or ""),
         positionen=positionen,
         offene_punkte=offen,
+        modell=modell,
+    )
+
+
+# ── Qualifizierung aus dem Verlauf ──────────────────────────────────────
+
+class Qualifizierungsvorschlag(BaseModel):
+    bedarf: str | None = None
+    ausloeser: str | None = None
+    entscheider: str | None = None
+    budget_geklaert: bool = False
+    zeitrahmen: str | None = None
+    standort_geklaert: bool = False
+    punkte: int
+    offen: list[str] = []
+    # Woher jede Angabe stammt. Ohne das ist eine ausgefüllte Maske eine
+    # Behauptung: Der Vertriebler müsste jede Zeile im Verlauf selbst
+    # nachschlagen, um ihr zu trauen — und dann hätte er sie auch gleich
+    # selbst eintragen können.
+    belege: dict[str, str] = {}
+    modell: str
+
+
+@router.post("/deals/{deal_id}/qualifizieren", response_model=Qualifizierungsvorschlag)
+async def qualifizieren(
+    deal_id: UUID,
+    user: CurrentUser = Depends(get_current_user),
+) -> Qualifizierungsvorschlag:
+    """Liest den Verlauf und trägt zusammen, was schon bekannt ist.
+
+    Das ist der Teil, der die Arbeit wirklich abnimmt: Die Antworten
+    stehen fast immer in den Gesprächsnotizen, nur eben verstreut. Was
+    nicht dort steht, bleibt leer — und die Liste der offenen Fragen ist
+    das eigentliche Ergebnis.
+
+    Geschrieben wird nichts. Der Vorschlag füllt die Maske; speichern tut
+    ein Mensch.
+    """
+    async with acquire_as(user.user_id) as conn:
+        deal = await conn.fetchrow(
+            """
+            select d.id, d.name, d.company_id, f.name as firma, f.industry, f.employee_count
+            from public.deals d
+            left join public.companies f on f.id = d.company_id
+            where d.id = $1 and d.deleted_at is null
+            """,
+            deal_id,
+        )
+        if deal is None:
+            raise HTTPException(404, "Deal nicht gefunden")
+
+        verlauf = await conn.fetch(
+            """
+            select kind, subject, body, occurred_at from public.activities
+            where deal_id = $1
+               or company_id = $2
+               or contact_id in (select id from public.contacts where company_id = $2)
+            order by occurred_at desc limit 40
+            """,
+            deal_id,
+            deal["company_id"],
+        )
+        kontakte = await conn.fetch(
+            "select first_name, last_name, job_title, buying_role from public.contacts "
+            "where company_id = $1 and deleted_at is null limit 20",
+            deal["company_id"],
+        )
+
+    kontext = "\n".join(
+        [
+            f"Geschäft: {deal['name']}",
+            f"Firma: {deal['firma'] or 'unbekannt'}, {deal['industry'] or 'Branche unbekannt'}, "
+            f"{deal['employee_count'] or '?'} Mitarbeiter",
+            "",
+            "Bekannte Personen:",
+            *(
+                [
+                    f"- {k['first_name'] or ''} {k['last_name'] or ''} "
+                    f"({k['job_title'] or 'Rolle unbekannt'}, {k['buying_role'] or 'Kaufrolle offen'})"
+                    for k in kontakte
+                ]
+                or ["- keine"]
+            ),
+            "",
+            "Verlauf, neueste zuerst:",
+            *(
+                [
+                    f"- {v['occurred_at']:%d.%m.%Y} [{v['kind']}] {v['subject'] or ''} "
+                    f"{(v['body'] or '')[:600]}"
+                    for v in verlauf
+                ]
+                or ["- leer"]
+            ),
+        ]
+    )
+
+    text, modell = await _lauf(
+        user,
+        "Trage aus dem Verlauf zusammen, was über dieses Geschäft bekannt ist.\n\n"
+        "Antworte ausschließlich als JSON-Objekt:\n"
+        '  "bedarf": welches Problem gelöst werden soll, oder null,\n'
+        '  "ausloeser": warum gerade jetzt, oder null,\n'
+        '  "entscheider": wer entscheidet, oder null,\n'
+        '  "budget_geklaert": true nur, wenn ein Budget ausdrücklich genannt wurde,\n'
+        '  "zeitrahmen": bis wann, oder null,\n'
+        '  "standort_geklaert": true nur, wenn über Platz, Strom oder Netz gesprochen wurde,\n'
+        '  "belege": je gefülltem Feld ein wörtliches Zitat aus dem Verlauf.\n\n'
+        "Nichts erfinden. Was nicht im Verlauf steht, ist null beziehungsweise false — "
+        "eine Lücke ist ein brauchbares Ergebnis, eine Vermutung nicht.\n\n" + kontext,
+    )
+
+    try:
+        roh = json_aus_antwort(text)
+    except ValueError as exc:
+        raise HTTPException(
+            502, f"Das Modell hat kein verwertbares Ergebnis geliefert: {exc}"
+        ) from exc
+
+    def text_oder_nichts(schluessel: str) -> str | None:
+        wert = roh.get(schluessel)
+        if wert is None:
+            return None
+        wert = str(wert).strip()
+        # Modelle schreiben gern „unbekannt" statt null. Das ist dasselbe
+        # wie nichts und darf keine Punkte geben.
+        return None if wert.lower() in ("", "null", "unbekannt", "keine angabe", "-") else wert
+
+    vorschlag = Qualifizierung(
+        bedarf=text_oder_nichts("bedarf"),
+        ausloeser=text_oder_nichts("ausloeser"),
+        entscheider=text_oder_nichts("entscheider"),
+        budget_geklaert=bool(roh.get("budget_geklaert")),
+        zeitrahmen=text_oder_nichts("zeitrahmen"),
+        standort_geklaert=bool(roh.get("standort_geklaert")),
+    )
+
+    belege = {
+        str(k): str(v)
+        for k, v in (roh.get("belege") or {}).items()
+        if isinstance(v, str | int | float)
+    }
+
+    async with acquire_as(user.user_id) as conn:
+        await conn.execute(
+            """
+            insert into public.activities (org_id, kind, subject, body, deal_id, payload, created_by)
+            values ($1, 'ai', 'Qualifizierung aus dem Verlauf gezogen', $2, $3, $4::jsonb, $5)
+            """,
+            user.org_id,
+            "Offen: " + "; ".join(qualifizierung.offen(vorschlag))
+            if qualifizierung.offen(vorschlag)
+            else "Nichts offen.",
+            deal_id,
+            orjson.dumps({"modell": modell, "punkte": qualifizierung.punkte(vorschlag)}).decode(),
+            user.user_id,
+        )
+
+    return Qualifizierungsvorschlag(
+        **vorschlag.model_dump(),
+        punkte=qualifizierung.punkte(vorschlag),
+        offen=qualifizierung.offen(vorschlag),
+        belege=belege,
         modell=modell,
     )

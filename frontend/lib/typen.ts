@@ -294,3 +294,70 @@ export interface Angebotsvorschlag {
   offene_punkte: string[];
   modell: string;
 }
+
+export interface Qualifizierung {
+  bedarf: string | null;
+  ausloeser: string | null;
+  entscheider: string | null;
+  budget_geklaert: boolean;
+  zeitrahmen: string | null;
+  standort_geklaert: boolean;
+}
+
+export interface QualifizierungAntwort extends Qualifizierung {
+  punkte: number;
+  qualifikation_am: string | null;
+  offen: string[];
+}
+
+export interface Qualifizierungsvorschlag extends Qualifizierung {
+  punkte: number;
+  offen: string[];
+  belege: Record<string, string>;
+  modell: string;
+}
+
+export interface Verlustgrund {
+  id: string;
+  name: string;
+  position: number;
+  is_active: boolean;
+}
+
+export interface Monatswert {
+  monat: string;
+  offen_cents: number;
+  gewichtet_cents: number;
+  anzahl: number;
+}
+
+export interface Verlustanteil {
+  grund: string;
+  anzahl: number;
+  summe_cents: number;
+}
+
+export interface Produktanteil {
+  produkt: string;
+  gewonnen: number;
+  verloren: number;
+  gewonnen_cents: number;
+}
+
+export interface Prognose {
+  offen_cents: number;
+  gewichtet_cents: number;
+  anzahl_offen: number;
+  gewonnen_cents: number;
+  anzahl_gewonnen: number;
+  verloren_cents: number;
+  anzahl_verloren: number;
+  trefferquote: number | null;
+  durchschnittsdauer_tage: number | null;
+  durchschnittswert_cents: number | null;
+  monate: Monatswert[];
+  verlustgruende: Verlustanteil[];
+  produkte: Produktanteil[];
+  ueberfaellig_anzahl: number;
+  ueberfaellig_cents: number;
+}
