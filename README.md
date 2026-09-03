@@ -16,6 +16,10 @@ Der Weg vom ersten Kontakt bis zum Abschluss, durchgängig:
 - **Eingang** — Besprechungsprotokolle aus
   [Insilo](https://github.com/ska1walker/insilo) landen am passenden
   Geschäft.
+- **Zu zweit** — Sitzplätze am geteilten Olares-Zugang: Besitz, Filter
+  und Protokoll je Person, ohne zweites Konto.
+- **Anpassbar** — eigene Eigenschaften je Objekt, mehrere Pipelines mit
+  frei geordneten Stufen, Kontakte mit mehreren Firmen.
 
 Und die KI liegt nicht obendrauf, sondern an den Stellen, wo sie Arbeit
 abnimmt: eine hingetippte Gesprächsnotiz wird zu Notiz, Aufgaben,
@@ -58,7 +62,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 91
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 140
 Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
 Was fehlt, ist die Box. Das Olares-Chart lintet, rendert und bringt das

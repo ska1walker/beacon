@@ -32,6 +32,7 @@ from app.config import settings
 # Firma vor dem Kontakt stehen und die Stufe vor dem Geschäft, sonst
 # greift der Fremdschlüssel.
 TABELLEN: list[str] = [
+    "property_definitions",
     "companies",
     "pipelines",
     "pipeline_stages",
@@ -41,6 +42,7 @@ TABELLEN: list[str] = [
     "contacts",
     "deals",
     "deal_contacts",
+    "contact_companies",
     "quotes",
     "quote_items",
     "activities",

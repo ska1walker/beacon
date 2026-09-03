@@ -10,6 +10,8 @@ import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
 import { Mitgliederblock } from "@/components/mitglieder";
+import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
+import { Pipelinesblock } from "@/components/pipelines-verwalten";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -137,6 +139,10 @@ export default function EinstellungenSeite() {
         </section>
 
         <Mitgliederblock />
+
+        <Pipelinesblock />
+
+        <Eigenschaftenblock />
 
         <Absenderblock />
 

@@ -11,6 +11,10 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Stufenpille } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Eigenschaftswerteblock } from "@/components/eigenschaften";
+import { Stammdaten } from "@/components/stammdaten";
+import { KontaktFirmen } from "@/components/kontakt-firmen";
+import { STUFEN_TEXT } from "@/lib/format";
 
 /** Entwurf für eine Ansprache. Er wird hingelegt, nie versendet. */
 function Entwurfsblock({ kontaktId }: { kontaktId: string }) {
@@ -107,54 +111,32 @@ export default function KontaktSeite({ params }: { params: Promise<{ id: string 
 
       <div className="datensatz">
         <div>
-          <section className="block">
-            <div className="block-kopf">
-              <h2>Über diesen Kontakt</h2>
-              <Stufenpille stufe={k.lifecycle_stage} />
-            </div>
-            <div className="block-inhalt">
-              <dl>
-                <div className="eigenschaft">
-                  <dt>E-Mail</dt>
-                  <dd>{k.email ? <a href={`mailto:${k.email}`}>{k.email}</a> : "—"}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Telefon</dt>
-                  <dd>{k.phone ?? k.mobile ?? "—"}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Firma</dt>
-                  <dd>
-                    {k.company_id ? (
-                      <Link
-                        href={`/firmen/${k.company_id}`}
-                        style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
-                      >
-                        {k.company_name}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Kaufrolle</dt>
-                  <dd>{k.buying_role ?? "—"}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Herkunft</dt>
-                  <dd>{k.source ?? "—"}</dd>
-                </div>
-                <div className="eigenschaft">
-                  <dt>Angelegt</dt>
-                  <dd>{datum(k.created_at)}</dd>
-                </div>
-              </dl>
-              {k.notes && (
-                <p style={{ marginTop: "var(--am-raum-4)", fontSize: "0.875rem" }}>{k.notes}</p>
-              )}
-            </div>
-          </section>
+          <Stammdaten
+            titel="Über diesen Kontakt"
+            pfad={`/api/contacts/${id}`}
+            abfrageSchluessel={["kontakt", id]}
+            zurueckNach="/kontakte"
+            loeschtext="Der Kontakt wird aus allen Listen genommen. Verlauf und Zuordnungen bleiben 30 Tage wiederherstellbar."
+            kopfrechts={<Stufenpille stufe={k.lifecycle_stage} />}
+            werte={k as unknown as Record<string, unknown>}
+            felder={[
+              { key: "first_name", text: "Vorname" },
+              { key: "last_name", text: "Nachname" },
+              { key: "email", text: "E-Mail", art: "email", zeige: (v) => <a href={`mailto:${String(v)}`}>{String(v)}</a> },
+              { key: "phone", text: "Telefon" },
+              { key: "mobile", text: "Mobil" },
+              { key: "job_title", text: "Position" },
+              { key: "buying_role", text: "Kaufrolle" },
+              { key: "lifecycle_stage", text: "Stufe", art: "select", optionen: Object.entries(STUFEN_TEXT).map(([wert, text]) => ({ wert, text })) },
+              { key: "source", text: "Herkunft" },
+              { key: "linkedin_url", text: "LinkedIn" },
+              { key: "notes", text: "Notizen", art: "textarea" },
+            ]}
+          />
+
+          <KontaktFirmen kontaktId={id} />
+
+          <Eigenschaftswerteblock entity="contacts" id={id} werte={k.custom} abfrageSchluessel={["kontakt", id]} />
         </div>
 
         <Zeitleiste bezug={{ contact_id: id }} />

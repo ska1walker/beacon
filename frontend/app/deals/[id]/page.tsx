@@ -20,6 +20,7 @@ import { KiKnopf } from "@/components/ki-knopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { AngebotAnlegen } from "@/components/angebot-anlegen";
 import { Qualifizierungsblock } from "@/components/qualifizierung";
+import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Notizkasten } from "@/components/notizkasten";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
@@ -266,6 +267,8 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
               )}
             </div>
           </section>
+
+          <Eigenschaftswerteblock entity="deals" id={id} werte={d.custom} abfrageSchluessel={["deal", id]} />
 
           <Qualifizierungsblock dealId={id} />
 

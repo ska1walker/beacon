@@ -49,6 +49,19 @@ async def _standard_pipeline(conn, org_id: UUID) -> UUID:
 
 # ── Pipelines ───────────────────────────────────────────────────────────
 
+async def _custom_pruefen(conn, entity: str, werte: dict | None) -> str:
+    """Prüft eigene Eigenschaften gegen ihre Definition, gibt JSON zurück."""
+    import json
+
+    from app import eigenschaften
+
+    try:
+        geprueft = eigenschaften.pruefen(werte or {}, await eigenschaften.definitionen(conn, entity))
+    except eigenschaften.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return json.dumps(geprueft)
+
+
 @router.get("/pipelines", response_model=list[Pipeline])
 async def list_pipelines(user: CurrentUser = Depends(get_current_user)) -> list[Pipeline]:
     async with acquire_as(user.user_id) as conn:
@@ -198,8 +211,8 @@ async def create_deal(payload: DealIn, user: CurrentUser = Depends(get_current_u
             """
             insert into public.deals
               (org_id, company_id, pipeline_id, stage_id, name, product, amount_cents,
-               currency, service_days, close_date, next_step, owner_id, created_by)
-            values ($1,$2,$3,$4,$5,$6::public.deal_product,$7,$8,$9,$10,$11,$12,$13)
+               currency, service_days, close_date, next_step, owner_id, created_by, custom)
+            values ($1,$2,$3,$4,$5,$6::public.deal_product,$7,$8,$9,$10,$11,$12,$13,$14::jsonb)
             returning id
             """,
             user.org_id,
@@ -215,6 +228,7 @@ async def create_deal(payload: DealIn, user: CurrentUser = Depends(get_current_u
             payload.next_step,
             payload.owner_id or user.user_id,
             user.user_id,
+            await _custom_pruefen(conn, 'deals', payload.custom),
         )
         await audit.log_fuer(
             conn,
@@ -239,6 +253,12 @@ async def update_deal(
             400,
             "Die Stufe wird über /deals/{id}/stage verschoben — dort wird der Wechsel protokolliert.",
         )
+    if "custom" in payload.model_fields_set:
+        async with acquire_as(user.user_id) as conn:
+            import json
+
+            geprueft = json.loads(await _custom_pruefen(conn, "deals", payload.custom))
+        payload = payload.model_copy(update={"custom": geprueft})
     try:
         zuweisungen, args = build_update(payload)
     except ValueError as exc:

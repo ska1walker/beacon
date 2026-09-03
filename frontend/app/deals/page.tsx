@@ -3,9 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, suchparameter } from "@/lib/api";
 import { datum, euro } from "@/lib/format";
-import type { Board, Deal, Mitglied, Wer } from "@/lib/typen";
+import type { Board, Deal, Mitglied, Pipeline, Wer } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { DealAnlegen } from "@/components/deal-anlegen";
@@ -15,10 +15,19 @@ export default function BoardSeite() {
   const [ziel, setZiel] = useState<string | null>(null);
   const [formularOffen, setFormularOffen] = useState(false);
   const [nurMeine, setNurMeine] = useState(false);
+  // Leer = Standard-Pipeline. Die Wahl liegt in der Seite, nicht in der
+  // Adresse: Wer zurückkommt, sieht wieder den Standard — das ist der
+  // Normalfall, nicht die zweite Pipeline.
+  const [pipelineId, setPipelineId] = useState("");
+
+  const pipelines = useQuery({
+    queryKey: ["pipelines"],
+    queryFn: () => api.get<Pipeline[]>("/api/pipelines"),
+  });
 
   const abfrage = useQuery({
-    queryKey: ["board"],
-    queryFn: () => api.get<Board>("/api/board"),
+    queryKey: ["board", pipelineId],
+    queryFn: () => api.get<Board>(`/api/board${suchparameter({ pipeline_id: pipelineId })}`),
   });
 
   const wer = useQuery({
@@ -70,6 +79,21 @@ export default function BoardSeite() {
         titel={board.pipeline.name}
         zahl={`${euro(summeOffen)} offen · ${euro(gewichtetOffen)} gewichtet`}
       >
+        {(pipelines.data?.length ?? 0) > 1 && (
+          <select
+            className="input"
+            style={{ width: "auto" }}
+            aria-label="Pipeline"
+            value={pipelineId || board.pipeline.id}
+            onChange={(e) => setPipelineId(e.target.value)}
+          >
+            {pipelines.data!.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
         {(mitglieder.data?.length ?? 0) > 1 && (
           <button
             type="button"
@@ -87,6 +111,7 @@ export default function BoardSeite() {
 
       {formularOffen && (
         <DealAnlegen
+          pipelineId={board.pipeline.id}
           stufen={board.pipeline.stages}
           beiSchliessen={() => setFormularOffen(false)}
           beiErfolg={() => {

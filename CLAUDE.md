@@ -33,16 +33,20 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 
 | Teil | Zustand |
 |---|---|
-| Schema + Zeilensicherheit | 6 Migrationen, alle Fachtabellen unter FORCE |
-| Backend | 50 API-Pfade, FastAPI + asyncpg |
+| Schema + Zeilensicherheit | 9 Migrationen, alle Fachtabellen unter FORCE |
+| Backend | rund 70 API-Pfade, FastAPI + asyncpg |
 | Oberfläche | Start, Board, Angebote, Prognose, Firmen, Kontakte, Aufgaben, Fragen, Eingang, Einstellungen |
 | Angebote | Katalog, Positionen, Summen, Druckfassung mit Briefkopf |
 | Qualifizierung | sechs Felder, gerechnete Punktzahl, Verlustgründe |
 | Prognose | gewichtet, Trefferquote, Verlustanalyse, nach Produkt |
 | KI | Notiz→Struktur, Tagesbriefing, Fragen an den Bestand, Angebotsvorschlag, Qualifizierung aus dem Verlauf, Anschreiben |
 | Insilo-Kopplung | signierter Empfang, Zuordnung, Eingangskorb |
+| Zusammenarbeit | Sitzplätze am geteilten Olares-Zugang, Besitz, Filter „Nur meine" |
+| Eigene Eigenschaften | je Objekt: Text, Zahl, Datum, Ja/Nein, Auswahl — geprüft beim Schreiben |
+| Pipelines | mehrere nebeneinander, Stufen anlegen/ändern/ordnen/löschen mit Zielangabe |
+| Kontakte | anlegen, bearbeiten, löschen; Hauptfirma plus weitere Firmen |
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
-| Tests | 91 Backend, 8 Frontend |
+| Tests | 140 Backend, 8 Frontend |
 | Olares-Chart | lintet und rendert, **nie auf einer echten Box installiert** |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
@@ -162,7 +166,22 @@ der Lieferung und liest die Token über `var(--am-*)`.
 
 3. **Bei Backend-Änderungen:** Keine Auth-Logik bauen. Jede Abfrage auf
    Fachdaten läuft über `acquire_as(user_id)` — `acquire()` ohne Kontext
-   ist nur für die Erstanlage da.
+   ist nur für die Erstanlage da. Protokolliert wird mit
+   `audit.log_fuer(conn, user, …)`: Es hält Person **und** Zugang fest,
+   denn am geteilten Olares-Konto sind das zwei verschiedene Dinge.
+
+   **Zwei Menschen, ein Zugang.** Olares installiert eine App pro Nutzer;
+   ein zweites Olares-Konto kommt nicht an den Entrance. Kai und Marc
+   teilen deshalb einen Zugang, und der *Sitzplatz* (Cookie, Kopf
+   `X-Aicrm-Sitzplatz`) sagt, wem die Arbeit zugeschrieben wird. Das ist
+   Zuschreibung, keine Anmeldung — ein Sitzplatz greift nur innerhalb
+   derselben Organisation, sonst 403.
+
+   **Eigene Eigenschaften** liegen als `custom jsonb` an Firma, Kontakt
+   und Geschäft; die Datenbank sieht nur JSON. Geprüft wird beim Schreiben
+   in `app/eigenschaften.py` gegen die Definition. PATCH führt zusammen
+   (`custom || $n`), `null` löscht einen Wert. Typ und Schlüssel einer
+   Definition sind nach dem Anlegen fest.
 
 4. **Bei UI-Arbeit:** Erst schauen, ob `globals.css` das Bauteil schon
    hat. Werte nie am Bauteil setzen.

@@ -11,6 +11,11 @@ import { Stufenpille, Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { KiKnopf } from "@/components/ki-knopf";
 import { Notizkasten } from "@/components/notizkasten";
+import { Eigenschaftswerteblock } from "@/components/eigenschaften";
+import { Stammdaten } from "@/components/stammdaten";
+import { KontaktAnlegen } from "@/components/kontakt-anlegen";
+import { STUFEN_TEXT } from "@/lib/format";
+import { useState } from "react";
 import { Fehler, Laedt } from "@/components/zustaende";
 
 function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
@@ -24,6 +29,7 @@ function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
 
 export default function FirmaSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const [kontaktOffen, setKontaktOffen] = useState(false);
 
   const firma = useQuery({
     queryKey: ["firma", id],
@@ -55,44 +61,37 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
         />
       </Seitenkopf>
 
+      {kontaktOffen && (
+        <KontaktAnlegen firmaId={id} beiSchliessen={() => setKontaktOffen(false)} beiErfolg={() => { setKontaktOffen(false); kontakte.refetch(); }} />
+      )}
+
       <div className="datensatz">
         {/* Links: was die Firma ist */}
         <div>
-          <section className="block">
-            <div className="block-kopf">
-              <h2>Über diese Firma</h2>
-              <Stufenpille stufe={f.lifecycle_stage} />
-            </div>
-            <div className="block-inhalt">
-              <dl>
-                <Eigenschaft
-                  name="Domain"
-                  wert={
-                    f.domain ? (
-                      <a
-                        href={`https://${f.domain}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}
-                      >
-                        {f.domain}
-                      </a>
-                    ) : null
-                  }
-                />
-                <Eigenschaft name="Branche" wert={f.industry} />
-                <Eigenschaft name="Mitarbeiter" wert={f.employee_count} />
-                <Eigenschaft name="Ort" wert={f.city} />
-                <Eigenschaft name="Herkunft" wert={f.source} />
-                <Eigenschaft name="Angelegt" wert={datum(f.created_at)} />
-              </dl>
-              {f.description && (
-                <p style={{ marginTop: "var(--am-raum-4)", fontSize: "0.875rem" }}>
-                  {f.description}
-                </p>
-              )}
-            </div>
-          </section>
+          <Stammdaten
+            titel="Über diese Firma"
+            pfad={`/api/companies/${id}`}
+            abfrageSchluessel={["firma", id]}
+            zurueckNach="/firmen"
+            loeschtext="Die Firma wird aus allen Listen genommen. Kontakte und Geschäfte bleiben bestehen und lassen sich 30 Tage wiederherstellen."
+            kopfrechts={<Stufenpille stufe={f.lifecycle_stage} />}
+            werte={f as unknown as Record<string, unknown>}
+            felder={[
+              { key: "name", text: "Name" },
+              { key: "domain", text: "Domain", zeige: (v) => <a href={`https://${String(v)}`} target="_blank" rel="noreferrer noopener" style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>{String(v)}</a> },
+              { key: "industry", text: "Branche" },
+              { key: "employee_count", text: "Mitarbeiter", art: "number" },
+              { key: "street", text: "Straße" },
+              { key: "postal_code", text: "PLZ" },
+              { key: "city", text: "Ort" },
+              { key: "phone", text: "Telefon" },
+              { key: "lifecycle_stage", text: "Stufe", art: "select", optionen: Object.entries(STUFEN_TEXT).map(([wert, text]) => ({ wert, text })) },
+              { key: "source", text: "Herkunft" },
+              { key: "description", text: "Beschreibung", art: "textarea" },
+            ]}
+          />
+
+          <Eigenschaftswerteblock entity="companies" id={id} werte={f.custom} abfrageSchluessel={["firma", id]} />
 
           {f.ai_summary && (
             <section className="block">
@@ -147,7 +146,7 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
           <section className="block">
             <div className="block-kopf">
               <h2>Kontakte</h2>
-              <span className="board-spalte-anzahl">{kontakte.data?.length ?? 0}</span>
+              <button type="button" className="btn btn-still btn-klein" onClick={() => setKontaktOffen(true)}>Anlegen</button>
             </div>
             <div className="block-inhalt">
               {kontakte.data?.length === 0 && (

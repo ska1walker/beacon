@@ -10,10 +10,12 @@ import type { Contact } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Stufenpille } from "@/components/stufe";
 import { Fehler, Laedt, Leer } from "@/components/zustaende";
+import { KontaktAnlegen } from "@/components/kontakt-anlegen";
 
 export default function KontakteSeite() {
   const router = useRouter();
   const [suche, setSuche] = useState("");
+  const [offen, setOffen] = useState(false);
 
   const abfrage = useQuery({
     queryKey: ["kontakte", suche],
@@ -22,10 +24,15 @@ export default function KontakteSeite() {
 
   return (
     <>
-      <Seitenkopf
-        titel="Kontakte"
-        zahl={abfrage.data ? `${abfrage.data.length} Einträge` : undefined}
-      />
+      <Seitenkopf titel="Kontakte" zahl={abfrage.data ? `${abfrage.data.length} Einträge` : undefined}>
+        <button type="button" className="btn btn-primaer" onClick={() => setOffen(true)}>
+          Kontakt anlegen
+        </button>
+      </Seitenkopf>
+
+      {offen && (
+        <KontaktAnlegen beiSchliessen={() => setOffen(false)} beiErfolg={(id) => { setOffen(false); router.push(`/kontakte/${id}`); }} />
+      )}
 
       <div className="werkzeugleiste">
         <div className="suchfeld">

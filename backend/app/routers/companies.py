@@ -30,6 +30,19 @@ where c.deleted_at is null
 """
 
 
+async def _custom_pruefen(conn, entity: str, werte: dict | None) -> str:
+    """Prüft eigene Eigenschaften gegen ihre Definition, gibt JSON zurück."""
+    import json
+
+    from app import eigenschaften
+
+    try:
+        geprueft = eigenschaften.pruefen(werte or {}, await eigenschaften.definitionen(conn, entity))
+    except eigenschaften.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return json.dumps(geprueft)
+
+
 @router.get("", response_model=list[Company])
 async def list_companies(
     user: CurrentUser = Depends(get_current_user),
@@ -76,8 +89,8 @@ async def create_company(
             """
             insert into public.companies
               (org_id, name, domain, industry, employee_count, city, country, phone,
-               website, lifecycle_stage, source, description, owner_id, created_by)
-            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14)
+               website, lifecycle_stage, source, description, owner_id, created_by, custom)
+            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14,$15::jsonb)
             returning id
             """,
             user.org_id,
@@ -94,6 +107,7 @@ async def create_company(
             payload.description,
             payload.owner_id or user.user_id,
             user.user_id,
+            await _custom_pruefen(conn, 'companies', payload.custom),
         )
         await audit.log_fuer(
             conn,
@@ -113,6 +127,12 @@ async def update_company(
     payload: CompanyPatch,
     user: CurrentUser = Depends(get_current_user),
 ) -> Company:
+    if "custom" in payload.model_fields_set:
+        async with acquire_as(user.user_id) as conn:
+            import json
+
+            geprueft = json.loads(await _custom_pruefen(conn, "companies", payload.custom))
+        payload = payload.model_copy(update={"custom": geprueft})
     try:
         zuweisungen, args = build_update(payload)
     except ValueError as exc:

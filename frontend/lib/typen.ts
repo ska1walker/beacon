@@ -27,6 +27,7 @@ export type StageKind = "open" | "won" | "lost";
 
 export interface Company {
   id: string;
+  custom: Eigenschaftswerte;
   name: string;
   domain: string | null;
   industry: string | null;
@@ -52,6 +53,7 @@ export interface Company {
 
 export interface Contact {
   id: string;
+  custom: Eigenschaftswerte;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -87,6 +89,7 @@ export interface Pipeline {
 
 export interface Deal {
   id: string;
+  custom: Eigenschaftswerte;
   name: string;
   company_id: string | null;
   company_name: string | null;
@@ -467,4 +470,30 @@ export interface Wer {
   org_id: string;
   login_username: string;
   sitzplatz_gewaehlt: boolean;
+}
+
+export type PropertyKind = "text" | "number" | "date" | "bool" | "select";
+export type PropertyEntity = "companies" | "contacts" | "deals";
+
+export interface PropertyDefinition {
+  id: string;
+  entity: PropertyEntity;
+  key: string;
+  label: string;
+  kind: PropertyKind;
+  options: string[];
+  description: string | null;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+/** Werte eigener Eigenschaften — Schlüssel = key der Definition. */
+export type Eigenschaftswerte = Record<string, string | number | boolean | null>;
+
+export interface Firmenverknuepfung {
+  company_id: string;
+  company_name: string;
+  role: string | null;
+  ist_haupt: boolean;
 }

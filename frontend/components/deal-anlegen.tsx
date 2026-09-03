@@ -19,11 +19,13 @@ const LISTENPREIS: Record<DealProduct, number> = {
 };
 
 export function DealAnlegen({
+  pipelineId,
   stufen,
   firmaId,
   beiSchliessen,
   beiErfolg,
 }: {
+  pipelineId?: string;
   stufen: Stage[];
   firmaId?: string;
   beiSchliessen: () => void;
@@ -47,6 +49,7 @@ export function DealAnlegen({
       api.post<Deal>("/api/deals", {
         name,
         product: produkt,
+        pipeline_id: pipelineId ?? null,
         amount_cents: Math.round(Number(betrag || 0) * 100),
         company_id: firma || null,
         stage_id: stufe || null,

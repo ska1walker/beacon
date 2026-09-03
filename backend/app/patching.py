@@ -5,6 +5,7 @@ ein Client kann hier also keinen eigenen Spaltennamen unterschieben. Was
 nicht im Modell steht, erreicht die Datenbank nicht.
 """
 
+import json
 from typing import Any
 
 from pydantic import BaseModel
@@ -31,6 +32,14 @@ def build_update(payload: BaseModel) -> tuple[str, list[Any]]:
     zuweisungen: list[str] = []
     args: list[Any] = []
     for name, wert in felder.items():
+        if name == "custom":
+            # Zusammenführen statt ersetzen: Wer eine Eigenschaft ändert,
+            # schickt nur diese eine — die anderen sollen stehen bleiben.
+            # Ein `null` im JSON überschreibt den alten Wert mit null und
+            # ist damit der Weg, eine Eigenschaft wieder leer zu bekommen.
+            args.append(json.dumps(wert or {}))
+            zuweisungen.append(f"custom = custom || ${len(args)}::jsonb")
+            continue
         args.append(wert)
         zuweisungen.append(f"{name} = ${len(args)}{CASTS.get(name, '')}")
     return ", ".join(zuweisungen), args

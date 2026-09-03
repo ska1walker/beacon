@@ -111,7 +111,8 @@ async def _suchen(conn, begriffe: list[str], grenze: int) -> list[Fundstelle]:
         from public.companies
         where deleted_at is null
           and (name ilike any($1) or industry ilike any($1) or city ilike any($1)
-               or description ilike any($1) or ai_summary ilike any($1))
+               or description ilike any($1) or ai_summary ilike any($1)
+               or custom::text ilike any($1))
         limit $2
         """,
         muster,
@@ -137,7 +138,8 @@ async def _suchen(conn, begriffe: list[str], grenze: int) -> list[Fundstelle]:
         where k.deleted_at is null
           and (k.first_name ilike any($1) or k.last_name ilike any($1)
                or k.job_title ilike any($1) or k.email ilike any($1)
-               or k.notes ilike any($1) or f.name ilike any($1))
+               or k.notes ilike any($1) or f.name ilike any($1)
+               or k.custom::text ilike any($1))
         limit $2
         """,
         muster,
@@ -164,7 +166,8 @@ async def _suchen(conn, begriffe: list[str], grenze: int) -> list[Fundstelle]:
         where d.deleted_at is null
           and (d.name ilike any($1) or d.next_step ilike any($1) or d.bedarf ilike any($1)
                or d.ausloeser ilike any($1) or d.entscheider ilike any($1)
-               or f.name ilike any($1) or d.product::text ilike any($1))
+               or f.name ilike any($1) or d.product::text ilike any($1)
+               or d.custom::text ilike any($1))
         limit $2
         """,
         muster,

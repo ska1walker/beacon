@@ -22,11 +22,13 @@ from app.routers import (
     companies,
     contacts,
     deals,
+    eigenschaften,
     eingang,
     fragen,
     ki,
     mitglieder,
     notiz,
+    pipelines,
     tasks,
 )
 from app.routers import qualifizierung as qualifizierung_router
@@ -140,6 +142,8 @@ app.include_router(fragen.router)
 app.include_router(eingang.router)
 app.include_router(eingang.quellen_router)
 app.include_router(mitglieder.router)
+app.include_router(eigenschaften.router)
+app.include_router(pipelines.router)
 app.include_router(sicherung_router.router)
 
 

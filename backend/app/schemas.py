@@ -6,10 +6,32 @@ Umrechnungen hinweg nicht mehr exakt.
 """
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def _json_dict(wert: Any) -> dict[str, Any]:
+    """asyncpg liefert jsonb als Text — die Oberfläche braucht ein Objekt."""
+    import orjson
+
+    if wert is None or wert == "":
+        return {}
+    if isinstance(wert, str | bytes):
+        return orjson.loads(wert)
+    return wert
+
+
+class MitEigenschaften(BaseModel):
+    """Eigene Eigenschaften, Schlüssel = key der Definition (siehe 0008)."""
+
+    custom: dict[str, Any] = {}
+
+    @field_validator("custom", mode="before")
+    @classmethod
+    def _custom_lesen(cls, wert: Any) -> dict[str, Any]:
+        return _json_dict(wert)
 
 LifecycleStage = Literal["lead", "qualified", "opportunity", "customer", "partner", "disqualified"]
 DealProduct = Literal["assistent", "analyst", "experte", "service", "sonstiges"]
@@ -21,7 +43,7 @@ StageKind = Literal["open", "won", "lost"]
 
 # ── Firmen ──────────────────────────────────────────────────────────────
 
-class CompanyIn(BaseModel):
+class CompanyIn(MitEigenschaften):
     name: str = Field(min_length=1, max_length=200)
     domain: str | None = None
     industry: str | None = None
@@ -53,6 +75,7 @@ class CompanyPatch(BaseModel):
     source: str | None = None
     description: str | None = None
     owner_id: UUID | None = None
+    custom: dict[str, Any] | None = None
 
 
 class Company(CompanyIn):
@@ -70,7 +93,7 @@ class Company(CompanyIn):
 
 # ── Kontakte ────────────────────────────────────────────────────────────
 
-class ContactIn(BaseModel):
+class ContactIn(MitEigenschaften):
     first_name: str | None = None
     last_name: str | None = None
     email: EmailStr | None = None
@@ -100,6 +123,7 @@ class ContactPatch(BaseModel):
     source: str | None = None
     notes: str | None = None
     owner_id: UUID | None = None
+    custom: dict[str, Any] | None = None
 
 
 class Contact(ContactIn):
@@ -129,7 +153,7 @@ class Pipeline(BaseModel):
 
 # ── Deals ───────────────────────────────────────────────────────────────
 
-class DealIn(BaseModel):
+class DealIn(MitEigenschaften):
     name: str = Field(min_length=1, max_length=200)
     company_id: UUID | None = None
     pipeline_id: UUID | None = None
@@ -154,9 +178,10 @@ class DealPatch(BaseModel):
     next_step: str | None = None
     lost_reason: str | None = None
     owner_id: UUID | None = None
+    custom: dict[str, Any] | None = None
 
 
-class Deal(BaseModel):
+class Deal(MitEigenschaften):
     id: UUID
     name: str
     company_id: UUID | None = None
