@@ -1436,6 +1436,110 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline-offset: 1px;
   }
 
+  /* ── Tagesbriefing ────────────────────────────────────────────────
+     Gruppen mit einer Erklärzeile. Ohne sie wüsste niemand, warum ein
+     Geschäft in der Liste steht — und eine Liste, deren Regel man nicht
+     kennt, glaubt man nicht. */
+  .briefing-gruppe + .briefing-gruppe {
+    margin-top: var(--am-raum-6);
+    padding-top: var(--am-raum-4);
+    border-top: 1px solid var(--am-trennlinie);
+  }
+
+  .briefing-titel {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--am-text-primaer);
+    margin: 0 0 2px;
+  }
+
+  .briefing-erklaerung {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    margin: 0 0 var(--am-raum-2);
+  }
+
+  .briefing-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .briefing-zeile + .briefing-zeile {
+    border-top: 1px solid var(--am-trennlinie);
+  }
+
+  .briefing-link {
+    display: flex;
+    align-items: baseline;
+    gap: var(--am-raum-3);
+    flex-wrap: wrap;
+    padding: var(--am-raum-2) var(--am-raum-2);
+    border-radius: var(--am-radius-klein);
+    font-size: 0.875rem;
+    color: var(--am-text-primaer);
+  }
+
+  a.briefing-link:hover { background: var(--am-flaeche-2); }
+
+  .briefing-hinweis {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .briefing-betrag {
+    margin-left: auto;
+    font-family: var(--am-schrift-mono);
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  /* ── Fundstellen ──────────────────────────────────────────────────
+     Nummeriert, weil die Antwort auf die Nummern verweist. Ohne die
+     Zuordnung wäre die Belegkette nur eine Behauptung. */
+  .fundstellen {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .fundstellen li {
+    padding: var(--am-raum-3) 0;
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .fundstellen li:last-child { border-bottom: none; }
+
+  .fundstelle-kopf {
+    display: flex;
+    align-items: baseline;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--am-raum-1);
+  }
+
+  .fundstelle-nummer {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.75rem;
+    color: var(--am-gold-beschriftung);
+    font-weight: 600;
+  }
+
+  .fundstelle-titel {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--am-text-primaer);
+  }
+
+  a.fundstelle-titel:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   /* ── Balken ───────────────────────────────────────────────────────
      Sechs Balken rechtfertigen keine Diagrammbibliothek. Eine Breite in
      Prozent sagt dasselbe und kostet nichts. */

@@ -1,22 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { api } from "@/lib/api";
-import { datum, euro } from "@/lib/format";
-import type { Board, Task } from "@/lib/typen";
+import { euro } from "@/lib/format";
+import type { Board } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Tagesbriefing } from "@/components/briefing";
 
 export default function StartSeite() {
   const board = useQuery({
     queryKey: ["board"],
     queryFn: () => api.get<Board>("/api/board"),
-  });
-
-  const aufgaben = useQuery({
-    queryKey: ["aufgaben", "open"],
-    queryFn: () => api.get<Task[]>("/api/tasks?status=open"),
   });
 
   if (board.isPending) return <Laedt />;
@@ -65,56 +60,8 @@ export default function StartSeite() {
       </dl>
 
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-        <section className="block">
-          <div className="block-kopf">
-            <h2>Was ansteht</h2>
-            <Link href="/aufgaben" style={{ fontSize: "0.8125rem" }}>
-              alle Aufgaben
-            </Link>
-          </div>
-          <div className="block-inhalt">
-            {aufgaben.data?.length === 0 && (
-              <p style={{ fontSize: "0.875rem", color: "var(--am-text-gedaempft)" }}>
-                Nichts offen.
-              </p>
-            )}
-            <dl>
-              {aufgaben.data?.slice(0, 6).map((a) => (
-                <div className="eigenschaft" key={a.id}>
-                  <dt>{a.due_at ? datum(a.due_at) : "ohne Frist"}</dt>
-                  <dd>{a.title}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </section>
+        <Tagesbriefing />
 
-        {ueberfaellig.length > 0 && (
-          <section className="block">
-            <div className="block-kopf">
-              <h2>Überfällige Geschäfte</h2>
-            </div>
-            <div className="block-inhalt">
-              {ueberfaellig.map((d) => (
-                <Link
-                  key={d.id}
-                  href={`/deals/${d.id}`}
-                  className="deal-karte"
-                  style={{ marginBottom: "var(--am-raum-2)" }}
-                >
-                  <div className="deal-karte-name">{d.name}</div>
-                  <div className="deal-karte-firma">{d.company_name ?? "Ohne Firma"}</div>
-                  <div className="deal-karte-fuss">
-                    <span className="deal-karte-betrag">{euro(d.amount_cents)}</span>
-                    <span className="deal-karte-datum" data-ueberfaellig="true">
-                      {datum(d.close_date)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </>
   );

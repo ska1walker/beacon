@@ -8,6 +8,7 @@ würde genau das nicht prüfen, worauf es ankommt.
 
 import os
 import pathlib
+import tempfile
 
 # Vor jedem Import aus app: die Einstellungen werden beim Laden des Moduls
 # gelesen, ein späteres Setzen käme zu spät.
@@ -16,6 +17,13 @@ os.environ["DB_USER"] = os.environ.get("TEST_DB_USER", "aicrm")
 os.environ["DB_PASSWORD"] = os.environ.get("TEST_DB_PASSWORD", "aicrm_dev_only")
 os.environ["DB_HOST"] = os.environ.get("TEST_DB_HOST", "localhost")
 os.environ["DEV_USER"] = ""
+
+# Eigener Ablagepfad für die Tests. Ohne ihn läse die Anwendung den
+# Sicherungsordner der Entwicklungsumgebung — und die erste Organisation
+# einer frischen Testdatenbank stellte sich daraus wieder her. Der
+# Wiederanlauf funktionierte also zu gut: Er machte jeden Test unsauber,
+# der von einer leeren Datenbank ausging.
+os.environ["APP_DATA_DIR"] = tempfile.mkdtemp(prefix="aicrm-test-daten-")
 os.environ["LLM_BASE_URL"] = ""
 os.environ["LLM_API_KEY"] = ""
 os.environ["LLM_MODEL"] = ""

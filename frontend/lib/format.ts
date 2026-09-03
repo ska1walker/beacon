@@ -114,3 +114,11 @@ export const ANGEBOT_STATUS_ART: Record<string, "open" | "won" | "lost"> = {
   rejected: "lost",
   expired: "lost",
 };
+
+/**
+ * Ein/Mehrzahl. Klein, aber „1 Punkte" liest sich wie ein Fehler — und
+ * genau so wirkt es auch auf den Rest der Anwendung.
+ */
+export function anzahl(n: number, einzahl: string, mehrzahl: string): string {
+  return `${n} ${n === 1 ? einzahl : mehrzahl}`;
+}

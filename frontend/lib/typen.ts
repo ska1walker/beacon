@@ -361,3 +361,61 @@ export interface Prognose {
   ueberfaellig_anzahl: number;
   ueberfaellig_cents: number;
 }
+
+export interface Aufgabenvorschlag {
+  titel: string;
+  faellig_am: string | null;
+}
+
+export interface Notizvorschlag {
+  art: ActivityKind;
+  betreff: string;
+  zusammenfassung: string;
+  aufgaben: Aufgabenvorschlag[];
+  naechster_schritt: string | null;
+  qualifizierung: Qualifizierung | null;
+  qualifikation_punkte: number | null;
+  unbekannte_personen: string[];
+  modell: string;
+}
+
+export interface Uebernahmebilanz {
+  aktivitaet_id: string;
+  aufgaben: number;
+  naechster_schritt_gesetzt: boolean;
+  qualifizierung_gesetzt: boolean;
+}
+
+export interface Posten {
+  art: string;
+  titel: string;
+  hinweis: string | null;
+  deal_id: string | null;
+  company_id: string | null;
+  betrag_cents: number | null;
+  tage: number | null;
+}
+
+export interface Briefing {
+  stand: string;
+  faellige_aufgaben: Posten[];
+  ueberfaellige_geschaefte: Posten[];
+  verstummte_geschaefte: Posten[];
+  ablaufende_angebote: Posten[];
+  ohne_naechsten_schritt: Posten[];
+  gesamt: number;
+}
+
+export interface Fundstelle {
+  art: string;
+  id: string | null;
+  titel: string;
+  text: string;
+}
+
+export interface Frageantwort {
+  antwort: string;
+  fundstellen: Fundstelle[];
+  modell: string;
+  hinweis: string | null;
+}

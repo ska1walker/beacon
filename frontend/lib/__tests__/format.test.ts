@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { euro, euroGenau, prozent, personName, initialen } from "@/lib/format";
+import { anzahl, euro, euroGenau, prozent, personName, initialen } from "@/lib/format";
 
 /**
  * Intl setzt vor das Währungszeichen ein geschütztes Leerzeichen (U+00A0),
@@ -56,5 +56,14 @@ describe("Anzeige", () => {
   it("bildet Initialen", () => {
     expect(initialen("Andrea", "Vosskamp")).toBe("AV");
     expect(initialen(null, null)).toBe("?");
+  });
+});
+
+describe("Ein- und Mehrzahl", () => {
+  it("schreibt bei eins die Einzahl", () => {
+    // „1 Punkte" liest sich wie ein Fehler — und wirkt so auf den Rest.
+    expect(anzahl(1, "Punkt", "Punkte")).toBe("1 Punkt");
+    expect(anzahl(0, "Punkt", "Punkte")).toBe("0 Punkte");
+    expect(anzahl(2, "Punkt", "Punkte")).toBe("2 Punkte");
   });
 });

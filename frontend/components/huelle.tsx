@@ -8,6 +8,7 @@ import {
   FileText,
   Handshake,
   LayoutDashboard,
+  MessageCircleQuestion,
   TrendingUp,
   Settings,
   Users,
@@ -25,6 +26,7 @@ const ZIELE = [
   { pfad: "/firmen", text: "Firmen", Zeichen: Building2 },
   { pfad: "/kontakte", text: "Kontakte", Zeichen: Users },
   { pfad: "/aufgaben", text: "Aufgaben", Zeichen: CheckSquare },
+  { pfad: "/fragen", text: "Fragen", Zeichen: MessageCircleQuestion },
 ];
 
 const NACHRANGIG = [{ pfad: "/einstellungen", text: "Einstellungen", Zeichen: Settings }];

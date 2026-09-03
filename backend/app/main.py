@@ -15,7 +15,18 @@ from fastapi.responses import JSONResponse
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
-from app.routers import activities, angebote, companies, contacts, deals, ki, tasks
+from app.routers import (
+    activities,
+    angebote,
+    briefing,
+    companies,
+    contacts,
+    deals,
+    fragen,
+    ki,
+    notiz,
+    tasks,
+)
 from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
@@ -121,6 +132,9 @@ app.include_router(activities.router)
 app.include_router(tasks.router)
 app.include_router(settings_router.router)
 app.include_router(ki.router)
+app.include_router(notiz.router)
+app.include_router(briefing.router)
+app.include_router(fragen.router)
 app.include_router(sicherung_router.router)
 
 

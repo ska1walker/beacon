@@ -10,6 +10,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Stufenpille, Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { KiKnopf } from "@/components/ki-knopf";
+import { Notizkasten } from "@/components/notizkasten";
 import { Fehler, Laedt } from "@/components/zustaende";
 
 function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
@@ -108,7 +109,10 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
         </div>
 
         {/* Mitte: was passiert ist */}
-        <Zeitleiste bezug={{ company_id: id }} />
+        <div>
+          <Notizkasten bezug={{ company_id: id }} />
+          <Zeitleiste bezug={{ company_id: id }} />
+        </div>
 
         {/* Rechts: was daranhängt */}
         <div>

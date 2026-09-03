@@ -20,6 +20,7 @@ import { KiKnopf } from "@/components/ki-knopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { AngebotAnlegen } from "@/components/angebot-anlegen";
 import { Qualifizierungsblock } from "@/components/qualifizierung";
+import { Notizkasten } from "@/components/notizkasten";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -268,7 +269,10 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
           )}
         </div>
 
-        <Zeitleiste bezug={{ deal_id: id }} />
+        <div>
+          <Notizkasten bezug={{ deal_id: id, company_id: d.company_id ?? undefined }} />
+          <Zeitleiste bezug={{ deal_id: id }} />
+        </div>
 
         <div>
           <section className="block">
