@@ -51,8 +51,8 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Anreicherung | Firmen und Kontakte aus Website, Suchdienst und LinkedIn-Treffern; jeder Wert mit Quelle, Kontaktdaten nur wörtlich belegt, nie überschreiben; leere Felder von selbst, Rest als Vorschlag |
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
 | Tests | 164 Backend, 8 Frontend |
-| Olares-Chart | lintet (`helm` und `olares-cli chart lint`), rendert, **läuft seit 3.9.2026 auf Kais Box** (0.1.2, Upload-Quelle) |
-| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag **live** in `bayerhazard/aimighty-market` (0.1.2); Icon nach Marcs Idee 6 (`docs/icon/`) |
+| Olares-Chart | lintet (`helm` und `olares-cli chart lint`), rendert, **läuft seit 3.9.2026 auf Kais Box** (0.1.3, Upload-Quelle) |
+| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag **live** in `bayerhazard/aimighty-market` (0.1.3); Icon nach Marcs Idee 6 (`docs/icon/`) |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
 E-Mail-Versand aus der Anwendung, Kampagnen und Sequenzen, Kalender-
