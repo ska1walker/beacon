@@ -223,3 +223,61 @@ ab — der Knopf am Datensatz bleibt.
 Jeder Lauf liegt in `anreicherungen`: gelesene Adressen mit Bytes,
 gestellte Suchanfragen, Vorschlag, Übernommenes. Das ist der Nachweis,
 was die Box verlassen hat.
+
+## Veröffentlichen — Abbilder, Chart, Markt
+
+Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an
+**drei** Stellen und muss überall gleich sein — `scripts/check-chart.sh`
+bricht sonst ab:
+
+- `olares/Chart.yaml` → `version` **und** `appVersion`
+- `olares/OlaresManifest.yaml` → `metadata.version` **und** `spec.versionName`
+
+Der Image-Tag steht nirgends: Er folgt `Chart.AppVersion`
+(`values.yaml` trägt `tag: ""`). Das ist Absicht — Olares spielt beim
+Aktualisieren die Werte der Erstinstallation zurück, die Chart-Metadaten
+kommen frisch an (Insilo v0.1.80, ausführlich in
+`insilo/docs/HANDOFF.md`).
+
+```bash
+# 1. Version an den drei Stellen setzen, prüfen, committen
+bash scripts/check-chart.sh
+git commit -am "release: v0.1.1"
+
+# 2. Tag pushen — release.yml baut ghcr.io/ska1walker/aicrm-{frontend,backend}:0.1.1
+#    (öffentlich, amd64) und legt dist/aicrm-0.1.1.tgz als Artefakt ab
+git tag v0.1.1 && git push origin main v0.1.1
+gh run watch
+
+# 3. Chart packen und mit dem Olares-Prüfer ansehen — immer das Paket,
+#    nie den Ordner (der Prüfer verlangt Ordnername == Chart-Name)
+helm package olares -d dist
+olares-cli chart lint dist/aicrm-0.1.1.tgz --with-rbac --with-security-context
+
+# 4. Auf der eigenen Box installieren, bevor irgendetwas in einen Markt geht
+olares-cli profile login --olares-id <id>       # macht Kai selbst (Browser, TOTP)
+olares-cli market upload dist/aicrm-0.1.1.tgz
+olares-cli market install aicrm
+```
+
+**Erst ausrollen, dann hochladen.** Eine App, die nie `running`
+erreicht hat, gehört in keinen Katalog.
+
+**Der Markt** ist die eigene Quelle von aimighty
+(`bayerhazard/aimighty-market`, Cloudflare Pages). Ein Eintrag besteht
+aus dem Block in `functions/_apps.ts` und dem base64-gepackten Chart
+unter dem Schlüssel `aicrm-<version>.tgz` in `functions/_lib.ts`. Kai
+hat dort nur Leserechte — der Weg ist Fork, Branch, Pull Request an
+Marc. Vor dem PR alle vier Endpunkte lokal beweisen
+(`npx wrangler pages dev functions --port 8788`): `/api/v1/appstore/info`
+listet die App, `/api/v1/applications/aicrm/chart` liefert die Bytes
+sha256-gleich, `/api/v1/appstore/hash` hat sich bewegt. Insilos
+Einreichung (PR #1 dort) ist die Vorlage; die Regeln stehen im Skill
+`insilo/.claude/skills/olares-release/SKILL.md`.
+
+**Was auf der Box noch offen ist:** die Empfangspfade
+`/api/eingang/…` und `/api/post/eingang/…` liegen hinter dem
+Envoy-Sidecar des Frontends. Insilo und Relay rufen sie ohne
+Authelia-Keks — dafür braucht es voraussichtlich eine `options.policies`-
+Regel mit `level: public` für genau diese Pfade. Das lässt sich nur auf
+einer echten Box messen.

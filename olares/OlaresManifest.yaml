@@ -114,11 +114,40 @@ spec:
   requiredCpu: '0.2'
   limitedCpu: '2'
 
+  # Nur amd64: release.yml baut nur dafür. Ein arm64-Versprechen ohne
+  # Abbild dahinter wäre ein Installationsfehler, der erst auf der
+  # falschen Box auffällt.
   supportArch:
     - amd64
-    - arm64
 
 options:
+  # apiVersion v3 verlangt genau diese Form: offen nach oben, mit '-0',
+  # damit Tages- und RC-Builds der Box (1.12.6-2026…) mitzählen. Ein
+  # geschlossenes Intervall hat Insilo einmal genau von der Version
+  # ausgesperrt, auf der die Box lief.
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+
+  allowMultipleInstall: false
+
+  # Ausgehend: HTTPS zum Sprachmodell (auf der Box über dessen öffentliche
+  # Adresse), zu den Websites der Firmen für die Anreicherung, zum
+  # Suchdienst und zu Relay. Port 80 nur, weil Firmen-Websites noch
+  # gelegentlich per http antworten und erst dann auf https umleiten.
+  allowedOutboundPorts:
+    - 443
+    - 80
+
+  # Nie als root — die Abbilder laufen mit UID 1000.
+  runAsUser: "1000"
+
+  # Je Nutzer installiert. Olares setzt damit das ns-owner-Label, das die
+  # NetworkPolicy zu Postgres und Authelia öffnet.
+  appScope:
+    clusterScoped: false
+
   policies:
     - uriRegex: '/'
       level: two_factor

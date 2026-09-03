@@ -1,0 +1,141 @@
+name: release
+
+# Baut die beiden Abbilder bei jedem Tag wie v0.1.0 und legt sie öffentlich
+# unter ghcr.io/<owner>/aicrm-<dienst>:<version> ab, damit die Olares-Box
+# sie ohne Zugangsdaten zieht. Dazu das gepackte Chart als Artefakt —
+# das ist die Datei, die in den Markt geht.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image tag without leading v (e.g. 0.1.0)"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  preflight:
+    name: olares chart · sanity
+    runs-on: ubuntu-latest
+    outputs:
+      build_images: ${{ steps.decide.outputs.build_images }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.16.2"
+
+      - name: codified Olares lessons (scripts/check-chart.sh)
+        run: bash scripts/check-chart.sh
+
+      - name: chart version must match the tag
+        if: github.event_name == 'push'
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CHART_VERSION="$(grep -E '^version:' olares/Chart.yaml | head -1 | awk '{print $2}')"
+          if [ "$TAG_VERSION" != "$CHART_VERSION" ]; then
+            echo "::error::git tag $GITHUB_REF_NAME (=$TAG_VERSION) does not match olares/Chart.yaml version $CHART_VERSION"
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches chart version $CHART_VERSION"
+
+      # Ein leerer Tag in values.yaml heißt „folgt Chart.AppVersion" — der
+      # Normalfall, das Chart referenziert dann genau diesen Tag. Ein
+      # gesetzter Tag ist ein Pin auf eine Vorversion: Die Abbilder gibt es
+      # schon, nichts bauen.
+      - name: are images needed for this tag?
+        id: decide
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          BUILD=true
+          PINS="$(grep -E "^[[:space:]]+tag:" olares/values.yaml | grep -vE 'tag:[[:space:]]*(""|'"''"')[[:space:]]*$' || true)"
+          if [ -n "$PINS" ] \
+             && ! grep -qE "^[[:space:]]+tag:[[:space:]]*[\"']?${TAG_VERSION}[\"']?[[:space:]]*$" olares/values.yaml; then
+            BUILD=false
+          fi
+          echo "build_images=$BUILD" >> "$GITHUB_OUTPUT"
+          if [ "$BUILD" = "true" ]; then
+            echo "### Images werden gebaut (\`$TAG_VERSION\`)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Image-Build übersprungen — values.yaml pinnt eine Vorversion" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: package chart
+        run: |
+          mkdir -p dist
+          helm package olares -d dist
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: dist/*.tgz
+          if-no-files-found: error
+
+  build:
+    name: ${{ matrix.service }}
+    needs: preflight
+    if: needs.preflight.outputs.build_images == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+          - service: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version
+        id: ver
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lowercase owner
+        id: owner
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Nur amd64 — das Manifest verspricht auch nur das. Ein Next.js-Bau
+      # unter QEMU für arm64 dauert eine halbe Stunde, und keine Box, die
+      # dieses CRM bekommt, ist eine ARM-Maschine.
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/aicrm-${{ matrix.service }}:${{ steps.ver.outputs.version }}
+            ghcr.io/${{ steps.owner.outputs.owner }}/aicrm-${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
