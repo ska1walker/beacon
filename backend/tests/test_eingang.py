@@ -295,3 +295,61 @@ async def test_fremder_eingang_bleibt_unsichtbar(datenbank):
 
         assert (await b.get("/api/eingang")).json() == []
         assert (await b.get("/api/eingang?status=zugeordnet")).json() == []
+
+
+async def test_dieselbe_besprechung_zweimal_zeigt_auf_dieselbe_aktivitaet(datenbank):
+    """Ein zweites Ereignis zur selben Besprechung darf nicht ins Leere zeigen.
+
+    Der eindeutige Index verhindert die zweite Aktivität. Ohne die
+    Nachsuche stünde der zweite Eingangsposten auf „zugeordnet" und
+    zeigte auf nichts.
+    """
+    async with klient_fuer("eingang-l") as klient:
+        quelle_id, secret = await _quelle(klient)
+        firma = (await klient.post("/api/companies", json={"name": "Doppelfirma"})).json()
+        await klient.post("/api/deals", json={"name": "D", "company_id": firma["id"]})
+
+        besprechung = uuid4().hex
+
+        async def schicken() -> dict:
+            koerper = json.dumps(
+                {
+                    "id": uuid4().hex,
+                    "event": "meeting.ready",
+                    "occurred_at": "2026-09-03T14:30:00+00:00",
+                    "meeting": {
+                        "id": besprechung,
+                        "title": "Termin Doppelfirma",
+                        "status": "ready",
+                        "tags": [],
+                    },
+                    "markdown": "# Protokoll",
+                },
+                ensure_ascii=False,
+            ).encode()
+            async with await _absender() as absender:
+                antwort = await absender.post(
+                    f"/api/eingang/{quelle_id}",
+                    content=koerper,
+                    headers={
+                        "X-Insilo-Event": "meeting.ready",
+                        "X-Insilo-Delivery-ID": uuid4().hex,
+                        "X-Insilo-Signature": signiere(secret, koerper),
+                    },
+                )
+            return antwort.json()
+
+        erst = await schicken()
+        zweit = await schicken()
+
+        assert erst["eingang_id"] != zweit["eingang_id"], "zwei Auslieferungen, zwei Posten"
+        assert zweit["zugeordnet"] is True
+
+        zugeordnet = (await klient.get("/api/eingang?status=zugeordnet")).json()
+        posten = [p for p in zugeordnet if p["titel"] == "Termin Doppelfirma"]
+        assert len(posten) == 2
+
+        # Aber nur eine Aktivität — sonst stünde das Protokoll doppelt am Deal.
+        deal_id = posten[0]["deal_id"]
+        verlauf = (await klient.get(f"/api/activities?deal_id={deal_id}")).json()
+        assert len([a for a in verlauf if a["kind"] == "meeting"]) == 1

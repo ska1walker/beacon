@@ -265,6 +265,11 @@ async def _als_aktivitaet(conn, org_id: UUID, actor: UUID, eingang_id: UUID) -> 
     if posten is None:
         return None
 
+    # Dieselbe Besprechung kann über zwei Auslieferungen hereinkommen —
+    # etwa nach einem `meeting.updated`. Der eindeutige Index verhindert
+    # die zweite Aktivität; `do nothing` gibt dann aber nichts zurück,
+    # und der Eingangsposten stünde auf „zugeordnet" ohne Ziel. Deshalb
+    # wird der vorhandene Eintrag hinterher gesucht.
     aktivitaet = await conn.fetchval(
         """
         insert into public.activities
@@ -284,6 +289,14 @@ async def _als_aktivitaet(conn, org_id: UUID, actor: UUID, eingang_id: UUID) -> 
         posten["external_id"],
         actor,
     )
+
+    if aktivitaet is None and posten["external_id"]:
+        aktivitaet = await conn.fetchval(
+            "select id from public.activities where org_id = $1 "
+            "and external_source = 'insilo' and external_id = $2",
+            org_id,
+            posten["external_id"],
+        )
 
     await conn.execute(
         "update public.eingang set status = 'zugeordnet', activity_id = $1 where id = $2",

@@ -210,7 +210,11 @@ async def list_quotes(
     user: CurrentUser = Depends(get_current_user),
     deal_id: UUID | None = Query(None),
     status: str | None = Query(None),
+    limit: int = Query(50, le=200),
 ) -> list[Quote]:
+    # Jedes Angebot wird einzeln geladen, weil die Summen aus den
+    # Positionen entstehen. Bei fünfzig ist das unauffällig, bei
+    # tausend wäre es das nicht — daher die Obergrenze.
     sql = "select q.id from public.quotes q where q.deleted_at is null"
     args: list[object] = []
     if deal_id:
@@ -219,7 +223,8 @@ async def list_quotes(
     if status:
         args.append(status)
         sql += f" and q.status = ${len(args)}::public.quote_status"
-    sql += " order by q.number_seq desc"
+    args.append(limit)
+    sql += f" order by q.number_seq desc limit ${len(args)}"
 
     async with acquire_as(user.user_id) as conn:
         ids = await conn.fetch(sql, *args)
