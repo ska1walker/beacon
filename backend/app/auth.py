@@ -11,6 +11,7 @@ import asyncpg
 from fastapi import Header, HTTPException
 from pydantic import BaseModel
 
+from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as
 
@@ -59,6 +60,43 @@ async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
             probability,
             position,
         )
+
+
+async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> None:
+    """Eine frisch angelegte Organisation füllen.
+
+    Der Normalfall ist die leere Pipeline. Der andere Fall ist der teure:
+    Nach einer Deinstallation legt Olares die Datenbank neu an, samt neuer
+    Org-Kennung — der gesamte Vertrieb wäre weg. Liegt neben den Daten ein
+    Abzug, wird er stattdessen zurückgespielt. Er überlebt, weil
+    /app/data unter permission.appData steht und die Datenbank nicht.
+
+    Zurückgespielt wird aber **nur in die erste Organisation der Box**.
+    Ohne diese Bedingung bekäme der zweite Mensch, der sich anmeldet, den
+    Bestand des ersten in seine eigene Organisation gelegt — ein Leck
+    zwischen Mandanten, und zwar eines, das wie eine Rettung aussieht.
+    Eine zweite Organisation ist kein Wiederanlauf, sondern ein zweiter
+    Nutzer, und der fängt leer an.
+    """
+    orgs = await conn.fetchval("select count(*) from public.orgs where deleted_at is null")
+    erster_anlauf = orgs == 1
+
+    letzter = next(iter(sicherung.staende()), None) if erster_anlauf else None
+    if letzter is not None:
+        try:
+            daten = sicherung.abzug_lesen(letzter["name"])
+            await sicherung.zurueckspielen(conn, daten, org_id, user_id)
+        except Exception as exc:
+            # Ein kaputter Abzug darf die Anmeldung nicht verhindern. Dann
+            # gibt es eben eine leere Pipeline, und der Stand liegt weiter
+            # da — von Hand einlesbar.
+            print(f"Sicherung {letzter['name']} nicht lesbar: {exc}", flush=True)
+
+    vorhanden = await conn.fetchval(
+        "select count(*) from public.pipelines where org_id = $1 and deleted_at is null", org_id
+    )
+    if not vorhanden:
+        await _seed_pipeline(conn, org_id)
 
 
 async def _ensure_user_and_org(olares_username: str) -> CurrentUser:
@@ -113,18 +151,18 @@ async def _ensure_user_and_org(olares_username: str) -> CurrentUser:
                     org["id"],
                 )
 
-    # Einstellungen und Pipeline entstehen erst hier — mit gesetztem
-    # Nutzerkontext. Beide Tabellen stehen unter FORCE ROW LEVEL SECURITY;
-    # ohne Kontext würde die Zeilensicherheit die Anlage abweisen. Der
-    # Block oben kann ihn noch nicht setzen: Die Rolle, aus der er sich
-    # ableitet, entsteht dort ja gerade erst.
+    # Einstellungen, Bestand und Pipeline entstehen erst hier — mit
+    # gesetztem Nutzerkontext. Die Tabellen stehen unter FORCE ROW LEVEL
+    # SECURITY; ohne Kontext würde die Zeilensicherheit die Anlage
+    # abweisen. Der Block oben kann ihn noch nicht setzen: Die Rolle, aus
+    # der er sich ableitet, entsteht dort ja gerade erst.
     if neu_angelegt:
         async with acquire_as(user_id) as conn:
             await conn.execute(
                 "insert into public.org_settings (org_id) values ($1) on conflict do nothing",
                 org["id"],
             )
-            await _seed_pipeline(conn, org["id"])
+            await _einrichten(conn, org["id"], user_id)
 
     return CurrentUser(
         olares_username=olares_username,

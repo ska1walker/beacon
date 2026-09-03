@@ -166,3 +166,20 @@ export interface KIErgebnis {
   text: string;
   model: string;
 }
+
+export interface Sicherungsstand {
+  name: string;
+  groesse_bytes: number;
+  erstellt_am: string;
+}
+
+export interface Sicherungsbilanz {
+  datei: string | null;
+  zeilen: Record<string, number>;
+}
+
+export interface Wiederherstellung {
+  datei: string | null;
+  geschrieben: Record<string, number>;
+  uebersprungen: Record<string, number>;
+}

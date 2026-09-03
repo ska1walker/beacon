@@ -15,6 +15,13 @@ metadata:
     component: backend
 spec:
   replicas: {{ (index .Values.workloads "aicrm-backend").replicaCount }}
+  # Recreate statt RollingUpdate: Dieses Deployment hängt /app/data per
+  # hostPath ein. Bei RollingUpdate liefen kurzzeitig zwei Pods auf
+  # demselben Verzeichnis und könnten sich beim Sichern in die Quere
+  # kommen. Der Olares-Markt lehnt die Kombination hostPath +
+  # RollingUpdate beim Hochladen ohnehin ab (HTTP 400).
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: aicrm
@@ -26,6 +33,18 @@ spec:
         component: backend
     spec:
       initContainers:
+        # /app/data gehört anfangs root. Der Backend-Container läuft als
+        # 1000 und könnte dort sonst keine Sicherung ablegen — also einmal
+        # die Rechte setzen, bevor irgendetwas startet.
+        - name: init-chown
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          command: ['sh', '-c', 'chown -R 1000:1000 /app/data']
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/data
+
         # Legt Schema und Zeilensicherheit an. Läuft mit Wiederholschleife:
         # Bis Olares das Label `bytetrade.io/ns-owner` auf unseren Namespace
         # gesetzt hat, sperrt die NetworkPolicy den Weg zur Datenbank. Der
@@ -154,10 +173,19 @@ spec:
             - name: LLM_MODEL
               value: "{{ (default (dict) .Values.llm).model | default "" }}"
 
+            # Der einzige Ort, der eine Deinstallation überlebt. Dort
+            # liegt der Abzug, aus dem sich die Anwendung nach einer
+            # Neuinstallation selbst wiederherstellt.
+            - name: APP_DATA_DIR
+              value: "/app/data"
+
             # Auf der Box setzt Envoy den Kopf X-Bfl-User. Leer heißt: Wer
             # ohne Kopf anklopft, wird abgewiesen statt erfunden.
             - name: DEV_USER
               value: ""
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/data
           resources:
 {{ toYaml .Values.resources.backend | indent 12 }}
           readinessProbe:
@@ -174,6 +202,10 @@ spec:
             periodSeconds: 30
 
       volumes:
+        - name: app-data
+          hostPath:
+            path: {{ .Values.userspace.appData }}
+            type: DirectoryOrCreate
         - name: sql
           configMap:
             name: aicrm-migrations

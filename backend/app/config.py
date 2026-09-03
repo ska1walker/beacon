@@ -26,6 +26,21 @@ class Settings(BaseSettings):
     app_lang: str = "de"
     app_timezone: str = "Europe/Berlin"
 
+    # --- Ablage ---
+    # Der einzige Ort, der eine Deinstallation überlebt (permission.appData).
+    # Olares erlaubt nur /app/data, /app/cache und /app/Home; lokal zeigt
+    # die .env auf einen Ordner im Repo.
+    app_data_dir: str = "/app/data"
+
+    # Wie viele Sicherungen aufgehoben werden. Vierzehn Tage sind lang
+    # genug, um einen Fehler zu bemerken, und kurz genug, dass die Ablage
+    # einer Box das trägt.
+    sicherung_behalten: int = 14
+
+    # Abstand zwischen den selbsttätigen Sicherungen. Sechs Stunden heißt:
+    # Im schlimmsten Fall ist ein halber Arbeitstag verloren.
+    sicherung_intervall_stunden: float = 6.0
+
     # --- Sprachmodell ---
     # Kein Vorgabewert, aus demselben Grund wie bei Insilo: jede geratene
     # Adresse ist bei einer anderen Box falsch. Die Olares-App-Kennung von

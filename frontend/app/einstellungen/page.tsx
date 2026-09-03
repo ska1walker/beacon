@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { OrgSettings } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Sicherungsblock } from "@/components/sicherung";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -131,6 +132,8 @@ export default function EinstellungenSeite() {
             </form>
           </div>
         </section>
+
+        <Sicherungsblock />
 
         <section className="block">
           <div className="block-kopf">

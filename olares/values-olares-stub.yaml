@@ -11,5 +11,8 @@ bfl:
   username: pruefer
 user:
   zone: pruefer.olares.com
+userspace:
+  appData: /olares/userdata/Cache/pruefer/aicrm
+  appCache: /olares/userdata/Cache/pruefer/aicrm-cache
 cluster:
   arch: amd64
