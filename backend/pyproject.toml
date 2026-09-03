@@ -1,0 +1,58 @@
+[project]
+name = "aicrm-backend"
+version = "0.1.0"
+description = "aicrm Backend — KI-gestütztes CRM für den AImighty-Vertrieb, auf Olares OS"
+authors = [{ name = "Kai Böhm", email = "kai@kaivo.studio" }]
+license = { text = "Proprietary" }
+requires-python = ">=3.11"
+
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "python-multipart>=0.0.12",
+  "asyncpg>=0.30.0",
+  "pydantic[email]>=2.9.0",
+  "pydantic-settings>=2.6.0",
+  "httpx>=0.27.0",
+  "orjson>=3.10.0",
+  "python-dateutil>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=5.0.0",
+  "ruff>=0.7.0",
+  "mypy>=1.13.0",
+]
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "B", "W", "C4", "UP", "ASYNC"]
+# B008: Depends(...)/Header(...) im Default-Argument ist das FastAPI-Muster.
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Ein Loop für den ganzen Lauf. Der Verbindungspool entsteht in der
+# Session-Fixture; läge jeder Test in einem eigenen Loop, gehörte der Pool
+# einem bereits geschlossenen und jede Abfrage liefe ins Leere.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]

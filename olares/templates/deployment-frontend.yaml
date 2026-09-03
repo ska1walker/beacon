@@ -1,0 +1,56 @@
+# ============================================================================
+# Oberfläche (Next.js). metadata.name ist der literale App-Name — Olares
+# verlangt das, {{ .Release.Name }} ist an dieser Stelle nicht erlaubt.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aicrm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aicrm
+    component: frontend
+spec:
+  replicas: {{ (index .Values.workloads "aicrm").replicaCount }}
+  selector:
+    matchLabels:
+      app: aicrm
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: aicrm
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.frontend.pullPolicy }}
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            # Die Weiterleitung in next.config.mjs zeigt hierhin. Der Aufruf
+            # läuft serverseitig im Cluster, nicht aus dem Browser — sonst
+            # ginge er am Envoy vorbei, der ihn prüfen soll.
+            - name: BACKEND_URL
+              value: "http://aicrm-backend:8000"
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
+          resources:
+{{ toYaml .Values.resources.frontend | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 30

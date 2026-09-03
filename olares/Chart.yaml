@@ -1,0 +1,7 @@
+apiVersion: v2
+name: aicrm
+description: KI-gestütztes CRM für den Vertrieb — läuft vollständig auf der eigenen Box
+type: application
+version: 0.1.0          # Chart-Version (Semver) — bei jeder Chart-Änderung erhöhen
+appVersion: "0.1.0"     # MUSS gleich version sein: der Linter prüft es, und der
+                        # wirksame Image-Tag hängt daran (siehe values.yaml)

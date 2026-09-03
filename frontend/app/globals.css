@@ -1,0 +1,1534 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   AImighty-Designsystem — Quelle der Werte
+   Übernommen aus dem InSilo_Design-Paket (tokens/globals.css), abgeleitet
+   aus AImighty claude/Marke-Regeln.md und claude/Anwendung.md.
+
+   Wer einen Wert ändert, ändert ihn HIER, nicht am Bauteil.
+
+   Die Schriften lädt next/font/local in app/layout.tsx (self-hosted,
+   nie vom Google-CDN) und reicht sie als --font-geist-* herein.
+
+   Die früheren Insilo-Tokens (--gold, --surface-soft, …) sind entfallen —
+   jedes Bauteil liest --am-*.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Schrift ─────────────────────────────────────────────────────── */
+  --am-schrift-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --am-schrift-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* ── Dichte — ein Hebel, keine zweite Wertetabelle ──────────────────
+     weit (Vorgabe) 1,1 · normal 1,0 · kompakt 0,9.
+     Auf Berührung greift automatisch `normal`. */
+  --am-skalierung: 1.1;
+  --am-einheit: 0.25rem; /* 4px */
+
+  /* ── Abstandsstufen — 4·8·12·16·24·32·48·64, an die Dichte gebunden ─ */
+  --am-raum-1: calc(var(--am-einheit) * 1 * var(--am-skalierung));
+  --am-raum-2: calc(var(--am-einheit) * 2 * var(--am-skalierung));
+  --am-raum-3: calc(var(--am-einheit) * 3 * var(--am-skalierung));
+  --am-raum-4: calc(var(--am-einheit) * 4 * var(--am-skalierung));
+  --am-raum-6: calc(var(--am-einheit) * 6 * var(--am-skalierung));
+  --am-raum-8: calc(var(--am-einheit) * 8 * var(--am-skalierung));
+  --am-raum-12: calc(var(--am-einheit) * 12 * var(--am-skalierung));
+  --am-raum-16: calc(var(--am-einheit) * 16 * var(--am-skalierung));
+
+  /* ── Lesespalte — App-Profil, hergeleitet, nicht gesetzt ──────────── */
+  --am-spur-inhalt: 27.75rem; /* 444px — 60 Zeichen bei 16px Grundgrad */
+
+  /* ── Zielgrößen ──────────────────────────────────────────────────── */
+  --am-ziel-zeiger: 2.5rem;      /* 40px */
+  --am-ziel-beruehrung: 2.75rem; /* 44px, ohne Ausnahme */
+  --am-ziel-abstand: 0.5rem;
+  --am-ziel-abstand-beruehrung: 0.75rem;
+
+  /* ── Zeilenhöhe Tabellen, an Dichte gebunden: 56·48·40 ────────────── */
+  --am-zeile-tabelle: 3.5rem;
+
+  /* ── Radien — Vorschlag, siehe Paket-README "Was noch fehlt" ──────── */
+  --am-radius-klein: 0.25rem;
+  --am-radius-mittel: 0.5rem;
+  --am-radius-gross: 0.75rem;
+  --am-radius-voll: 999px;
+
+  /* ── Randstärken ─────────────────────────────────────────────────── */
+  --am-rand-ruhend: 1px;
+  --am-rand-betont: 2px;
+
+  /* ── Bewegung — nur die dokumentierten Ausnahmen ──────────────────── */
+  --am-dauer-kurz: 120ms;
+  --am-dauer-lang: 200ms;
+
+  /* ── Hanseatenblau — Flächenleiter, Farbton 249,9 ─────────────────── */
+  --am-blau-25: #f5f9fc;
+  --am-blau-50: #eff4f9;
+  --am-blau-100: #e3eaf3;
+  --am-blau-200: #cfdbe7;
+  --am-blau-300: #afc0d2;
+  --am-blau-400: #819bb7;
+  --am-blau-500: #587898; /* Wendepunkt — als Text in beiden Modi lesbar */
+  --am-blau-600: #335578;
+  --am-blau-700: #142e47;
+  --am-blau-800: #0a2238;
+  --am-blau-900: #051729; /* Grundfläche */
+  --am-blau-950: #010c1a;
+
+  /* ── Gold — Auszeichnung, Farbton 85,7 ────────────────────────────── */
+  --am-gold-200: #ebddbd;
+  --am-gold-300: #dfc896;
+  --am-gold-400: #d7ba7b;
+  --am-gold-500: #caa960; /* das eine Markengold */
+  --am-gold-600: #b7974e;
+  --am-gold-700: #a4843a;
+  --am-gold-800: #8b6c1f; /* Gold als Text auf Weiß, 4,93:1 */
+  --am-gold-900: #71560f;
+
+  /* ── Zustandsfarben — Text und Rand, keine Fläche außer im Formular ─ */
+  --am-erfolg: #007e46;
+  --am-hinweis: #066bb8;
+  --am-achtung: #9f5100;
+  --am-fehler: #ad3f38;
+  --am-erfolg-flaeche: #e7f6eb;
+  --am-erfolg-rand: #b5dcc1;
+  --am-hinweis-flaeche: #e8f3ff;
+  --am-hinweis-rand: #b6d5f4;
+  --am-achtung-flaeche: #feeee4;
+  --am-achtung-rand: #eec8af;
+  --am-fehler-flaeche: #ffedeb;
+  --am-fehler-rand: #f3c4be;
+
+  /* ── Halbsemantische Ebene, Hellmodus (Vorgabe) ───────────────────── */
+  --am-seite: #ffffff;
+  --am-flaeche-1: var(--am-blau-25);   /* Karte, Tafel */
+  --am-flaeche-2: var(--am-blau-50);   /* Menü, Aufklapper */
+  --am-flaeche-3: var(--am-blau-100);  /* Dialog, Popover */
+  --am-trennlinie: var(--am-blau-200);
+  --am-rand: var(--am-blau-200);
+  --am-rand-betont-farbe: var(--am-blau-300);
+
+  --am-text-primaer: var(--am-blau-900);
+  --am-text-sekundaer: var(--am-blau-600);
+  --am-text-gedaempft: var(--am-blau-500);
+  --am-text-deaktiviert: var(--am-blau-400);
+
+  --am-handlung-ruhend: #002f56;
+  --am-handlung-hover: #104472;
+  --am-handlung-aktiv: #002140;
+  --am-handlung-text: #ffffff;
+
+  --am-gold-auszeichnung: var(--am-gold-500);
+  --am-fokus-ring: #002f56;
+  --am-deckschicht: rgb(5 23 41 / 60%);
+
+  /* Gold als Beschriftung — Sprecher-Namen, aktiver Navigationseintrag,
+     Aufnahme-Pille. Eigene Stufe, weil --am-gold-800 laut Paket für Text
+     *auf Weiß* gerechnet ist: auf der dunklen Fläche kommt es nur auf
+     3,3:1 und fällt damit unter die Lesbarkeitsschwelle. Der Dunkelmodus
+     setzt darum weiter unten den helleren Ton. */
+  --am-gold-beschriftung: var(--am-gold-800);
+
+  /* Fläche eines ausgewählten Eintrags (Vorlage, Sprache, Sprecher).
+     Im Hellmodus trägt die goldene Tönung die Auszeichnung. Im
+     Dunkelmodus wäre dieselbe helle Fläche ein Loch, auf dem der helle
+     Text verschwindet — dort hebt eine dunklere Blaustufe den Eintrag,
+     und die Auszeichnung übernimmt der goldene Rand. */
+  --am-auswahl-flaeche: var(--am-gold-200);
+}
+
+/* ── Dunkelmodus — Gold handelt, Blau trägt die Fläche ────────────────
+   Die dokumentierte Ausnahme: Blau auf Blau trägt nicht. */
+html.dunkel {
+  --am-seite: var(--am-blau-900);
+  --am-flaeche-1: var(--am-blau-800);
+  --am-flaeche-2: var(--am-blau-700);
+  --am-flaeche-3: var(--am-blau-700);
+  --am-rand-betont-farbe: var(--am-blau-600);
+  --am-trennlinie: var(--am-blau-700);
+  --am-rand: var(--am-blau-700);
+
+  --am-text-primaer: #ffffff;
+  --am-text-sekundaer: var(--am-blau-200);
+  --am-text-gedaempft: var(--am-blau-300);
+  --am-text-deaktiviert: var(--am-blau-400);
+
+  --am-handlung-ruhend: var(--am-gold-500);
+  --am-handlung-hover: var(--am-gold-400);
+  --am-handlung-aktiv: var(--am-gold-600);
+  --am-handlung-text: var(--am-blau-900);
+
+  --am-erfolg: #55c483;
+  --am-hinweis: #60b0ff;
+  --am-achtung: #ed914c;
+  --am-fehler: #f6857a;
+  --am-erfolg-flaeche: #102a1a;
+  --am-erfolg-rand: #1f4d31;
+  --am-hinweis-flaeche: #122539;
+  --am-hinweis-rand: #234566;
+  --am-achtung-flaeche: #351e0d;
+  --am-achtung-rand: #5f371a;
+  --am-fehler-flaeche: #371b18;
+  --am-fehler-rand: #62332e;
+
+  --am-fokus-ring: var(--am-gold-900);
+
+  /* Auf Hanseatenblau trägt das Markengold: 7,2:1 auf der Navigationsfläche,
+     8,1:1 auf der Grundfläche. Es ist zugleich die Handlungsfarbe im
+     Dunkelmodus, also bleibt die Sprache geschlossen. */
+  --am-gold-beschriftung: var(--am-gold-500);
+  --am-auswahl-flaeche: var(--am-blau-700);
+}
+
+/* ── Dichte — Zeiger vs. Berührung ─────────────────────────────────── */
+@media (pointer: coarse) {
+  :root {
+    --am-skalierung: 1; /* normal — die Ziele stehen ohnehin auf 44px */
+  }
+}
+
+/* Dichte-Hebel für die spätere Einstellung am <html data-dichte="…"> */
+html[data-dichte="normal"] { --am-skalierung: 1; }
+html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
+
+/* ── Zahlen: tabellarisch, rechtsbündig, Geist Mono ───────────────── */
+.am-zahl {
+  font-family: var(--am-schrift-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@layer base {
+  :root {
+    /* Die früheren Insilo-Farbtoken (--gold, --surface-soft, --text-meta …)
+       sind entfallen — alle Bauteile lesen jetzt --am-*. Geblieben sind nur
+       die Bewegungswerte: das AImighty-Paket gibt Dauern vor, aber keine
+       Beschleunigungskurve. */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-medium: 250ms;
+  }
+
+  html {
+    color-scheme: light;
+    background: var(--am-seite);
+  }
+
+  /* Der Dunkelmodus-Umschalter setzt die Klasse; color-scheme muss
+     mitziehen, sonst bleiben Scrollbalken und Formularelemente hell. */
+  html.dunkel {
+    color-scheme: dark;
+  }
+
+  body {
+    color: var(--am-text-primaer);
+    background: var(--am-seite);
+    font-family: var(--am-schrift-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--am-schrift-sans);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  code, .mono {
+    font-family: var(--am-schrift-mono);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Bauteile — AImighty-Designsystem
+   1:1 aus dem Referenzblatt (InSilo_Design-Paket.html) übernommen.
+   Deutsche Klassennamen; die englischen Alt-Bauteile weiter unten bleiben
+   stehen, bis alle Seiten umgezogen sind.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── Buttons ──────────────────────────────────────────────────────
+     Primär genau eine Handlung je Ansicht. Sekundär und still beliebig
+     oft. Höhe ist die Zielgröße, nicht Padding-Zufall. */
+  .btn-reihe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--am-raum-4);
+    align-items: center;
+  }
+
+  .btn {
+    font-family: var(--am-schrift-sans);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-radius: var(--am-radius-mittel);
+    border: var(--am-rand-ruhend) solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--am-raum-2);
+    transition:
+      background var(--am-dauer-kurz) ease,
+      color var(--am-dauer-kurz) ease,
+      border-color var(--am-dauer-kurz) ease;
+    height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-6);
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  .btn-klein {
+    height: 2rem;
+    padding: 0 var(--am-raum-4);
+    font-size: 0.8125rem;
+  }
+
+  .btn-gross {
+    height: var(--am-ziel-beruehrung);
+    padding: 0 var(--am-raum-8);
+    font-size: 1rem;
+  }
+
+  .btn-primaer {
+    background: var(--am-handlung-ruhend);
+    color: var(--am-handlung-text);
+  }
+  .btn-primaer:hover { background: var(--am-handlung-hover); }
+  .btn-primaer:active { background: var(--am-handlung-aktiv); }
+
+  .btn-sekundaer {
+    background: transparent;
+    color: var(--am-handlung-ruhend);
+    border-color: var(--am-rand-betont-farbe);
+  }
+  .btn-sekundaer:hover { background: var(--am-flaeche-2); }
+
+  .btn-still {
+    background: transparent;
+    color: var(--am-text-sekundaer);
+  }
+  .btn-still:hover {
+    background: var(--am-flaeche-1);
+    color: var(--am-text-primaer);
+  }
+
+  .btn-gesperrt,
+  .btn:disabled {
+    background: var(--am-flaeche-2);
+    color: var(--am-text-deaktiviert);
+    cursor: not-allowed;
+    border-color: transparent;
+  }
+  .btn:disabled:hover { background: var(--am-flaeche-2); }
+
+  /* Berührung: 44px ohne Ausnahme — auch die kleinen Varianten. */
+  @media (pointer: coarse) {
+    .btn,
+    .btn-klein,
+    .btn-gross {
+      height: var(--am-ziel-beruehrung);
+    }
+    .btn-reihe { gap: var(--am-ziel-abstand-beruehrung); }
+  }
+
+  /* ── Formularfelder ───────────────────────────────────────────────── */
+  .feld { margin-bottom: var(--am-raum-6); }
+
+  .feld label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: var(--am-raum-2);
+    color: var(--am-text-primaer);
+  }
+
+  .feld label .optional {
+    font-weight: 400;
+    color: var(--am-text-gedaempft);
+  }
+
+  .feld input,
+  .feld select,
+  .feld textarea {
+    width: 100%;
+    min-height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-4);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+  }
+
+  .feld textarea {
+    padding: var(--am-raum-3) var(--am-raum-4);
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  .feld input:focus-visible,
+  .feld select:focus-visible,
+  .feld textarea:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  .feld.fehler input,
+  .feld.fehler select,
+  .feld.fehler textarea {
+    border-color: var(--am-fehler-rand);
+    border-width: var(--am-rand-betont);
+  }
+
+  .feld-fehlertext {
+    color: var(--am-fehler);
+    font-size: 0.8125rem;
+    margin-top: var(--am-raum-2);
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+  }
+
+  .feld-hinweis {
+    color: var(--am-text-gedaempft);
+    font-size: 0.8125rem;
+    margin-top: var(--am-raum-2);
+  }
+
+  @media (pointer: coarse) {
+    .feld input,
+    .feld select,
+    .feld textarea { min-height: var(--am-ziel-beruehrung); }
+  }
+
+  /* ── Zustandsstreifen ─────────────────────────────────────────────
+     Farbe ist nie das einzige Merkmal — jede Meldung trägt Zeichen und
+     Satz. Das `zeichen`-Element ist Pflicht, nicht Dekoration. */
+  .streifen {
+    display: flex;
+    gap: var(--am-raum-3);
+    align-items: flex-start;
+    padding: var(--am-raum-4);
+    border-radius: var(--am-radius-mittel);
+    border: 1px solid;
+    font-size: 0.9375rem;
+  }
+
+  .streifen .zeichen {
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .streifen-erfolg {
+    background: var(--am-erfolg-flaeche);
+    border-color: var(--am-erfolg-rand);
+    color: var(--am-text-primaer);
+  }
+  .streifen-erfolg .zeichen { color: var(--am-erfolg); }
+
+  .streifen-hinweis {
+    background: var(--am-hinweis-flaeche);
+    border-color: var(--am-hinweis-rand);
+    color: var(--am-text-primaer);
+  }
+  .streifen-hinweis .zeichen { color: var(--am-hinweis); }
+
+  .streifen-achtung {
+    background: var(--am-achtung-flaeche);
+    border-color: var(--am-achtung-rand);
+    color: var(--am-text-primaer);
+  }
+  .streifen-achtung .zeichen { color: var(--am-achtung); }
+
+  .streifen-fehler {
+    background: var(--am-fehler-flaeche);
+    border-color: var(--am-fehler-rand);
+    color: var(--am-text-primaer);
+  }
+  .streifen-fehler .zeichen { color: var(--am-fehler); }
+
+  /* ── Deckschicht hinter Dialogen ──────────────────────────────────── */
+  .deckschicht {
+    background: var(--am-deckschicht);
+  }
+
+  /* Ausgewählter Eintrag — Fläche folgt dem Modus, siehe Token oben. */
+  .flaeche-auswahl {
+    background: var(--am-auswahl-flaeche);
+  }
+
+  /* ── Karte ────────────────────────────────────────────────────────── */
+  .karte {
+    background: var(--am-flaeche-1);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    padding: var(--am-raum-6);
+  }
+
+  /* ── Tabelle ──────────────────────────────────────────────────────── */
+  .tabelle-rahmen {
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    overflow: hidden;
+  }
+
+  table.am-tabelle {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+
+  table.am-tabelle th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+    background: var(--am-flaeche-1);
+    padding: 0 var(--am-raum-4);
+    height: var(--am-raum-12);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  table.am-tabelle td {
+    padding: 0 var(--am-raum-4);
+    height: var(--am-zeile-tabelle);
+    border-bottom: 1px solid var(--am-trennlinie);
+    color: var(--am-text-primaer);
+  }
+
+  table.am-tabelle tr:last-child td { border-bottom: none; }
+
+  /* ── Die Hülle ────────────────────────────────────────────────────
+     Zeiger (≥1024px): Navigation links, Inhalt, Ablage rechts.
+     Berührung (<1024px): Navigation als untere Leiste, Ablage unter dem
+     Inhalt. Der mobile Fall steht nicht im Referenzblatt — Insilo ist
+     aber primär eine Smartphone-PWA, und 220px Seitenspalte gehen auf
+     375px nicht auf. */
+  .huelle {
+    display: grid;
+    /* minmax(0, …), nicht 1fr: sonst darf ein breites Kind die Spalte
+       aufdehnen und der Inhalt läuft seitlich aus dem Viewport. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 100dvh;
+    background: var(--am-seite);
+  }
+
+  .huelle-nav {
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: var(--am-raum-1);
+    background: var(--am-flaeche-1);
+    border-top: 1px solid var(--am-trennlinie);
+    padding: var(--am-raum-2) var(--am-raum-2);
+    padding-bottom: max(var(--am-raum-2), env(safe-area-inset-bottom));
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+  }
+
+  /* Kopfecke und die Gruppierung tragen erst ab der Seitenspalte. */
+  .huelle-kopfecke,
+  .huelle-nav-spacer {
+    display: none;
+  }
+
+  .huelle-nav-gruppe {
+    display: contents;
+  }
+
+  .huelle-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--am-raum-1);
+    padding: var(--am-raum-2);
+    min-width: var(--am-ziel-beruehrung);
+    min-height: var(--am-ziel-beruehrung);
+    border-radius: var(--am-radius-klein);
+    font-size: 0.6875rem;
+    color: var(--am-text-sekundaer);
+    text-align: center;
+    transition: color var(--am-dauer-kurz) ease;
+  }
+
+  .huelle-nav-item:hover { color: var(--am-text-primaer); }
+
+  .huelle-nav-item.aktiv {
+    color: var(--am-gold-beschriftung);
+    font-weight: 600;
+  }
+
+  /* Auf der Leiste ist Platz für fünf Ziele. „Über Insilo" ist eine
+     Infoseite und war auch in der alten Kopfzeile mobil ausgeblendet —
+     erreichbar bleibt sie über die Einstellungen. */
+  .huelle-nav-item[data-nachrangig="true"] {
+    display: none;
+  }
+
+  /* Herkunftsvermerk — wie der Nachweis nur in der Seitenspalte
+     sichtbar; Farbe und Schnitt gelten unabhängig davon. */
+  .huelle-herkunft {
+    display: none;
+  }
+
+  .huelle-herkunft-marke {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--am-text-sekundaer);
+    border-radius: var(--am-radius-klein);
+    transition: color var(--am-dauer-kurz) ease;
+  }
+
+  .huelle-herkunft-marke:hover {
+    color: var(--am-text-primaer);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .huelle-herkunft-marke:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 2px;
+  }
+
+  .huelle-herkunft-recht {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.625rem;
+    color: var(--am-text-deaktiviert);
+  }
+
+  /* ── Datenschutz-Nachweis ─────────────────────────────────────────
+     Sitzt unten in der Navigation. Auf der schmalen Leiste hat er keinen
+     Platz — dort trägt ihn die Ansicht „Was verlässt diese Box?" selbst. */
+  .huelle-schutz {
+    display: none;
+  }
+
+  .huelle-inhalt {
+    grid-row: 1;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .huelle-ablage {
+    grid-row: 3;
+    background: var(--am-flaeche-1);
+    border-top: 1px solid var(--am-trennlinie);
+    padding: var(--am-raum-4);
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  @media (min-width: 1024px) {
+    .huelle {
+      grid-template-columns: 220px minmax(0, 1fr);
+      grid-template-rows: 1fr;
+    }
+
+    .huelle.hat-ablage {
+      grid-template-columns: 220px minmax(0, 1fr) 280px;
+    }
+
+    .huelle-nav {
+      grid-row: 1;
+      grid-column: 1;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: var(--am-raum-1);
+      background: var(--am-flaeche-1);
+      border-top: none;
+      border-right: 1px solid var(--am-trennlinie);
+      padding: var(--am-raum-4);
+      position: sticky;
+      top: 0;
+      bottom: auto;
+      height: 100dvh;
+    }
+
+    .huelle-kopfecke {
+      display: flex;
+      align-items: center;
+      gap: var(--am-raum-3);
+      padding-bottom: var(--am-raum-4);
+      margin-bottom: var(--am-raum-4);
+      border-bottom: 1px solid var(--am-trennlinie);
+    }
+
+    .huelle-nav-gruppe {
+      display: flex;
+      flex-direction: column;
+      gap: var(--am-raum-1);
+    }
+
+    .huelle-nav-spacer {
+      display: block;
+      flex: 1;
+    }
+
+    .huelle-nav-item {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: var(--am-raum-3);
+      padding: var(--am-raum-2) var(--am-raum-3);
+      min-height: var(--am-ziel-zeiger);
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    /* In der Seitenspalte ist Platz für alle Ziele. */
+    .huelle-nav-item[data-nachrangig="true"] {
+      display: flex;
+    }
+
+    .huelle-nav-item:hover { background: var(--am-flaeche-2); }
+
+    .huelle-schutz {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--am-raum-2);
+      margin-top: var(--am-raum-3);
+      padding: var(--am-raum-2) var(--am-raum-3);
+      border-radius: var(--am-radius-klein);
+      border: 1px solid transparent;
+      font-family: var(--am-schrift-mono);
+      font-size: 0.6875rem;
+      line-height: 1.4;
+      transition: background var(--am-dauer-kurz) ease;
+    }
+
+    .huelle-schutz-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .huelle-schutz-kopf {
+      font-weight: 600;
+    }
+
+    .huelle-schutz-unter {
+      opacity: 0.85;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Alles intern — der ruhige Normalfall. */
+    .huelle-schutz-erfolg {
+      background: var(--am-erfolg-flaeche);
+      border-color: var(--am-erfolg-rand);
+      color: var(--am-erfolg);
+    }
+
+    /* Ziele konfiguriert, aber bewusst: neutral halten, nicht warnen. */
+    .huelle-schutz-neutral {
+      background: var(--am-flaeche-2);
+      border-color: var(--am-rand);
+      color: var(--am-text-sekundaer);
+    }
+
+    /* Sprachmodell außerhalb der Box — hier gehen ganze Transkripte
+       hinaus. Das ist der Fall, der auffallen muss. */
+    .huelle-schutz-achtung {
+      background: var(--am-achtung-flaeche);
+      border-color: var(--am-achtung-rand);
+      color: var(--am-achtung);
+    }
+
+    .huelle-herkunft {
+      display: flex;
+      align-items: baseline;
+      gap: var(--am-raum-2);
+      margin-top: var(--am-raum-3);
+      padding: 0 var(--am-raum-3);
+      font-size: 0.6875rem;
+      line-height: 1.4;
+    }
+
+    .huelle-inhalt {
+      grid-row: 1;
+      grid-column: 2;
+      overflow-y: auto;
+      max-height: 100dvh;
+    }
+
+    .huelle-ablage {
+      grid-row: 1;
+      grid-column: 3;
+      border-top: none;
+      border-left: 1px solid var(--am-trennlinie);
+      overflow-y: auto;
+      max-height: 100dvh;
+    }
+  }
+
+  /* ── Leerzustand ──────────────────────────────────────────────────── */
+  .leerzustand {
+    text-align: center;
+    padding: var(--am-raum-16) var(--am-raum-8);
+    color: var(--am-text-sekundaer);
+  }
+  .leerzustand svg {
+    color: var(--am-blau-300);
+    margin-bottom: var(--am-raum-4);
+  }
+  .leerzustand h4 {
+    color: var(--am-text-primaer);
+    font-size: 1rem;
+    margin-bottom: var(--am-raum-2);
+  }
+  .leerzustand p {
+    max-width: 320px;
+    margin: 0 auto var(--am-raum-6);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   aicrm — Bauteile der Anwendung
+
+   Die Bedienung folgt HubSpot: linke Navigation, dichte Listenansicht,
+   dreispaltige Datensatzseite, Pipeline als Board. Die Werte kommen aus
+   dem AImighty-Designsystem oben — hier steht kein einziger Farbwert,
+   nur --am-*. Wer eine Farbe ändern will, ändert sie dort.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+  /* ── Nur für Vorleser ─────────────────────────────────────────────── */
+  .nur-vorleser {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ── Marke in der Kopfecke ────────────────────────────────────────── */
+  .marke {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: var(--am-text-primaer);
+  }
+
+  /* Der goldene Punkt ist die Signatur — Gold zeichnet aus, es handelt
+     nicht. Deshalb sitzt er hier und nicht auf einer Schaltfläche. */
+  .marke-punkt {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-gold-500);
+    flex: none;
+  }
+
+  /* ── Darstellungsschalter ─────────────────────────────────────────── */
+  .darstellung-schalter {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-2);
+  }
+
+  .darstellung-knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+
+  .darstellung-knopf:hover { color: var(--am-text-primaer); }
+
+  .darstellung-knopf.aktiv {
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+  }
+
+  .darstellung-knopf:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  /* ── Seitenkopf ───────────────────────────────────────────────────
+     Bleibt beim Rollen stehen. In einer Liste mit 200 Zeilen ist die
+     Frage „wo bin ich und was kann ich hier tun" sonst nach dem dritten
+     Bildschirm unbeantwortet. */
+  .seitenkopf {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--am-raum-4);
+    flex-wrap: wrap;
+    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-4);
+    background: var(--am-seite);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .seitenkopf h1 {
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .seitenkopf-zahl {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+    margin-top: var(--am-raum-1);
+  }
+
+  .seitenkopf-pfad {
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+    margin-bottom: var(--am-raum-1);
+  }
+
+  .seitenkopf-pfad a:hover {
+    color: var(--am-text-primaer);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* ── Werkzeugleiste über der Liste ────────────────────────────────── */
+  .werkzeugleiste {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    flex-wrap: wrap;
+    padding: var(--am-raum-3) var(--am-raum-8);
+    border-bottom: 1px solid var(--am-trennlinie);
+    background: var(--am-seite);
+  }
+
+  .suchfeld {
+    position: relative;
+    flex: 1 1 240px;
+    max-width: 360px;
+  }
+
+  .suchfeld svg {
+    position: absolute;
+    left: var(--am-raum-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--am-text-gedaempft);
+    pointer-events: none;
+  }
+
+  .suchfeld input {
+    width: 100%;
+    height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-4) 0 calc(var(--am-raum-4) + 1.25rem);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+  }
+
+  .suchfeld input:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  .werkzeugleiste select {
+    height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-4);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background-color: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.875rem;
+  }
+
+  /* ── Datentabelle ─────────────────────────────────────────────────
+     Dicht, ohne Zebrastreifen: Die Trennlinie reicht, und Streifen
+     kämpfen bei jeder Auswahlfarbe gegen die Auszeichnung. */
+  .liste {
+    padding: 0 var(--am-raum-8) var(--am-raum-16);
+  }
+
+  .tabelle {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .tabelle thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--am-text-gedaempft);
+    background: var(--am-seite);
+    padding: var(--am-raum-3) var(--am-raum-3);
+    border-bottom: 1px solid var(--am-rand);
+    white-space: nowrap;
+  }
+
+  .tabelle tbody tr {
+    border-bottom: 1px solid var(--am-trennlinie);
+    cursor: pointer;
+    transition: background var(--am-dauer-kurz) ease;
+  }
+
+  .tabelle tbody tr:hover { background: var(--am-flaeche-1); }
+
+  .tabelle td {
+    padding: var(--am-raum-3);
+    vertical-align: middle;
+    color: var(--am-text-sekundaer);
+  }
+
+  .tabelle td.haupt {
+    color: var(--am-text-primaer);
+    font-weight: 500;
+  }
+
+  .tabelle td.zahl {
+    font-family: var(--am-schrift-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Auf schmalen Geräten wird die Tabelle zur Rollfläche statt die Seite
+     nach rechts zu schieben — der erste Befund jeder Prüfseite. */
+  .rollbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Stufen-Pille ─────────────────────────────────────────────────
+     Farbe trägt die Aussage nie allein: Der Text steht daneben, immer. */
+  .stufe {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    padding: 2px var(--am-raum-2);
+    border-radius: var(--am-radius-voll);
+    border: 1px solid var(--am-rand);
+    background: var(--am-flaeche-1);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--am-text-sekundaer);
+    white-space: nowrap;
+  }
+
+  .stufe::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: var(--am-radius-voll);
+    background: currentColor;
+    flex: none;
+  }
+
+  .stufe[data-stufe="customer"],
+  .stufe[data-art="won"] {
+    color: var(--am-erfolg);
+    border-color: var(--am-erfolg-rand);
+    background: var(--am-erfolg-flaeche);
+  }
+
+  .stufe[data-stufe="opportunity"] {
+    color: var(--am-gold-beschriftung);
+    border-color: var(--am-gold-300);
+    background: var(--am-gold-200);
+  }
+
+  .stufe[data-stufe="disqualified"],
+  .stufe[data-art="lost"] {
+    color: var(--am-fehler);
+    border-color: var(--am-fehler-rand);
+    background: var(--am-fehler-flaeche);
+  }
+
+  .stufe[data-stufe="qualified"] {
+    color: var(--am-hinweis);
+    border-color: var(--am-hinweis-rand);
+    background: var(--am-hinweis-flaeche);
+  }
+
+  /* ── Datensatzseite — drei Bereiche ───────────────────────────────
+     Links die Eigenschaften, Mitte der Verlauf, rechts was daranhängt.
+     Auf schmalen Geräten untereinander, Verlauf zuerst: dort steht,
+     was zuletzt passiert ist, und danach wird zuerst gefragt. */
+  .datensatz {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--am-raum-6);
+    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-16);
+    align-items: start;
+  }
+
+  @media (min-width: 1100px) {
+    .datensatz {
+      grid-template-columns: 300px minmax(0, 1fr) 300px;
+    }
+  }
+
+  .block {
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-gross);
+    background: var(--am-flaeche-1);
+    overflow: hidden;
+  }
+
+  .block + .block { margin-top: var(--am-raum-4); }
+
+  .block-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-3) var(--am-raum-4);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .block-kopf h2 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--am-text-gedaempft);
+    margin: 0;
+  }
+
+  .block-inhalt { padding: var(--am-raum-4); }
+
+  /* ── Eigenschaftsliste ────────────────────────────────────────────── */
+  .eigenschaft {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: var(--am-raum-2) 0;
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .eigenschaft:last-child { border-bottom: none; }
+
+  .eigenschaft dt {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .eigenschaft dd {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--am-text-primaer);
+    word-break: break-word;
+  }
+
+  /* ── Zeitleiste ───────────────────────────────────────────────────── */
+  .zeitleiste { list-style: none; margin: 0; padding: 0; }
+
+  .zeitleiste li {
+    position: relative;
+    padding: 0 0 var(--am-raum-6) var(--am-raum-8);
+    border-left: 1px solid var(--am-trennlinie);
+  }
+
+  .zeitleiste li:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+  .zeitleiste li::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 4px;
+    width: 9px;
+    height: 9px;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-seite);
+    border: 2px solid var(--am-rand-betont-farbe);
+  }
+
+  /* Was die KI geschrieben hat, ist am goldenen Punkt zu erkennen —
+     und zusätzlich an der Beschriftung. Nie nur an der Farbe. */
+  .zeitleiste li[data-art="ai"]::before {
+    border-color: var(--am-gold-500);
+    background: var(--am-gold-500);
+  }
+
+  .zeitleiste-kopf {
+    display: flex;
+    align-items: baseline;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--am-raum-1);
+  }
+
+  .zeitleiste-art {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--am-text-gedaempft);
+  }
+
+  .zeitleiste li[data-art="ai"] .zeitleiste-art { color: var(--am-gold-beschriftung); }
+
+  .zeitleiste-zeit {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.6875rem;
+    color: var(--am-text-deaktiviert);
+    margin-left: auto;
+  }
+
+  .zeitleiste-betreff {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--am-text-primaer);
+  }
+
+  .zeitleiste-text {
+    font-size: 0.875rem;
+    color: var(--am-text-sekundaer);
+    white-space: pre-wrap;
+    margin: var(--am-raum-1) 0 0;
+  }
+
+  /* ── Board ────────────────────────────────────────────────────────
+     Waagerecht rollbar, Spalten fester Breite. Eine Spalte, die mit dem
+     Fenster mitwächst, wird bei sieben Stufen unlesbar schmal. */
+  .board {
+    display: flex;
+    gap: var(--am-raum-4);
+    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-16);
+    overflow-x: auto;
+    align-items: flex-start;
+    min-height: 60vh;
+  }
+
+  .board-spalte {
+    flex: 0 0 260px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--am-raum-2);
+    border-radius: var(--am-radius-gross);
+    background: var(--am-flaeche-1);
+    border: 1px solid var(--am-rand);
+    padding: var(--am-raum-3);
+    min-height: 120px;
+  }
+
+  /* Die Spalte, über der gerade ein Deal hängt. Der goldene Rand ist
+     Auszeichnung, keine Handlung — er sagt „hier landet es". */
+  .board-spalte[data-ziel="true"] {
+    border-color: var(--am-gold-500);
+    background: var(--am-flaeche-2);
+  }
+
+  .board-spalte-kopf {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 var(--am-raum-1) var(--am-raum-2);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .board-spalte-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--am-text-primaer);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+  }
+
+  .board-spalte-anzahl {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    font-weight: 400;
+  }
+
+  .board-spalte-summe {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.75rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  .board-spalte-gewichtet {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.6875rem;
+    color: var(--am-text-deaktiviert);
+  }
+
+  .deal-karte {
+    display: block;
+    padding: var(--am-raum-3);
+    border-radius: var(--am-radius-mittel);
+    border: 1px solid var(--am-rand);
+    background: var(--am-seite);
+    cursor: grab;
+    transition:
+      border-color var(--am-dauer-kurz) ease,
+      transform var(--am-dauer-kurz) ease;
+  }
+
+  .deal-karte:hover { border-color: var(--am-rand-betont-farbe); }
+  .deal-karte:active { cursor: grabbing; }
+  .deal-karte[data-zieht="true"] { opacity: 0.4; }
+
+  .deal-karte-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--am-text-primaer);
+    margin-bottom: 2px;
+  }
+
+  .deal-karte-firma {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    margin-bottom: var(--am-raum-2);
+  }
+
+  .deal-karte-fuss {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+    font-size: 0.75rem;
+  }
+
+  .deal-karte-betrag {
+    font-family: var(--am-schrift-mono);
+    font-weight: 600;
+    color: var(--am-text-primaer);
+  }
+
+  .deal-karte-datum {
+    font-family: var(--am-schrift-mono);
+    color: var(--am-text-gedaempft);
+  }
+
+  .deal-karte-datum[data-ueberfaellig="true"] { color: var(--am-fehler); }
+
+  /* ── Kennzahlen auf der Startseite ────────────────────────────────── */
+  .kennzahlen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--am-raum-4);
+    padding: var(--am-raum-6) var(--am-raum-8) 0;
+  }
+
+  .kennzahl {
+    padding: var(--am-raum-4);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-gross);
+    background: var(--am-flaeche-1);
+  }
+
+  .kennzahl dt {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    margin-bottom: var(--am-raum-2);
+  }
+
+  .kennzahl dd {
+    margin: 0;
+    font-family: var(--am-schrift-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--am-text-primaer);
+    line-height: 1.1;
+  }
+
+  .kennzahl-fuss {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    margin-top: var(--am-raum-1);
+  }
+
+  /* ── KI-Block ─────────────────────────────────────────────────────
+     Ergebnisse eines Modells stehen abgesetzt und beschriftet. Wer in
+     einem Jahr auf diese Seite sieht, muss erkennen, was ein Mensch
+     geschrieben hat und was nicht. */
+  .ki-block {
+    border: 1px solid var(--am-gold-300);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-gold-200);
+    padding: var(--am-raum-3);
+  }
+
+  html.dunkel .ki-block {
+    background: var(--am-flaeche-2);
+    border-color: var(--am-gold-700);
+  }
+
+  .ki-block-kopf {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--am-gold-beschriftung);
+    margin-bottom: var(--am-raum-2);
+  }
+
+  .ki-block-text {
+    font-size: 0.875rem;
+    color: var(--am-text-primaer);
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
+  /* ── Eingabefeld für Notizen ──────────────────────────────────────── */
+  .notiz-feld textarea {
+    width: 100%;
+    min-height: 5rem;
+    padding: var(--am-raum-3);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  .notiz-feld textarea:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  /* ── Dialogschicht ────────────────────────────────────────────────
+     Das Paket liefert mit .deckschicht nur die Farbe. Die Lage ist
+     Sache der Anwendung, deshalb steht sie hier und nicht dort. */
+  .dialog-schicht {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--am-raum-4);
+    background: var(--am-deckschicht);
+    overflow-y: auto;
+  }
+
+  /* ── Hinweiszeile ─────────────────────────────────────────────────── */
+  .hinweis {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-3);
+    border-radius: var(--am-radius-mittel);
+    border: 1px solid var(--am-rand);
+    background: var(--am-flaeche-2);
+    font-size: 0.875rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  .hinweis[data-art="achtung"] {
+    border-color: var(--am-achtung-rand);
+    background: var(--am-achtung-flaeche);
+    color: var(--am-achtung);
+  }
+
+  .hinweis[data-art="fehler"] {
+    border-color: var(--am-fehler-rand);
+    background: var(--am-fehler-flaeche);
+    color: var(--am-fehler);
+  }
+}
+
+/* ── Eingabefeld, aus dem Paket übernommen ──────────────────────────── */
+@layer components {
+  .input {
+    padding: 0 var(--am-raum-4);
+    height: var(--am-ziel-zeiger);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+    width: 100%;
+  }
+
+  .input:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  .input::placeholder { color: var(--am-text-deaktiviert); }
+
+  /* Der native Pfeil sitzt je nach Browser hart am Rand und ignoriert das
+     Padding. Deshalb abschalten und ein eigenes Zeichen setzen. */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23587898' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--am-raum-4) center;
+    background-size: 1rem 1rem;
+    padding-right: calc(var(--am-raum-4) * 2 + 1rem);
+  }
+
+  html.dunkel select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23afc0d2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  select[multiple],
+  select[size]:not([size="1"]) {
+    background-image: none;
+    padding-right: var(--am-raum-4);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--am-radius-voll);
+    font-weight: 500;
+    font-size: 0.75rem;
+    background: var(--am-flaeche-1);
+    color: var(--am-text-sekundaer);
+  }
+}

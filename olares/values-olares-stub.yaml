@@ -1,0 +1,15 @@
+# Nur zum Prüfen mit `helm lint` und `helm template`. Die echten Werte
+# injiziert Olares zur Laufzeit; dieses Blatt tut nur so, als wären sie da.
+postgres:
+  host: postgres-cluster.os-platform
+  port: "5432"
+  username: aicrm
+  password: nur-zum-pruefen
+  databases:
+    aicrm: aicrm-db
+bfl:
+  username: pruefer
+user:
+  zone: pruefer.olares.com
+cluster:
+  arch: amd64

@@ -1,0 +1,179 @@
+# ============================================================================
+# Backend (FastAPI) samt Migrations-Vorlauf.
+#
+# Kein Entrance, also kein Envoy-Sidecar davor — siehe OlaresManifest.
+# Die Zugangsdaten zur Datenbank injiziert Olares als .Values.postgres.*,
+# weil middleware: postgres deklariert ist. Nichts davon steht fest im Code.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aicrm-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aicrm
+    component: backend
+spec:
+  replicas: {{ (index .Values.workloads "aicrm-backend").replicaCount }}
+  selector:
+    matchLabels:
+      app: aicrm
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: aicrm
+        component: backend
+    spec:
+      initContainers:
+        # Legt Schema und Zeilensicherheit an. Läuft mit Wiederholschleife:
+        # Bis Olares das Label `bytetrade.io/ns-owner` auf unseren Namespace
+        # gesetzt hat, sperrt die NetworkPolicy den Weg zur Datenbank. Der
+        # natürliche Neustartzyklus des Pods deckt dieses Fenster ab.
+        #
+        # Kein Helm-Hook: Ein Hook liefe vor genau diesem Label und käme
+        # nie durch (Henne und Ei, bei Insilo teuer gelernt).
+        - name: migrate
+          image: "{{ .Values.images.backend.repository }}:{{ .Values.images.backend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.postgres.port }}"
+            - name: DB_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: DB_PASSWORD
+              value: "{{ .Values.postgres.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.postgres.databases.aicrm }}"
+          command:
+            - python3
+            - -c
+            - |
+              import asyncio, glob, os, sys
+              import asyncpg
+              from asyncpg.exceptions import (
+                  DuplicateColumnError, DuplicateObjectError, DuplicateSchemaError,
+                  DuplicateTableError, UniqueViolationError,
+              )
+
+              # Fehler, die „diese Migration lief schon" bedeuten. Jede Datei
+              # geht als ein execute() hinaus und ist damit eine implizite
+              # Transaktion; bei einem dieser Fehler ist sie zurückgerollt
+              # und die ganze Datei gilt als bereits angewandt.
+              UEBERSPRINGBAR = (
+                  DuplicateColumnError, DuplicateObjectError, DuplicateSchemaError,
+                  DuplicateTableError, UniqueViolationError,
+              )
+
+              async def verbinden(versuche=60, pause=5.0):
+                  letzter = None
+                  for i in range(1, versuche + 1):
+                      try:
+                          return await asyncpg.connect(
+                              host=os.environ["DB_HOST"],
+                              port=int(os.environ["DB_PORT"]),
+                              user=os.environ["DB_USER"],
+                              password=os.environ["DB_PASSWORD"],
+                              database=os.environ["DB_NAME"],
+                              timeout=4,
+                          )
+                      except Exception as exc:
+                          letzter = exc
+                          print(f"  Versuch {i}/{versuche}: {type(exc).__name__}: {exc}", flush=True)
+                          await asyncio.sleep(pause)
+                  raise letzter
+
+              async def main():
+                  print("Warte auf Postgres …", flush=True)
+                  conn = await verbinden()
+                  print("Verbunden.", flush=True)
+                  try:
+                      for pfad in sorted(glob.glob("/sql/*.sql")):
+                          print(f"Wende an: {pfad}", flush=True)
+                          sql = open(pfad).read()
+                          try:
+                              await conn.execute(sql)
+                              print(f"  ok ({len(sql)} Bytes)", flush=True)
+                          except UEBERSPRINGBAR as exc:
+                              print(f"  übersprungen (lief schon): {type(exc).__name__}", flush=True)
+                  finally:
+                      await conn.close()
+                  print("Migrationen fertig.", flush=True)
+
+              try:
+                  asyncio.run(main())
+              except Exception as exc:
+                  print(f"FEHLGESCHLAGEN: {exc}", flush=True)
+                  sys.exit(1)
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+              readOnly: true
+
+      containers:
+        - name: backend
+          image: "{{ .Values.images.backend.repository }}:{{ .Values.images.backend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.postgres.port }}"
+            - name: DB_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: DB_PASSWORD
+              value: "{{ .Values.postgres.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.postgres.databases.aicrm }}"
+
+            # Kein Punktzugriff auf .Values.llm.baseUrl, und das ist keine
+            # Stilfrage: Ein Upgrade spielt die bei der Installation
+            # gespeicherten Werte zurück und mischt die Vorgaben des neuen
+            # Charts nicht ein. Ein Schlüssel, den es in der Vorversion
+            # noch nicht gab, fehlt dann schlicht — der Punktzugriff stirbt
+            # mit „nil pointer evaluating interface {}.baseUrl", und das
+            # Upgrade scheitert, bevor irgendetwas passiert. `default (dict)`
+            # fängt den fehlenden Block ab. `dig` wäre naheliegend, kann
+            # aber nicht auf .Values — das ist chartutil.Values, keine
+            # einfache Map. Für jeden künftig neuen Schlüssel genauso.
+            - name: LLM_BASE_URL
+              value: "{{ (default (dict) .Values.llm).baseUrl | default "" }}"
+            - name: LLM_API_KEY
+              value: "{{ (default (dict) .Values.llm).apiKey | default "" }}"
+            - name: LLM_MODEL
+              value: "{{ (default (dict) .Values.llm).model | default "" }}"
+
+            # Auf der Box setzt Envoy den Kopf X-Bfl-User. Leer heißt: Wer
+            # ohne Kopf anklopft, wird abgewiesen statt erfunden.
+            - name: DEV_USER
+              value: ""
+          resources:
+{{ toYaml .Values.resources.backend | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+
+      volumes:
+        - name: sql
+          configMap:
+            name: aicrm-migrations

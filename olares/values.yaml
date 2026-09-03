@@ -1,0 +1,70 @@
+# ============================================================================
+# values.yaml — Vorgabewerte für aicrm
+#
+# Olares injiziert zur Laufzeit zusätzlich:
+#   .Values.bfl.username, .Values.user.zone
+#   .Values.userspace.appData / appCache
+#   .Values.postgres.*   (weil middleware: postgres deklariert ist)
+#   .Values.cluster.arch
+# ============================================================================
+
+# Replikatzahlen je Workload. Olares überschreibt sie zur Laufzeit
+# (Installation, Anhalten, Fortsetzen). Die Templates lesen ausschließlich
+# von hier, nie eine feste Zahl — sonst läuft der Lebenslauf ins Leere.
+workloads:
+  "aicrm":
+    replicaCount: 1
+  "aicrm-backend":
+    replicaCount: 1
+
+# ---- Abbilder --------------------------------------------------------------
+#
+# `tag` ist mit Absicht leer. Der wirksame Tag ist `Chart.AppVersion`.
+#
+# Der Grund ist teuer bezahlt (Insilo v0.1.80): Ein Upgrade über den Markt
+# spielt die bei der *Installation* gespeicherten Werte wieder ein und
+# übernimmt die Vorgaben des neuen Charts nicht. Ein Tag, der hier steht,
+# friert damit dauerhaft fest — die Box lief nach dem Upgrade weiter mit
+# den alten Abbildern, und jede Prüfung meldete „ok". Die Chart-Metadaten
+# kommen dagegen frisch an, also hängt der Tag an ihnen.
+#
+# Ein Wert hier ist nur für ein Release ohne neue Abbilder richtig: dort
+# ändert sich das Chart allein, und der alte Tag muss festgehalten werden.
+images:
+  frontend:
+    repository: ghcr.io/ska1walker/aicrm-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  backend:
+    repository: ghcr.io/ska1walker/aicrm-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+
+# ---- Sprachmodell ----------------------------------------------------------
+# Leer, und das bleibt so. Jede Adresse, die hier stünde, wäre auf einer
+# anderen Box falsch: Die Olares-Kennung der LiteLLM-App wird erst bei
+# deren Installation vergeben, und der clusterinterne Weg ist durch den
+# Envoy-Sidecar gesperrt (er verlangt einen Authelia-Token, den ein
+# Server-zu-Server-Aufruf nicht hat). Der Nutzer trägt die öffentliche
+# Adresse unter /einstellungen ein; bis dahin sagt die App offen, dass
+# nichts eingerichtet ist.
+llm:
+  baseUrl: ""
+  apiKey: ""
+  model: ""
+
+resources:
+  frontend:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  backend:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

@@ -1,0 +1,127 @@
+# ============================================================================
+# OlaresManifest.yaml — aicrm
+#
+# Linter-Regeln, die hier zwingend gelten:
+# - metadata.name, metadata.appid, Chart.yaml.name und der Ordnername
+#   müssen alle exakt "aicrm" sein (^[a-z0-9]{1,30}$, keine Bindestriche)
+# - metadata.version muss Chart.yaml.version entsprechen
+# - spec.versionName muss Chart.yaml.appVersion entsprechen
+# - spec.requiredDisk muss gesetzt sein
+# ============================================================================
+
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+# Jedes Deployment, das dieses Chart rendert, mit seiner Replikatzahl.
+# app-service steuert darüber den Lebenslauf: Die Installation rendert
+# zuerst mit 0 und skaliert dann hoch, Anhalten setzt alles auf 0.
+workloadReplicas:
+  aicrm: 1
+  aicrm-backend: 1
+
+metadata:
+  name: aicrm
+  appid: aicrm
+  title: aicrm
+  description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
+  icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+  version: 0.1.0
+  categories:
+    - AI
+
+# ---- Entrances --------------------------------------------------------------
+# Nur einer: die Oberfläche. Das Backend bekommt bewusst KEINEN Entrance.
+#
+# Der Grund ist bei Insilo gemessen worden: Mit einem Entrance sitzt ein
+# Envoy-Sidecar vor dem Pod und prüft jeden eingehenden TCP-Verkehr gegen
+# Authelia. Die serverseitige Weiterleitung von Next.js trägt aber keine
+# Authelia-Kekse und bekam prompt 401. Ohne Entrance läuft das Backend
+# ohne Sidecar, Next.js ruft http://aicrm-backend:8000 direkt, und die
+# Identität reicht der Kopf X-Bfl-User weiter.
+entrances:
+  - name: aicrm
+    host: aicrm
+    port: 3000
+    title: aicrm
+    icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+    authLevel: internal
+    invisible: false
+    openMethod: window
+
+# ---- System-Middleware ------------------------------------------------------
+# Olares stellt PostgreSQL bereit und reicht die Zugangsdaten als
+# .Values.postgres.* herein. Kein Redis: Es gibt noch keine Hintergrund-
+# jobs, und was nicht gebraucht wird, wird nicht angefordert.
+middleware:
+  postgres:
+    username: aicrm
+    databases:
+      - name: aicrm
+        extensions:
+          - pg_trgm      # Trigram-Suche über Firmen- und Personennamen
+          - pgcrypto
+          - uuid-ossp
+        # `vector` fehlt hier, so wie in den Migrationen: Diese Ausbaustufe
+        # rechnet keine Einbettungen. Kommt mit der Ask-Funktion.
+
+# ---- Berechtigungen ---------------------------------------------------------
+permission:
+  # Wird noch von keinem Pfad beschrieben — steht aber hier, weil es die
+  # einzige Ablage ist, die eine Deinstallation überlebt. Die Datenbank tut
+  # das nicht: Olares legt sie neu an. Für ein CRM heißt das, dass ohne
+  # Sicherung sämtliche Firmen, Kontakte und Geschäfte weg wären. Der
+  # Ausfuhrpfad dorthin ist der erste Punkt der nächsten Ausbaustufe
+  # (siehe docs/BETRIEB.md).
+  appData: true
+
+spec:
+  versionName: '0.1.0'
+
+  featuredImage: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+  promoteImage:
+    - https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+
+  fullDescription: |
+    **aicrm** is a lean sales CRM for teams that cannot send their pipeline
+    to a US cloud.
+
+    Companies, contacts, deals on a drag-and-drop pipeline board, an
+    activity timeline on every record, and tasks — the parts a sales team
+    actually uses, without the rest.
+
+    The AI assistant summarises where an account stands, proposes the next
+    step on a deal and drafts outreach. It talks to an OpenAI-compatible
+    endpoint that **you** configure — typically a LiteLLM or local model
+    app on the same box. There is deliberately no default: nothing is sent
+    anywhere until you enter an address, and the app says so plainly
+    instead of failing with a connection error.
+
+    No telemetry. No phone home. Fonts are served from the box, not from a
+    CDN.
+
+  developer: 'kaivo.studio'
+  website: 'https://aimighty.de'
+  sourceCode: 'https://github.com/ska1walker/aicrm'
+  license:
+    - text: Proprietary
+      url: 'https://aimighty.de'
+
+  requiredMemory: '1Gi'
+  limitedMemory: '2Gi'
+  requiredDisk: '1Gi'
+  limitedDisk: '5Gi'
+  requiredCpu: '0.2'
+  limitedCpu: '2'
+
+  supportArch:
+    - amd64
+    - arm64
+
+options:
+  policies:
+    - uriRegex: '/'
+      level: two_factor
+      oneTime: false
+      validDuration: 3600s
+      entranceName: aicrm

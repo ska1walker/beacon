@@ -1,0 +1,42 @@
+# ============================================================================
+# Nur ClusterIP. Kein NodePort, kein LoadBalancer, kein hostNetwork —
+# Olares lässt nichts anderes zu, und von außen führt der Weg
+# ausschließlich über den deklarierten Entrance.
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: aicrm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aicrm
+    component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: aicrm
+    component: frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aicrm-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aicrm
+    component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: aicrm
+    component: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
