@@ -12,6 +12,13 @@ COPY . .
 # nicht zur Bauzeit — sonst führe der Bau eine Verbindung nach draußen,
 # die es laut Versprechen nicht geben darf.
 ENV NEXT_TELEMETRY_DISABLED=1
+# Das Proxy-Ziel der Rewrites wird BEIM BAU eingebrannt: next.config.mjs
+# liest BACKEND_URL beim Bauen, und im Standalone-Abbild ist die
+# Umgebungsvariable zur Laufzeit dafür bedeutungslos. Auf der Box lief
+# 0.1.1 deshalb gegen localhost:8000 und jede API-Anfrage endete mit
+# 500. Der Dienstname ist im Chart fest, also darf er hier stehen.
+ARG BACKEND_URL=http://aicrm-backend:8000
+ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
 
 FROM node:22-alpine AS runtime

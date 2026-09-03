@@ -52,7 +52,7 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
 | Tests | 162 Backend, 8 Frontend |
 | Olares-Chart | lintet (`helm` und `olares-cli chart lint`), rendert, **nie auf einer echten Box installiert** |
-| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag als Branch `aicrm-0.1.1` auf Kais Fork von `aimighty-market` — PR erst nach Box-Installation |
+| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag als Branch `aicrm-0.1.2` auf Kais Fork von `aimighty-market` — PR erst nach Box-Installation |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
 E-Mail-Versand aus der Anwendung, Kampagnen und Sequenzen, Kalender-

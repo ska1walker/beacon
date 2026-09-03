@@ -236,6 +236,12 @@ bricht sonst ab:
   (`cp olares/OlaresManifest.yaml .`) — Marcs Regel für den Markt, der
   Guard in `check-chart.sh` verlangt Gleichheit
 
+Das Proxy-Ziel des Frontends (`BACKEND_URL`) wird **beim Bau**
+eingebrannt — `next.config.mjs` liest es in `rewrites()`, und das
+Standalone-Abbild kennt zur Laufzeit keine Rewrites mehr. Das
+Dockerfile setzt es auf `http://aicrm-backend:8000`; 0.1.1 lief ohne
+diese Zeile gegen `localhost` und jede API-Anfrage endete mit 500.
+
 Zwei Manifest-Angaben, die auf der Box den Unterschied machen:
 `options.apiTimeout: 0` (sonst kappt der Envoy-Sidecar jede Antwort nach
 15 Sekunden, und das Modell antwortet synchron im Request) und
