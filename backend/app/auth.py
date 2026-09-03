@@ -19,6 +19,46 @@ from app.db import acquire, acquire_as
 # einer Migration, weil Organisationen zur Laufzeit entstehen — eine
 # Migration läuft genau einmal und hätte für die zweite Organisation nichts
 # angelegt. Wer die Stufen ändert, ändert sie danach in der Oberfläche.
+# Der Produktkatalog aus claude/Produkte.md. Preise netto in Cent.
+#
+# Der Servicetag steht ohne Preis: In der Produktbeschreibung ist keiner
+# genannt, und ein geratener Tagessatz landete sonst in einem Angebot beim
+# Kunden. Wer ihn einträgt, trägt ihn im Katalog ein.
+STANDARD_PRODUKTE: list[dict[str, object]] = [
+    {
+        "key": "assistent",
+        "name": "Assistent",
+        "description": "Ein Werkzeug. Bis 5 gleichzeitige Nutzer, 500 Dokumente, Open WebUI.",
+        "kind": "system",
+        "list_price_cents": 990000,
+        "default_service_days": 6,
+    },
+    {
+        "key": "analyst",
+        "name": "Analyst",
+        "description": "Ein Kollege. Eine Sitzung, 2.500 Dokumente, Zugriff auf Dokumente und Netz.",
+        "kind": "system",
+        "list_price_cents": 1450000,
+        "default_service_days": 8,
+    },
+    {
+        "key": "experte",
+        "name": "Experte",
+        "description": "Ein Prozess. Läuft selbstständig, Zugriff auf Anwendungen, Datenbanken, Verzeichnisse.",
+        "kind": "system",
+        "list_price_cents": 1450000,
+        "default_service_days": 12,
+    },
+    {
+        "key": "servicetag",
+        "name": "Zusätzlicher Servicetag",
+        "description": "Einführung, Anpassung, Schulung — über die enthaltenen Tage hinaus.",
+        "kind": "service",
+        "list_price_cents": 0,
+        "default_service_days": None,
+    },
+]
+
 STANDARD_STUFEN: list[tuple[str, str, float]] = [
     ("Erstkontakt", "open", 0.05),
     ("Qualifiziert", "open", 0.20),
@@ -62,6 +102,27 @@ async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
         )
 
 
+async def _seed_produkte(conn: asyncpg.Connection, org_id: UUID) -> None:
+    for position, produkt in enumerate(STANDARD_PRODUKTE):
+        await conn.execute(
+            """
+            insert into public.products
+              (org_id, key, name, description, kind, list_price_cents,
+               default_service_days, position)
+            values ($1,$2,$3,$4,$5::public.product_kind,$6,$7,$8)
+            on conflict (org_id, key) do nothing
+            """,
+            org_id,
+            produkt["key"],
+            produkt["name"],
+            produkt["description"],
+            produkt["kind"],
+            produkt["list_price_cents"],
+            produkt["default_service_days"],
+            position,
+        )
+
+
 async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> None:
     """Eine frisch angelegte Organisation füllen.
 
@@ -97,6 +158,12 @@ async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> 
     )
     if not vorhanden:
         await _seed_pipeline(conn, org_id)
+
+    katalog = await conn.fetchval(
+        "select count(*) from public.products where org_id = $1", org_id
+    )
+    if not katalog:
+        await _seed_produkte(conn, org_id)
 
 
 async def _ensure_user_and_org(olares_username: str) -> CurrentUser:

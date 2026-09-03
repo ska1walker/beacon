@@ -7,6 +7,7 @@ import type { OrgSettings } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Sicherungsblock } from "@/components/sicherung";
+import { Absenderblock } from "@/components/absender";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -132,6 +133,8 @@ export default function EinstellungenSeite() {
             </form>
           </div>
         </section>
+
+        <Absenderblock />
 
         <Sicherungsblock />
 

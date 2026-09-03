@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.llm import load_llm_config
-from app.schemas import OrgSettings, OrgSettingsIn
+from app.schemas import Absender, OrgSettings, OrgSettingsIn
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -17,7 +17,14 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
             "select * from public.org_settings where org_id = $1", user.org_id
         )
         cfg = await load_llm_config(conn, user.org_id)
+    # Die Absenderfelder kommen unverändert aus der Zeile. Sie einzeln
+    # aufzuzählen hieße, jede neue Angabe an zwei Stellen zu pflegen.
+    absender = {
+        feld: (row[feld] if row and feld in row else None)
+        for feld in Absender.model_fields
+    }
     return OrgSettings(
+        **absender,
         llm_base_url=cfg.base_url,
         llm_model=cfg.model,
         # Der Schlüssel geht nie zurück — die Oberfläche muss nur wissen,

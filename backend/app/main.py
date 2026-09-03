@@ -15,10 +15,42 @@ from fastapi.responses import JSONResponse
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
-from app.routers import activities, companies, contacts, deals, ki
+from app.routers import activities, angebote, companies, contacts, deals, ki, tasks
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
-from app.routers import tasks
+
+
+async def _katalog_nachziehen() -> None:
+    """Sät den Produktkatalog in Organisationen, die noch keinen haben.
+
+    Läuft einmal beim Start. Die Aussaat beim Anlegen einer Organisation
+    deckt nur neue ab — eine Box, die vor dieser Ausbaustufe installiert
+    wurde, hätte nach dem Upgrade eine leere Produktliste und könnte kein
+    Angebot schreiben. Für jede spätere Erweiterung des Katalogs greift
+    derselbe Weg.
+    """
+    from app.auth import _seed_produkte
+
+    try:
+        async with acquire() as conn:
+            orgs = await conn.fetch(
+                """
+                select o.id, r.user_id
+                from public.orgs o
+                join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
+                where o.deleted_at is null
+                  and not exists (select 1 from public.products p where p.org_id = o.id)
+                """
+            )
+        for org in orgs:
+            async with acquire_as(org["user_id"]) as conn:
+                await _seed_produkte(conn, org["id"])
+        if orgs:
+            print(f"Produktkatalog für {len(orgs)} Organisation(en) nachgezogen.", flush=True)
+    except Exception as exc:
+        # Ein fehlender Katalog ist ärgerlich, aber kein Grund, die
+        # Anwendung nicht zu starten.
+        print(f"Katalog konnte nicht nachgezogen werden: {exc}", flush=True)
 
 
 async def _sicherungsschleife() -> None:
@@ -58,6 +90,7 @@ async def _sicherungsschleife() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
+    await _katalog_nachziehen()
     schleife = asyncio.create_task(_sicherungsschleife())
     yield
     schleife.cancel()
@@ -74,6 +107,7 @@ app = FastAPI(
 )
 
 app.include_router(companies.router)
+app.include_router(angebote.router)
 app.include_router(contacts.router)
 app.include_router(deals.router)
 app.include_router(activities.router)

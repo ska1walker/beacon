@@ -7,7 +7,9 @@ statt den Nutzer in einen Verbindungsfehler laufen zu lassen.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -94,3 +96,35 @@ async def chat(
         # Ein Endpunkt, der etwas anderes zurückgibt, ist kein
         # OpenAI-kompatibler Endpunkt. Das gehört gesagt, nicht geraten.
         raise RuntimeError(f"Unerwartete Antwort vom Endpunkt {url}: {data!r}") from exc
+
+
+def json_aus_antwort(text: str) -> Any:
+    """Holt das JSON-Objekt aus einer Modellantwort.
+
+    Modelle rahmen ihre Antwort gern mit ```json ein oder schreiben einen
+    Satz davor, egal wie deutlich die Aufforderung war. Statt darauf zu
+    hoffen, wird der äußerste geschweifte Block gesucht und gelesen. Was
+    dann immer noch kein JSON ist, ist ein Fehler und wird als solcher
+    gemeldet — nicht stillschweigend zu einem leeren Ergebnis.
+    """
+    roh = text.strip()
+    if roh.startswith("```"):
+        roh = roh.split("```")[1]
+        if roh.startswith("json"):
+            roh = roh[4:]
+        roh = roh.strip()
+
+    try:
+        return json.loads(roh)
+    except json.JSONDecodeError:
+        pass
+
+    anfang = roh.find("{")
+    ende = roh.rfind("}")
+    if anfang != -1 and ende > anfang:
+        try:
+            return json.loads(roh[anfang : ende + 1])
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Die Antwort enthält kein lesbares JSON: {exc}") from exc
+
+    raise ValueError("Die Antwort enthält kein JSON-Objekt.")

@@ -2,23 +2,37 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { use } from "react";
-import { api } from "@/lib/api";
-import { datum, euro, PRODUKT_TEXT, prozent } from "@/lib/format";
-import type { Board, Deal } from "@/lib/typen";
+import { use, useState } from "react";
+import { api, suchparameter } from "@/lib/api";
+import {
+  ANGEBOT_STATUS_ART,
+  ANGEBOT_STATUS_TEXT,
+  datum,
+  euro,
+  PRODUKT_TEXT,
+  prozent,
+} from "@/lib/format";
+import type { Board, Deal, Quote } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { KiKnopf } from "@/components/ki-knopf";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { AngebotAnlegen } from "@/components/angebot-anlegen";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const client = useQueryClient();
+  const [angebotOffen, setAngebotOffen] = useState(false);
 
   const deal = useQuery({
     queryKey: ["deal", id],
     queryFn: () => api.get<Deal>(`/api/deals/${id}`),
+  });
+
+  const angebote = useQuery({
+    queryKey: ["angebote", "deal", id],
+    queryFn: () => api.get<Quote[]>(`/api/quotes${suchparameter({ deal_id: id })}`),
   });
 
   const board = useQuery({
@@ -55,6 +69,10 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
           invalidiert={["deal", id]}
         />
       </Seitenkopf>
+
+      {angebotOffen && (
+        <AngebotAnlegen dealId={id} beiSchliessen={() => setAngebotOffen(false)} />
+      )}
 
       <div className="datensatz">
         <div>
@@ -158,6 +176,42 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
         <Zeitleiste bezug={{ deal_id: id }} />
 
         <div>
+          <section className="block">
+            <div className="block-kopf">
+              <h2>Angebote</h2>
+              <button
+                type="button"
+                className="btn btn-still btn-klein"
+                onClick={() => setAngebotOffen(true)}
+              >
+                Anlegen
+              </button>
+            </div>
+            <div className="block-inhalt">
+              {angebote.data?.length === 0 && (
+                <p style={{ fontSize: "0.875rem", color: "var(--am-text-gedaempft)" }}>
+                  Noch kein Angebot.
+                </p>
+              )}
+              {angebote.data?.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/angebote/${a.id}`}
+                  className="deal-karte"
+                  style={{ marginBottom: "var(--am-raum-2)" }}
+                >
+                  <div className="deal-karte-name mono">{a.number}</div>
+                  <div className="deal-karte-fuss">
+                    <span className="deal-karte-betrag">{euro(a.gross_cents)}</span>
+                    <span className="stufe" data-art={ANGEBOT_STATUS_ART[a.status]}>
+                      {ANGEBOT_STATUS_TEXT[a.status]}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+
           <section className="block">
             <div className="block-kopf">
               <h2>Verlauf des Geschäfts</h2>

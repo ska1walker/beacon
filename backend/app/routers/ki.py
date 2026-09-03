@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
-from app.llm import LLMNichtEingerichtet, chat, load_llm_config
+from app.llm import LLMNichtEingerichtet, chat, json_aus_antwort, load_llm_config
 
 router = APIRouter(prefix="/api/ki", tags=["ki"])
 
@@ -299,3 +299,162 @@ async def entwurf(payload: EntwurfIn, user: CurrentUser = Depends(get_current_us
             user.user_id,
         )
     return KIErgebnis(text=text, model=model)
+
+
+# ── Angebotsvorschlag ───────────────────────────────────────────────────
+
+class Angebotsposition(BaseModel):
+    produkt_key: str | None = None
+    titel: str
+    beschreibung: str | None = None
+    menge: float = 1
+    einzelpreis_cents: int = 0
+
+
+class Angebotsvorschlag(BaseModel):
+    begruendung: str
+    anschreiben: str
+    positionen: list[Angebotsposition]
+    modell: str
+    # Was das Modell nicht wissen konnte, steht hier statt geraten im
+    # Angebot. Ein Vertriebler prüft drei offene Punkte gern; ein
+    # erfundener Preis fällt ihm erst beim Kunden auf.
+    offene_punkte: list[str] = []
+
+
+def _katalogzeile(p) -> str:
+    teile = [f"- {p['key']}: {p['name']}", f"{p['list_price_cents'] / 100:.0f} € netto"]
+    if p["default_service_days"]:
+        teile.append(f"{p['default_service_days']} Servicetage")
+    if p["description"]:
+        teile.append(p["description"])
+    return ", ".join(teile)
+
+
+@router.post("/deals/{deal_id}/angebotsvorschlag", response_model=Angebotsvorschlag)
+async def angebotsvorschlag(
+    deal_id: UUID,
+    user: CurrentUser = Depends(get_current_user),
+) -> Angebotsvorschlag:
+    """Schlägt Positionen und ein Anschreiben für ein Angebot vor.
+
+    Das Ergebnis ist ein Entwurf und wird nirgends verschickt. **Preise
+    kommen aus dem Katalog, nie aus dem Modell**: Ein Sprachmodell, das
+    einen Betrag erfindet, erfindet ihn plausibel — und plausibel falsch
+    ist genau die Sorte Fehler, die bis zum Kunden durchkommt.
+    """
+    async with acquire_as(user.user_id) as conn:
+        deal = await conn.fetchrow(
+            """
+            select d.id, d.name, d.company_id, d.amount_cents, d.product,
+                   f.name as firma, f.industry, f.employee_count,
+                   f.description as firmennotiz, s.name as stufe
+            from public.deals d
+            left join public.companies f on f.id = d.company_id
+            join public.pipeline_stages s on s.id = d.stage_id
+            where d.id = $1 and d.deleted_at is null
+            """,
+            deal_id,
+        )
+        if deal is None:
+            raise HTTPException(404, "Deal nicht gefunden")
+
+        produkte = await conn.fetch(
+            "select key, name, description, list_price_cents, default_service_days "
+            "from public.products where is_active order by position"
+        )
+        verlauf = await conn.fetch(
+            "select kind, subject, body, occurred_at from public.activities "
+            "where deal_id = $1 or company_id = $2 order by occurred_at desc limit 25",
+            deal_id,
+            deal["company_id"],
+        )
+
+    kontext = "\n".join(
+        [
+            f"Geschäft: {deal['name']}",
+            f"Firma: {deal['firma'] or 'unbekannt'}",
+            f"Branche: {deal['industry'] or 'unbekannt'}",
+            f"Mitarbeiter: {deal['employee_count'] or 'unbekannt'}",
+            f"Notiz zur Firma: {deal['firmennotiz'] or '—'}",
+            f"Stufe: {deal['stufe']}",
+            f"Bisher angesetzt: {deal['amount_cents'] / 100:.0f} €",
+            "",
+            "Katalog — die einzigen erlaubten Schlüssel:",
+            "\n".join(_katalogzeile(p) for p in produkte),
+            "",
+            "Verlauf:",
+            *(
+                [
+                    f"- {v['occurred_at']:%d.%m.%Y} [{v['kind']}] {v['subject'] or ''} "
+                    f"{(v['body'] or '')[:300]}"
+                    for v in verlauf
+                ]
+                or ["- leer"]
+            ),
+        ]
+    )
+
+    text, modell = await _lauf(
+        user,
+        "Schlage die Positionen für ein Angebot vor und schreibe ein kurzes Anschreiben.\n\n"
+        "Antworte ausschließlich als JSON-Objekt mit den Schlüsseln:\n"
+        '  "begruendung": ein Satz, warum diese Zusammenstellung,\n'
+        '  "anschreiben": höchstens 120 Wörter, Sie-Form, ein konkreter Bezug zum Gespräch,\n'
+        '  "positionen": Liste aus {"produkt_key", "titel", "beschreibung", "menge"},\n'
+        '  "offene_punkte": was du nicht wissen konntest.\n\n'
+        "Verwende als produkt_key ausschließlich Schlüssel aus dem Katalog. "
+        "Nenne keine Preise — die kommen aus dem Katalog.\n\n" + kontext,
+    )
+
+    try:
+        roh = json_aus_antwort(text)
+    except ValueError as exc:
+        raise HTTPException(
+            502, f"Das Modell hat kein verwertbares Ergebnis geliefert: {exc}"
+        ) from exc
+
+    preise = {p["key"]: p["list_price_cents"] for p in produkte}
+    namen = {p["key"]: p["name"] for p in produkte}
+
+    positionen: list[Angebotsposition] = []
+    for eintrag in roh.get("positionen") or []:
+        key = eintrag.get("produkt_key")
+        bekannt = key in preise
+        positionen.append(
+            Angebotsposition(
+                # Ein Schlüssel, den der Katalog nicht kennt, wird zur
+                # Position ohne Preis — nicht zu einem erfundenen Betrag.
+                produkt_key=key if bekannt else None,
+                titel=eintrag.get("titel") or (namen.get(key) if bekannt else "Position"),
+                beschreibung=eintrag.get("beschreibung"),
+                menge=float(eintrag.get("menge") or 1),
+                einzelpreis_cents=preise[key] if bekannt else 0,
+            )
+        )
+
+    offen = list(roh.get("offene_punkte") or [])
+    ohne_preis = [p.titel for p in positionen if p.produkt_key is None]
+    if ohne_preis:
+        offen.append("Ohne Preis übernommen, im Katalog nicht gefunden: " + ", ".join(ohne_preis))
+
+    async with acquire_as(user.user_id) as conn:
+        await conn.execute(
+            """
+            insert into public.activities (org_id, kind, subject, body, deal_id, payload, created_by)
+            values ($1, 'ai', 'Angebotsvorschlag erzeugt', $2, $3, $4::jsonb, $5)
+            """,
+            user.org_id,
+            roh.get("begruendung"),
+            deal_id,
+            orjson.dumps({"modell": modell, "positionen": len(positionen)}).decode(),
+            user.user_id,
+        )
+
+    return Angebotsvorschlag(
+        begruendung=str(roh.get("begruendung") or ""),
+        anschreiben=str(roh.get("anschreiben") or ""),
+        positionen=positionen,
+        offene_punkte=offen,
+        modell=modell,
+    )

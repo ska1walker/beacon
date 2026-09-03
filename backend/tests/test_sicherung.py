@@ -12,24 +12,7 @@ import pytest
 
 from app import sicherung
 from app.db import acquire_as
-
-
-def klient_fuer(name: str):
-    """Ein eigener Nutzer für Tests, die Daten zerstören.
-
-    Wer die Pipeline einer Organisation löscht, macht sie für jeden
-    folgenden Test unbrauchbar — die Tests teilen sich eine Datenbank.
-    Deshalb bekommt jeder zerstörende Test seine eigene Organisation.
-    """
-    from httpx import ASGITransport, AsyncClient
-
-    from app.main import app
-
-    return AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-        headers={"X-Bfl-User": name},
-    )
+from tests.conftest import klient_fuer
 
 
 @pytest.fixture(autouse=True)
@@ -100,7 +83,10 @@ async def test_abzug_enthaelt_alles(kai, eigene_ablage):
     assert bilanz["zeilen"]["tasks"] >= 1
     assert bilanz["zeilen"]["pipeline_stages"] == 7
 
-    dateien = list(pathlib.Path(eigene_ablage).glob("sicherungen/*.json"))
+    # ASYNC240 hier ausgenommen: Der Regel geht es um blockierende
+    # Dateizugriffe in nebenläufigem Code. Ein Test, der ohnehin auf jede
+    # Antwort wartet, blockiert nichts.
+    dateien = list(pathlib.Path(eigene_ablage).glob("sicherungen/*.json"))  # noqa: ASYNC240
     assert len(dateien) == 1
     # Der Abzug trägt den Schlüssel zum Sprachmodell — er darf nicht
     # für jeden auf der Box lesbar sein.
@@ -200,7 +186,7 @@ async def test_ausfuhr_traegt_keinen_schluessel(kai, eigene_ablage):
 
 
 async def test_unbekanntes_format_wird_abgelehnt(kai, eigene_ablage):
-    async with acquire_as((await _kennung(kai))) as conn:
+    async with acquire_as(await _kennung(kai)) as conn:
         org_id, user_id = await _org_und_nutzer(conn)
         with pytest.raises(ValueError, match="Unbekanntes Format"):
             await sicherung.zurueckspielen(conn, {"format": 99}, org_id, user_id)

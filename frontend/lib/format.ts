@@ -1,10 +1,23 @@
 // Formatieren an einer Stelle. Beträge kommen als Cent aus der API — wer
 // sie irgendwo durch 100 teilt, tut es hier oder gar nicht.
 
+// Zwei Formate, und der Unterschied ist keine Geschmacksfrage.
+//
+// In Listen und Summen der Pipeline stören Cent-Beträge: „14.500 €" liest
+// sich, „14.500,00 €" muss man entziffern. Auf einem Angebot dagegen ist
+// die gerundete Zahl schlicht falsch — 3.575,80 € sind nicht 3.576 €, und
+// das Blatt geht an einen Kunden.
 const WAEHRUNG = new Intl.NumberFormat("de-DE", {
   style: "currency",
   currency: "EUR",
   maximumFractionDigits: 0,
+});
+
+const WAEHRUNG_GENAU = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 const DATUM = new Intl.DateTimeFormat("de-DE", {
@@ -23,6 +36,11 @@ const DATUM_ZEIT = new Intl.DateTimeFormat("de-DE", {
 
 export function euro(cents: number): string {
   return WAEHRUNG.format(cents / 100);
+}
+
+/** Auf Cent genau. Für alles, was ein Kunde in die Hand bekommt. */
+export function euroGenau(cents: number): string {
+  return WAEHRUNG_GENAU.format(cents / 100);
 }
 
 export function datum(wert: string | null | undefined): string {
@@ -75,6 +93,24 @@ export const AKTIVITAET_TEXT: Record<string, string> = {
   meeting: "Termin",
   task: "Aufgabe",
   stage_change: "Stufenwechsel",
+  quote: "Angebot",
   ai: "KI",
   system: "System",
+};
+
+export const ANGEBOT_STATUS_TEXT: Record<string, string> = {
+  draft: "Entwurf",
+  sent: "Verschickt",
+  accepted: "Angenommen",
+  rejected: "Abgelehnt",
+  expired: "Frist abgelaufen",
+};
+
+/** Wie die Stufenpille: Farbe trägt die Aussage nie allein. */
+export const ANGEBOT_STATUS_ART: Record<string, "open" | "won" | "lost"> = {
+  draft: "open",
+  sent: "open",
+  accepted: "won",
+  rejected: "lost",
+  expired: "lost",
 };

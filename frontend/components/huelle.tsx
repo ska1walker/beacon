@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   CheckSquare,
+  FileText,
   Handshake,
   LayoutDashboard,
   Settings,
@@ -18,6 +19,7 @@ import { Darstellungsschalter } from "@/components/darstellung";
 const ZIELE = [
   { pfad: "/", text: "Start", Zeichen: LayoutDashboard },
   { pfad: "/deals", text: "Deals", Zeichen: Handshake },
+  { pfad: "/angebote", text: "Angebote", Zeichen: FileText },
   { pfad: "/firmen", text: "Firmen", Zeichen: Building2 },
   { pfad: "/kontakte", text: "Kontakte", Zeichen: Users },
   { pfad: "/aufgaben", text: "Aufgaben", Zeichen: CheckSquare },

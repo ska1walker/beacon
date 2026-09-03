@@ -59,10 +59,14 @@ fi
 grep -q 'default .Chart.AppVersion' olares/templates/deployment-backend.yaml \
   || melde "deployment-backend liest den Tag nicht aus Chart.AppVersion"
 
-echo "→ Migrations-ConfigMap ist aktuell"
+echo "→ Migrations-ConfigMap passt zur Quelle"
+# Verglichen wird der Inhalt, nicht der Git-Zustand: Ein Vergleich gegen
+# HEAD schlüge bei jeder noch nicht committeten Migration an und wäre als
+# Torwächter vor dem Commit damit unbrauchbar.
+VORHER=$(cat olares/templates/configmap-migrations.yaml 2>/dev/null || true)
 python3 scripts/regen-migrations.py > /dev/null
-if ! git diff --quiet -- olares/templates/configmap-migrations.yaml 2>/dev/null; then
-  melde "configmap-migrations.yaml weicht von supabase/migrations/ ab — regen-migrations.py laufen lassen und committen"
+if [ "$VORHER" != "$(cat olares/templates/configmap-migrations.yaml)" ]; then
+  melde "configmap-migrations.yaml war nicht aktuell — sie wurde soeben neu erzeugt, bitte mit committen"
 fi
 
 echo "→ helm lint und helm template"

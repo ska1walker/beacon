@@ -35,9 +35,12 @@ TABELLEN: list[str] = [
     "companies",
     "pipelines",
     "pipeline_stages",
+    "products",
     "contacts",
     "deals",
     "deal_contacts",
+    "quotes",
+    "quote_items",
     "activities",
     "tasks",
 ]
@@ -48,6 +51,7 @@ TABELLEN: list[str] = [
 # Wiederherstellenden gesetzt.
 NUTZERSPALTEN: dict[str, list[str]] = {
     "companies": ["owner_id", "created_by"],
+    "quotes": ["created_by"],
     "contacts": ["owner_id", "created_by"],
     "deals": ["owner_id", "created_by"],
     "activities": ["created_by"],

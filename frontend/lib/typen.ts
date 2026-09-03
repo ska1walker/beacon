@@ -19,6 +19,7 @@ export type ActivityKind =
   | "meeting"
   | "task"
   | "stage_change"
+  | "quote"
   | "ai"
   | "system";
 
@@ -30,6 +31,8 @@ export interface Company {
   domain: string | null;
   industry: string | null;
   employee_count: number | null;
+  street: string | null;
+  postal_code: string | null;
   city: string | null;
   country: string | null;
   phone: string | null;
@@ -147,7 +150,25 @@ export interface Task {
   created_at: string;
 }
 
-export interface OrgSettings {
+export interface Absender {
+  absender_name: string | null;
+  absender_strasse: string | null;
+  absender_plz: string | null;
+  absender_ort: string | null;
+  absender_land: string | null;
+  absender_email: string | null;
+  absender_telefon: string | null;
+  absender_website: string | null;
+  ust_id: string | null;
+  vertretung: string | null;
+  registergericht: string | null;
+  bank_iban: string | null;
+  bank_name: string | null;
+  standard_bedingungen: string | null;
+  bindefrist_tage: number | null;
+}
+
+export interface OrgSettings extends Absender {
   llm_base_url: string;
   llm_model: string;
   llm_api_key_set: boolean;
@@ -182,4 +203,94 @@ export interface Wiederherstellung {
   datei: string | null;
   geschrieben: Record<string, number>;
   uebersprungen: Record<string, number>;
+}
+
+export type ProductKind = "system" | "hardware" | "service" | "subscription";
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+
+export interface Product {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  kind: ProductKind;
+  list_price_cents: number;
+  default_service_days: number | null;
+  position: number;
+  is_active: boolean;
+}
+
+export interface QuoteItem {
+  id: string;
+  product_id: string | null;
+  title: string;
+  description: string | null;
+  quantity: number;
+  unit_price_cents: number;
+  discount_percent: number;
+  position: number;
+  line_total_cents: number;
+}
+
+export interface QuoteItemIn {
+  product_id?: string | null;
+  title: string;
+  description?: string | null;
+  quantity: number;
+  unit_price_cents: number;
+  discount_percent?: number;
+  position?: number;
+}
+
+export interface Empfaenger {
+  name: string | null;
+  street: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
+  ansprechpartner: string | null;
+}
+
+export interface Quote {
+  id: string;
+  deal_id: string;
+  deal_name: string | null;
+  company_name: string | null;
+  empfaenger: Empfaenger | null;
+  number: string;
+  number_seq: number;
+  status: QuoteStatus;
+  title: string;
+  intro_text: string | null;
+  terms_text: string | null;
+  discount_cents: number;
+  tax_rate: number;
+  valid_until: string | null;
+  sent_at: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  items: QuoteItem[];
+  net_cents: number;
+  discount_total_cents: number;
+  taxable_cents: number;
+  tax_cents: number;
+  gross_cents: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Angebotsposition {
+  produkt_key: string | null;
+  titel: string;
+  beschreibung: string | null;
+  menge: number;
+  einzelpreis_cents: number;
+}
+
+export interface Angebotsvorschlag {
+  begruendung: string;
+  anschreiben: string;
+  positionen: Angebotsposition[];
+  offene_punkte: string[];
+  modell: string;
 }

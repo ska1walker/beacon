@@ -13,7 +13,9 @@ from pydantic import BaseModel, EmailStr, Field
 
 LifecycleStage = Literal["lead", "qualified", "opportunity", "customer", "partner", "disqualified"]
 DealProduct = Literal["assistent", "analyst", "experte", "service", "sonstiges"]
-ActivityKind = Literal["note", "call", "email", "meeting", "task", "stage_change", "ai", "system"]
+ActivityKind = Literal[
+    "note", "call", "email", "meeting", "task", "stage_change", "quote", "ai", "system"
+]
 StageKind = Literal["open", "won", "lost"]
 
 
@@ -24,6 +26,8 @@ class CompanyIn(BaseModel):
     domain: str | None = None
     industry: str | None = None
     employee_count: int | None = Field(default=None, ge=0)
+    street: str | None = None
+    postal_code: str | None = None
     city: str | None = None
     country: str | None = "DE"
     phone: str | None = None
@@ -39,6 +43,8 @@ class CompanyPatch(BaseModel):
     domain: str | None = None
     industry: str | None = None
     employee_count: int | None = Field(default=None, ge=0)
+    street: str | None = None
+    postal_code: str | None = None
     city: str | None = None
     country: str | None = None
     phone: str | None = None
@@ -240,7 +246,27 @@ class Task(TaskIn):
 
 # ── Einstellungen ───────────────────────────────────────────────────────
 
-class OrgSettingsIn(BaseModel):
+class Absender(BaseModel):
+    """Der Briefkopf. Steht unter jedem Angebot, das das Haus verlässt."""
+
+    absender_name: str | None = None
+    absender_strasse: str | None = None
+    absender_plz: str | None = None
+    absender_ort: str | None = None
+    absender_land: str | None = None
+    absender_email: str | None = None
+    absender_telefon: str | None = None
+    absender_website: str | None = None
+    ust_id: str | None = None
+    vertretung: str | None = None
+    registergericht: str | None = None
+    bank_iban: str | None = None
+    bank_name: str | None = None
+    standard_bedingungen: str | None = None
+    bindefrist_tage: int | None = Field(default=None, ge=1, le=365)
+
+
+class OrgSettingsIn(Absender):
     llm_base_url: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = None
@@ -248,7 +274,7 @@ class OrgSettingsIn(BaseModel):
     locale: str | None = None
 
 
-class OrgSettings(BaseModel):
+class OrgSettings(Absender):
     llm_base_url: str = ""
     llm_model: str = ""
     # Der Schlüssel geht nie zurück an die Oberfläche. Sie erfährt nur,
@@ -257,3 +283,126 @@ class OrgSettings(BaseModel):
     llm_ready: bool = False
     default_currency: str = "EUR"
     locale: str = "de"
+
+
+# ── Produkte ────────────────────────────────────────────────────────────
+
+ProductKind = Literal["system", "hardware", "service", "subscription"]
+QuoteStatus = Literal["draft", "sent", "accepted", "rejected", "expired"]
+
+
+class Product(BaseModel):
+    id: UUID
+    key: str
+    name: str
+    description: str | None = None
+    kind: ProductKind
+    list_price_cents: int
+    default_service_days: int | None = None
+    position: int
+    is_active: bool
+
+
+class ProductIn(BaseModel):
+    key: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    kind: ProductKind = "system"
+    list_price_cents: int = Field(default=0, ge=0)
+    default_service_days: int | None = Field(default=None, ge=0)
+    position: int = 0
+
+
+class ProductPatch(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    kind: ProductKind | None = None
+    list_price_cents: int | None = Field(default=None, ge=0)
+    default_service_days: int | None = Field(default=None, ge=0)
+    position: int | None = None
+    is_active: bool | None = None
+
+
+# ── Angebote ────────────────────────────────────────────────────────────
+
+class QuoteItemIn(BaseModel):
+    product_id: UUID | None = None
+    title: str = Field(min_length=1, max_length=300)
+    description: str | None = None
+    quantity: float = Field(default=1, gt=0)
+    unit_price_cents: int = Field(default=0, ge=0)
+    discount_percent: float = Field(default=0, ge=0, le=100)
+    position: int = 0
+
+
+class QuoteItem(QuoteItemIn):
+    id: UUID
+    # Gerechnet, nie gespeichert: Ein abgelegter Zeilenbetrag und die
+    # Faktoren daneben laufen beim ersten Tippfehler auseinander.
+    line_total_cents: int
+
+
+class QuoteIn(BaseModel):
+    deal_id: UUID
+    title: str = "Angebot"
+    intro_text: str | None = None
+    terms_text: str | None = None
+    discount_cents: int = Field(default=0, ge=0)
+    tax_rate: float = Field(default=0.19, ge=0, le=1)
+    valid_until: date | None = None
+    items: list[QuoteItemIn] = []
+
+
+class QuotePatch(BaseModel):
+    title: str | None = None
+    intro_text: str | None = None
+    terms_text: str | None = None
+    discount_cents: int | None = Field(default=None, ge=0)
+    tax_rate: float | None = Field(default=None, ge=0, le=1)
+    valid_until: date | None = None
+    decision_note: str | None = None
+
+
+class Empfaenger(BaseModel):
+    """Die Anschrift, die im Angebot oben steht."""
+
+    name: str | None = None
+    street: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+    country: str | None = None
+    ansprechpartner: str | None = None
+
+
+class Quote(BaseModel):
+    id: UUID
+    deal_id: UUID
+    deal_name: str | None = None
+    company_name: str | None = None
+    empfaenger: Empfaenger | None = None
+    number: str
+    number_seq: int
+    status: QuoteStatus
+    title: str
+    intro_text: str | None = None
+    terms_text: str | None = None
+    discount_cents: int
+    tax_rate: float
+    valid_until: date | None = None
+    sent_at: datetime | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
+    items: list[QuoteItem] = []
+    # Summen, alle gerechnet
+    net_cents: int = 0
+    discount_total_cents: int = 0
+    taxable_cents: int = 0
+    tax_cents: int = 0
+    gross_cents: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class QuoteStatusIn(BaseModel):
+    status: QuoteStatus
+    decision_note: str | None = None

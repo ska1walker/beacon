@@ -1436,6 +1436,219 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline-offset: 1px;
   }
 
+  /* ── Bearbeitbare Tabelle ─────────────────────────────────────────
+     Zahlenfelder in einer engen Spalte zeigen sonst nichts an: Der
+     Drehregler des Browsers frisst die Breite, und übrig bleibt ein
+     leeres Kästchen. Also weg mit ihm und eine Mindestbreite setzen. */
+  .tabelle input.input,
+  .tabelle select.input {
+    min-width: 0;
+    height: 2rem;
+    padding: 0 var(--am-raum-2);
+    font-size: 0.875rem;
+  }
+
+  .tabelle td.zahl input.input {
+    text-align: right;
+    font-family: var(--am-schrift-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabelle input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .tabelle input[type="number"]::-webkit-outer-spin-button,
+  .tabelle input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  /* ── Druckfassung eines Angebots ──────────────────────────────────
+     Ein Dokument, kein Bildschirm. Deshalb feste Maße statt fließender:
+     Ein Angebot ist ein A4-Blatt, und ein Betrag, der je nach Fenster
+     woanders steht, sieht nach Zufall aus. */
+  .druck-seite {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-16);
+  }
+
+  .druck-leiste {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+    margin-bottom: var(--am-raum-6);
+  }
+
+  .dokument {
+    background: var(--am-seite);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    padding: 20mm 18mm;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .dokument-kopf {
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: var(--am-raum-8);
+  }
+
+  .dokument-marke {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    font-weight: 600;
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+  }
+
+  .dokument-absenderzeile {
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
+    border-bottom: 1px solid var(--am-trennlinie);
+    padding-bottom: 2px;
+    margin: 0 0 var(--am-raum-2);
+  }
+
+  .dokument-empfaenger {
+    font-style: normal;
+    margin-bottom: var(--am-raum-12);
+    min-height: 25mm;
+  }
+
+  .dokument-meta {
+    display: flex;
+    gap: var(--am-raum-8);
+    flex-wrap: wrap;
+    margin-bottom: var(--am-raum-6);
+  }
+
+  .dokument-meta span {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .dokument-titel {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 var(--am-raum-4);
+  }
+
+  .dokument-text {
+    white-space: pre-wrap;
+    margin: 0 0 var(--am-raum-6);
+  }
+
+  .dokument-tabelle {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--am-raum-6);
+  }
+
+  .dokument-tabelle th {
+    text-align: left;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--am-text-gedaempft);
+    border-bottom: 1px solid var(--am-rand);
+    padding: var(--am-raum-2) var(--am-raum-2);
+  }
+
+  .dokument-tabelle td {
+    padding: var(--am-raum-3) var(--am-raum-2);
+    border-bottom: 1px solid var(--am-trennlinie);
+    vertical-align: top;
+  }
+
+  .dokument-zeilentext {
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  .dokument-summe {
+    margin-left: auto;
+    border-collapse: collapse;
+    min-width: 60mm;
+  }
+
+  .dokument-summe td {
+    padding: var(--am-raum-1) var(--am-raum-2);
+  }
+
+  .dokument-summe-gesamt td {
+    border-top: 2px solid var(--am-text-primaer);
+    font-weight: 600;
+    padding-top: var(--am-raum-2);
+  }
+
+  .dokument-bedingungen {
+    margin-top: var(--am-raum-12);
+  }
+
+  .dokument-bedingungen h2 {
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--am-text-gedaempft);
+    margin-bottom: var(--am-raum-2);
+  }
+
+  .dokument-fuss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr));
+    gap: var(--am-raum-4);
+    margin-top: var(--am-raum-16);
+    padding-top: var(--am-raum-3);
+    border-top: 1px solid var(--am-trennlinie);
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
+  }
+}
+
+/* ── Beim Drucken bleibt nur das Dokument ──────────────────────────────
+   Ohne das nimmt der Druck die Navigation und die Bedienleiste mit aufs
+   Papier — der häufigste Fehler bei Druckansichten in Anwendungen. */
+@media print {
+  .huelle-nav,
+  .druck-leiste,
+  .hinweis {
+    display: none !important;
+  }
+
+  .huelle,
+  .huelle-inhalt {
+    display: block;
+    overflow: visible;
+    height: auto;
+  }
+
+  .druck-seite {
+    max-width: none;
+    padding: 0;
+  }
+
+  .dokument {
+    border: none;
+    padding: 0;
+  }
+
+  /* Eine Positionszeile darf nicht über den Seitenumbruch reißen. */
+  .dokument-tabelle tr {
+    break-inside: avoid;
+  }
+
+  .dokument-summe {
+    break-inside: avoid;
+  }
+}
+
+@layer components {
   /* ── Dialogschicht ────────────────────────────────────────────────
      Das Paket liefert mit .deckschicht nur die Farbe. Die Lage ist
      Sache der Anwendung, deshalb steht sie hier und nicht dort. */

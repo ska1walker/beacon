@@ -80,6 +80,18 @@ def _klient(nutzer: str) -> AsyncClient:
     )
 
 
+def klient_fuer(name: str) -> AsyncClient:
+    """Ein Klient mit eigener Organisation.
+
+    Tests teilen sich eine Datenbank. Wer Einstellungen ändert, eine
+    Pipeline löscht oder sonst etwas Bleibendes tut, nimmt sonst die
+    folgenden Tests mit — der LLM-Endpunkt aus einem Angebots-Test hat
+    genau das schon einmal getan. Wer Spuren hinterlässt, nimmt einen
+    eigenen Nutzer.
+    """
+    return _klient(name)
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def kai(datenbank):
     async with _klient("kai") as c:
