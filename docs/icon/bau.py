@@ -1,0 +1,41 @@
+"""aicrm-App-Icon nach Idee 6 (Marc): Sandgrund, dunkelblaues Wappen, Buchstabe.
+Alle Maße im 160er-Raster aus Figma (Knoten 301:164), gerendert mit 3,2-fach."""
+import sys, resvg_py
+buchstabe = sys.argv[1] if len(sys.argv) > 1 else "A"
+ziel = sys.argv[2] if len(sys.argv) > 2 else f"aicrm-{buchstabe}.png"
+groesse = int(sys.argv[3]) if len(sys.argv) > 3 else 512
+grundlinie = 50.51 + 41.664 * (0.025 + 1.005)   # Zeilenhöhe 1,35, Geist-Metrik
+svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{groesse}" height="{groesse}" viewBox="0 0 160 160">
+<defs>
+  <linearGradient id="grund" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#dcbe7c"/><stop offset="0.52" stop-color="#d6b265"/><stop offset="1" stop-color="#b29454"/>
+  </linearGradient>
+  <linearGradient id="wappen" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#415C78"/><stop offset="1" stop-color="#16293D"/>
+  </linearGradient>
+  <linearGradient id="rand" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0.12"/>
+  </linearGradient>
+  <linearGradient id="schrift" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#dec184"/><stop offset="1" stop-color="#bc9d59"/>
+  </linearGradient>
+  <clipPath id="kachel"><rect width="160" height="160" rx="35.84"/></clipPath>
+  <filter id="weich" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10"/></filter>
+  <filter id="weich2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5.53507"/></filter>
+  <clipPath id="wappenform"><path transform="translate(40.4638 30.4)" d="M39.5362 99.2C28.0872 96.3067 18.6356 89.714 11.1813 79.422C3.72711 69.13 0 57.7013 0 45.136V14.88L39.5362 0L79.0725 14.88V45.136C79.0725 57.7013 75.3454 69.13 67.8911 79.422C60.4369 89.714 50.9853 96.3067 39.5362 99.2Z"/></clipPath>
+</defs>
+<g clip-path="url(#kachel)">
+  <rect width="160" height="160" fill="url(#grund)"/>
+  <ellipse cx="79.2" cy="-30.4" rx="108" ry="65.6" fill="#fff" fill-opacity="0.15" filter="url(#weich)"/>
+</g>
+<path transform="translate(40.4638 30.4)" d="M78.0723 15.5713V45.1357C78.0723 57.4878 74.4131 68.7116 67.0811 78.835C59.8067 88.8786 50.6296 95.3019 39.5361 98.165C28.4428 95.3019 19.2655 88.8785 11.9912 78.835C4.6592 68.7116 1 57.4877 1 45.1357V15.5713L39.5361 1.06738L78.0723 15.5713Z" fill="url(#wappen)" stroke="url(#rand)" stroke-width="2"/>
+<g clip-path="url(#wappenform)">
+  <ellipse cx="80" cy="25.44" rx="67.2116" ry="38.688" fill="#fff" fill-opacity="0.3" filter="url(#weich2)"/>
+</g>
+<text x="80" y="{grundlinie:.3f}" text-anchor="middle" font-family="Geist" font-weight="600" font-size="41.664" fill="url(#schrift)">{buchstabe}</text>
+<rect x="1" y="1" width="158" height="158" rx="34.84" fill="none" stroke="#fff" stroke-opacity="0.32" stroke-width="2"/>
+</svg>'''
+png = resvg_py.svg_to_bytes(svg_string=svg, width=groesse, height=groesse, font_files=["Geist-SemiBold.ttf"], skip_system_fonts=True)
+open(ziel, "wb").write(bytes(png))
+open(ziel.replace(".png", ".svg"), "w").write(svg)
+print(ziel, len(png))
