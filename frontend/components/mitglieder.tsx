@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
@@ -10,6 +11,9 @@ import { Fehler, Laedt } from "@/components/zustaende";
 export function Mitgliederblock() {
   const client = useQueryClient();
   const [name, setName] = useState("");
+  // Welche Zeile gerade umbenannt wird, und der Entwurf des Namens.
+  const [bearbeitet, setBearbeitet] = useState<string | null>(null);
+  const [entwurf, setEntwurf] = useState("");
 
   const mitglieder = useQuery({
     queryKey: ["mitglieder"],
@@ -26,6 +30,16 @@ export function Mitgliederblock() {
     onSuccess: () => {
       setName("");
       client.invalidateQueries({ queryKey: ["mitglieder"] });
+    },
+  });
+
+  const umbenennen = useMutation({
+    mutationFn: ({ id, display_name }: { id: string; display_name: string }) =>
+      api.patch<Mitglied>(`/api/mitglieder/${id}`, { display_name }),
+    onSuccess: () => {
+      setBearbeitet(null);
+      client.invalidateQueries({ queryKey: ["mitglieder"] });
+      client.invalidateQueries({ queryKey: ["wer"] });
     },
   });
 
@@ -74,7 +88,47 @@ export function Mitgliederblock() {
           <tbody>
             {mitglieder.data!.map((m) => (
               <tr key={m.id} style={{ cursor: "default" }}>
-                <td className="haupt">{m.display_name ?? m.olares_username}</td>
+                <td className="haupt">
+                  {bearbeitet === m.id ? (
+                    <form
+                      style={{ display: "flex", gap: "var(--am-raum-2)", alignItems: "center" }}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (entwurf.trim().length >= 2) umbenennen.mutate({ id: m.id, display_name: entwurf });
+                      }}
+                    >
+                      <input
+                        aria-label="Name der Person"
+                        value={entwurf}
+                        onChange={(e) => setEntwurf(e.target.value)}
+                        autoFocus
+                        style={{ minWidth: 0 }}
+                      />
+                      <button type="submit" className="btn btn-primaer btn-klein" disabled={entwurf.trim().length < 2 || umbenennen.isPending}>
+                        Speichern
+                      </button>
+                      <button type="button" className="btn btn-still btn-klein" onClick={() => setBearbeitet(null)}>
+                        Abbrechen
+                      </button>
+                    </form>
+                  ) : (
+                    <span style={{ display: "inline-flex", gap: "var(--am-raum-2)", alignItems: "center", whiteSpace: "nowrap" }}>
+                      {m.display_name ?? m.olares_username}
+                      <button
+                        type="button"
+                        className="btn btn-still btn-klein"
+                        aria-label={`${m.display_name ?? m.olares_username} umbenennen`}
+                        title="Namen ändern"
+                        onClick={() => {
+                          setBearbeitet(m.id);
+                          setEntwurf(m.display_name ?? "");
+                        }}
+                      >
+                        <Pencil size={14} aria-hidden="true" />
+                      </button>
+                    </span>
+                  )}
+                </td>
                 <td className="mono" style={{ fontSize: "0.8125rem" }}>
                   {m.olares_username}
                 </td>
@@ -101,6 +155,7 @@ export function Mitgliederblock() {
         </table>
 
         {entfernen.isError && <Fehler text={(entfernen.error as Error).message} />}
+        {umbenennen.isError && <Fehler text={(umbenennen.error as Error).message} />}
 
         <form
           style={{ display: "flex", gap: "var(--am-raum-2)", alignItems: "flex-end" }}
@@ -134,7 +189,9 @@ export function Mitgliederblock() {
         {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
 
         <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", marginTop: "var(--am-raum-3)" }}>
-          Beide sehen und ändern alles. Besitz ist Arbeitsteilung, keine Schranke.
+          Beide sehen und ändern alles. Besitz ist Arbeitsteilung, keine Schranke. Der Name
+          lässt sich für jede Person ändern, auch für den Olares-Zugang selbst — die Kennung
+          bleibt.
         </p>
       </div>
     </section>

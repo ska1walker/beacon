@@ -167,3 +167,37 @@ async def test_sitzplatz_entfernen_laesst_besitz_stehen(datenbank):
         # Und der Sitzplatz greift nicht mehr.
         async with mit_sitzplatz("team-k", marc["id"]) as nicht_mehr:
             assert (await nicht_mehr.get("/api/companies")).status_code == 403
+
+
+async def test_boxinhaber_bekommt_einen_namen(datenbank):
+    """Der Olares-Zugang bringt nur die Kennung mit. Der Name kommt von Hand."""
+    async with klient_fuer("team-name") as klient:
+        wer = (await klient.get("/api/mitglieder/wer")).json()
+        assert wer["display_name"] == "team-name"
+
+        neu = (
+            await klient.patch(f"/api/mitglieder/{wer['user_id']}", json={"display_name": "  Kai Böhm "})
+        ).json()
+        assert neu["display_name"] == "Kai Böhm"
+        assert neu["olares_username"] == "team-name"  # die Kennung bleibt
+        assert neu["zugang"] == "olares"
+
+        # Die Liste und „wer" zeigen den Namen; ein weiterer Aufruf setzt ihn nicht zurück.
+        liste = (await klient.get("/api/mitglieder")).json()
+        assert [m["display_name"] for m in liste if m["id"] == wer["user_id"]] == ["Kai Böhm"]
+        assert (await klient.get("/api/mitglieder/wer")).json()["display_name"] == "Kai Böhm"
+
+        leer = await klient.patch(f"/api/mitglieder/{wer['user_id']}", json={})
+        assert leer.status_code == 400
+        kurz = await klient.patch(f"/api/mitglieder/{wer['user_id']}", json={"display_name": "K"})
+        assert kurz.status_code == 422
+
+
+async def test_fremde_person_bleibt_unbenannt(datenbank):
+    """Der Name einer Person aus einer anderen Organisation ist nicht erreichbar."""
+    async with klient_fuer("team-x") as x, klient_fuer("team-y") as y:
+        marc = (await x.post("/api/mitglieder", json={"display_name": "Marc Bayer"})).json()
+        antwort = await y.patch(f"/api/mitglieder/{marc['id']}", json={"display_name": "Jemand"})
+        assert antwort.status_code == 404
+        liste = (await x.get("/api/mitglieder")).json()
+        assert [m["display_name"] for m in liste if m["id"] == marc["id"]] == ["Marc Bayer"]

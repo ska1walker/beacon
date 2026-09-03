@@ -77,7 +77,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 162
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 164
 Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
 Seit dem 3. September 2026 läuft aicrm auf einer echten Olares-Box und

@@ -30,6 +30,11 @@ class MitgliedIn(BaseModel):
     email: str | None = None
 
 
+class MitgliedPatch(BaseModel):
+    display_name: str | None = Field(default=None, min_length=2, max_length=120)
+    email: str | None = None
+
+
 class Mitglied(BaseModel):
     id: UUID
     display_name: str | None = None
@@ -157,6 +162,50 @@ async def anlegen(
         )
 
     return Mitglied(**dict(person), role="member")
+
+
+@router.patch("/{mitglied_id}", response_model=Mitglied)
+async def umbenennen(
+    mitglied_id: UUID,
+    payload: MitgliedPatch,
+    user: CurrentUser = Depends(get_current_user),
+) -> Mitglied:
+    """Gibt einer Person einen Namen — auch der mit eigenem Zugang.
+
+    Der Olares-Zugang bringt nur die Kennung mit („kaivostudio"); wer
+    dahinter sitzt, weiß Olares nicht. Die Kennung bleibt, wie sie ist:
+    Sie ist der Schlüssel für Besitz, Protokoll und die spätere
+    Anmeldung. Nur der Anzeigename ändert sich.
+    """
+    felder = payload.model_dump(exclude_unset=True)
+    if not felder:
+        raise HTTPException(400, "Keine Änderung übergeben")
+    if "display_name" in felder:
+        felder["display_name"] = felder["display_name"].strip()
+
+    async with acquire_as(user.user_id) as conn:
+        zeile = await conn.fetchrow(
+            """
+            update public.users u
+               set display_name = coalesce($1, u.display_name),
+                   email = case when $3 then $2 else u.email end
+              from public.user_org_roles r
+             where u.id = $4 and r.user_id = u.id and r.org_id = $5 and u.deleted_at is null
+            returning u.id, u.display_name, u.email, u.olares_username, u.zugang,
+                      r.role::text as role, u.created_at, u.last_seen_at
+            """,
+            felder.get("display_name"),
+            felder.get("email"),
+            "email" in felder,
+            mitglied_id,
+            user.org_id,
+        )
+        if zeile is None:
+            raise HTTPException(404, "Nicht in dieser Organisation")
+        await audit.log_fuer(
+            conn, user, action="update", entity="users", entity_id=mitglied_id, diff=felder
+        )
+    return Mitglied(**dict(zeile))
 
 
 @router.delete("/{mitglied_id}", status_code=204)
