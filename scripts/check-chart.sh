@@ -20,6 +20,12 @@ MANIFEST_VERSIONNAME=$(grep -E '^  versionName:' olares/OlaresManifest.yaml | aw
 [ "$CHART_VERSION" = "$MANIFEST_VERSION" ] || melde "OlaresManifest metadata.version ($MANIFEST_VERSION) != Chart-version ($CHART_VERSION)"
 [ "$CHART_APPVERSION" = "$MANIFEST_VERSIONNAME" ] || melde "OlaresManifest spec.versionName ($MANIFEST_VERSIONNAME) != appVersion ($CHART_APPVERSION)"
 
+echo "→ Root-Manifest ist eine Kopie des Chart-Manifests"
+# Marcs Regel für den AImighty-Markt: Repo-Wurzel und Chart tragen
+# dasselbe Manifest. Zwei Fassungen driften, eine Kopie nicht.
+cmp -s OlaresManifest.yaml olares/OlaresManifest.yaml \
+  || melde "OlaresManifest.yaml (Wurzel) weicht von olares/OlaresManifest.yaml ab — cp olares/OlaresManifest.yaml ."
+
 echo "→ Namen identisch (Ordner, Chart, metadata.name, appid)"
 for wert in \
   "$(basename "$(pwd)")" \

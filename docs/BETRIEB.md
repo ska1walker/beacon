@@ -232,6 +232,17 @@ bricht sonst ab:
 
 - `olares/Chart.yaml` → `version` **und** `appVersion`
 - `olares/OlaresManifest.yaml` → `metadata.version` **und** `spec.versionName`
+- `OlaresManifest.yaml` in der Wurzel ist eine **Kopie** des Chart-Manifests
+  (`cp olares/OlaresManifest.yaml .`) — Marcs Regel für den Markt, der
+  Guard in `check-chart.sh` verlangt Gleichheit
+
+Zwei Manifest-Angaben, die auf der Box den Unterschied machen:
+`options.apiTimeout: 0` (sonst kappt der Envoy-Sidecar jede Antwort nach
+15 Sekunden, und das Modell antwortet synchron im Request) und
+`options.dependencies` mit `>=1.12.6-0` (v3-Pflichtform). Jede
+Chart-Änderung, auch eine an Beschreibungen, braucht eine neue Version:
+Der Katalog-Hash entsteht aus Name und Version, sonst synchronisiert
+Olares nicht.
 
 Der Image-Tag steht nirgends: Er folgt `Chart.AppVersion`
 (`values.yaml` trägt `tag: ""`). Das ist Absicht — Olares spielt beim
