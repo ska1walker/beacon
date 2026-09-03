@@ -97,10 +97,9 @@ async def schreiben(
         )
         if zeile is None:
             raise HTTPException(404, "Deal nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="deals",
             entity_id=deal_id,

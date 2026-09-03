@@ -100,7 +100,7 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     # Neuinstallation nicht ins Leere zeigt.
     nutzer = await conn.fetch(
         """
-        select u.id, u.olares_username, u.display_name, r.role
+        select u.id, u.olares_username, u.display_name, u.email, u.zugang, r.role
         from public.users u
         join public.user_org_roles r on r.user_id = u.id
         where r.org_id = $1
@@ -203,15 +203,52 @@ def abzug_lesen(name: str) -> dict[str, Any]:
 
 
 async def _nutzerzuordnung(
-    conn: asyncpg.Connection, daten: dict[str, Any], ersatz: UUID
+    conn: asyncpg.Connection, daten: dict[str, Any], ersatz: UUID, ziel_org: UUID
 ) -> dict[str, UUID]:
-    """Alte Nutzer-Kennung → heutige, über den Olares-Namen."""
+    """Alte Nutzer-Kennung → heutige, über den Olares-Namen.
+
+    Personen ohne eigenen Olares-Zugang werden dabei **wieder angelegt**.
+    Ohne das verschwände nach einer Neuinstallation jeder Sitzplatz, und
+    alles, was Marc gehörte, gehörte plötzlich dem, der die
+    Wiederherstellung ausgelöst hat. Besitz und Protokoll wären damit
+    stillschweigend umgeschrieben — schlimmer als ein Datenverlust, weil
+    es niemandem auffällt.
+    """
     zuordnung: dict[str, UUID] = {}
     for eintrag in daten.get("nutzer", []):
+        name = eintrag.get("olares_username")
+        if not name:
+            continue
+
         heutige = await conn.fetchval(
-            "select id from public.users where olares_username = $1",
-            eintrag.get("olares_username"),
+            "select id from public.users where olares_username = $1", name
         )
+
+        if heutige is None and eintrag.get("zugang") == "sitzplatz":
+            heutige = await conn.fetchval(
+                """
+                insert into public.users (olares_username, display_name, email, zugang)
+                values ($1, $2, $3, 'sitzplatz')
+                on conflict (olares_username) do update set display_name = excluded.display_name
+                returning id
+                """,
+                name,
+                eintrag.get("display_name"),
+                eintrag.get("email"),
+            )
+
+        if heutige is not None:
+            # Die Mitgliedschaft gehört dazu: Ohne sie könnte der Sitzplatz
+            # nicht wieder eingenommen werden (siehe _sitzplatz_einnehmen).
+            await conn.execute(
+                "insert into public.user_org_roles (user_id, org_id, role) "
+                "values ($1, $2, coalesce($3::public.user_role, 'member')) "
+                "on conflict (user_id, org_id) do nothing",
+                heutige,
+                ziel_org,
+                eintrag.get("role"),
+            )
+
         zuordnung[eintrag["id"]] = heutige or ersatz
     return zuordnung
 
@@ -233,7 +270,7 @@ async def zurueckspielen(
             f"Unbekanntes Format {daten.get('format')!r}; diese Fassung liest {FORMAT_VERSION}."
         )
 
-    nutzer = await _nutzerzuordnung(conn, daten, handelnder)
+    nutzer = await _nutzerzuordnung(conn, daten, handelnder, ziel_org)
     bilanz: dict[str, int] = {}
     uebersprungen: dict[str, int] = {}
 

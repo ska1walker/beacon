@@ -277,10 +277,9 @@ async def create_quote(payload: QuoteIn, user: CurrentUser = Depends(get_current
         )
         await _zeilen_schreiben(conn, user, kopf["id"], payload.items)
 
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="create",
             entity="quotes",
             entity_id=kopf["id"],
@@ -419,10 +418,9 @@ async def status_setzen(
             orjson.dumps({"angebot": str(quote_id), "status": payload.status}).decode(),
             user.user_id,
         )
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="quotes",
             entity_id=quote_id,

@@ -12,7 +12,7 @@ import {
   PRODUKT_TEXT,
   prozent,
 } from "@/lib/format";
-import type { Board, Deal, Quote, Verlustgrund } from "@/lib/typen";
+import type { Board, Deal, Mitglied, Quote, Verlustgrund } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
@@ -45,6 +45,19 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
   const board = useQuery({
     queryKey: ["board"],
     queryFn: () => api.get<Board>("/api/board"),
+  });
+
+  const mitglieder = useQuery({
+    queryKey: ["mitglieder"],
+    queryFn: () => api.get<Mitglied[]>("/api/mitglieder"),
+  });
+
+  const zustaendig = useMutation({
+    mutationFn: (owner_id: string | null) => api.patch<Deal>(`/api/deals/${id}`, { owner_id }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["deal", id] });
+      client.invalidateQueries({ queryKey: ["board"] });
+    },
   });
 
   const verlustgruende = useQuery({
@@ -212,6 +225,29 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
                 <div className="eigenschaft">
                   <dt>Servicetage</dt>
                   <dd>{d.service_days ?? "—"}</dd>
+                </div>
+                <div className="eigenschaft">
+                  <dt>Zuständig</dt>
+                  <dd>
+                    {(mitglieder.data?.length ?? 0) > 1 ? (
+                      <select
+                        className="input"
+                        aria-label="Zuständig"
+                        value={d.owner_id ?? ""}
+                        onChange={(e) => zustaendig.mutate(e.target.value || null)}
+                        disabled={zustaendig.isPending}
+                      >
+                        <option value="">— niemand —</option>
+                        {mitglieder.data?.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.display_name ?? m.olares_username}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      (mitglieder.data?.find((m) => m.id === d.owner_id)?.display_name ?? "—")
+                    )}
+                  </dd>
                 </div>
                 {d.lost_reason && (
                   <div className="eigenschaft">

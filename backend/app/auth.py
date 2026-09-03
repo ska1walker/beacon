@@ -86,10 +86,23 @@ STANDARD_STUFEN: list[tuple[str, str, float]] = [
 
 
 class CurrentUser(BaseModel):
+    """Wer handelt — und über welchen Zugang.
+
+    Bei einem geteilten Olares-Konto sind das zwei verschiedene Dinge:
+    `user_id` ist die Person, der die Arbeit zugeschrieben wird,
+    `login_username` der Zugang, über den sie hereinkam. Das Protokoll
+    hält beides fest, sonst sähe es aus, als hätte die Person sich selbst
+    angemeldet.
+    """
+
     olares_username: str
     user_id: UUID
     org_id: UUID
     display_name: str | None = None
+    # Der Olares-Name aus X-Bfl-User. Gleich `olares_username`, solange
+    # kein Sitzplatz gewählt ist.
+    login_username: str = ""
+    sitzplatz: bool = False
 
 
 async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
@@ -271,8 +284,50 @@ async def _ensure_user_and_org(olares_username: str) -> CurrentUser:
     )
 
 
+async def _sitzplatz_einnehmen(angemeldet: CurrentUser, sitzplatz_id: UUID) -> CurrentUser:
+    """Wechselt die handelnde Person innerhalb derselben Organisation.
+
+    Die Prüfung ist die eigentliche Substanz dieser Funktion: Ein
+    Sitzplatz greift **nur**, wenn er Mitglied derselben Organisation ist
+    wie der angemeldete Olares-Nutzer. Ohne diese Bedingung wäre der
+    Sitzplatz ein Weg in fremde Mandanten — und damit die Umgehung von
+    allem, was die Zeilensicherheit schützt.
+
+    Ein unbekannter oder fremder Sitzplatz wird abgewiesen und nicht
+    stillschweigend ignoriert: Sonst schriebe die Oberfläche Arbeit der
+    falschen Person zu und niemand würde es merken.
+    """
+    async with acquire() as conn:
+        person = await conn.fetchrow(
+            """
+            select u.id, u.display_name, u.olares_username, u.zugang
+            from public.users u
+            join public.user_org_roles r on r.user_id = u.id
+            where u.id = $1 and r.org_id = $2 and u.deleted_at is null
+            """,
+            sitzplatz_id,
+            angemeldet.org_id,
+        )
+
+    if person is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Dieser Sitzplatz gehört nicht zu Ihrer Organisation.",
+        )
+
+    return CurrentUser(
+        olares_username=person["olares_username"],
+        user_id=person["id"],
+        org_id=angemeldet.org_id,
+        display_name=person["display_name"],
+        login_username=angemeldet.login_username,
+        sitzplatz=person["id"] != angemeldet.user_id,
+    )
+
+
 async def get_current_user(
     x_bfl_user: str | None = Header(None, alias="X-Bfl-User"),
+    x_aicrm_sitzplatz: str | None = Header(None, alias="X-Aicrm-Sitzplatz"),
 ) -> CurrentUser:
     name = (x_bfl_user or "").strip() or settings.dev_user.strip()
     if not name:
@@ -280,4 +335,20 @@ async def get_current_user(
         # lässt den Request gar nicht durch. Fehlt er trotzdem, ist etwas
         # an der Kette kaputt — und dann ist Verweigern richtig.
         raise HTTPException(status_code=401, detail="Keine Identität im Request (X-Bfl-User fehlt)")
-    return await _ensure_user_and_org(name)
+
+    angemeldet = await _ensure_user_and_org(name)
+    angemeldet = angemeldet.model_copy(update={"login_username": name})
+
+    gewaehlt = (x_aicrm_sitzplatz or "").strip()
+    if not gewaehlt:
+        return angemeldet
+
+    try:
+        sitzplatz_id = UUID(gewaehlt)
+    except ValueError:
+        raise HTTPException(400, "Der Sitzplatz ist keine gültige Kennung.") from None
+
+    if sitzplatz_id == angemeldet.user_id:
+        return angemeldet
+
+    return await _sitzplatz_einnehmen(angemeldet, sitzplatz_id)

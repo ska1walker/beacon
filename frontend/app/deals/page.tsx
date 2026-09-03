@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { datum, euro } from "@/lib/format";
-import type { Board, Deal } from "@/lib/typen";
+import type { Board, Deal, Mitglied, Wer } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { DealAnlegen } from "@/components/deal-anlegen";
@@ -14,10 +14,21 @@ export default function BoardSeite() {
   const client = useQueryClient();
   const [ziel, setZiel] = useState<string | null>(null);
   const [formularOffen, setFormularOffen] = useState(false);
+  const [nurMeine, setNurMeine] = useState(false);
 
   const abfrage = useQuery({
     queryKey: ["board"],
     queryFn: () => api.get<Board>("/api/board"),
+  });
+
+  const wer = useQuery({
+    queryKey: ["wer"],
+    queryFn: () => api.get<Wer>("/api/mitglieder/wer"),
+  });
+
+  const mitglieder = useQuery({
+    queryKey: ["mitglieder"],
+    queryFn: () => api.get<Mitglied[]>("/api/mitglieder"),
   });
 
   const verschieben = useMutation({
@@ -29,7 +40,26 @@ export default function BoardSeite() {
   if (abfrage.isPending) return <Laedt />;
   if (abfrage.isError) return <Fehler text={(abfrage.error as Error).message} />;
 
-  const board = abfrage.data!;
+  const rohboard = abfrage.data!;
+  // Gefiltert wird in der Oberfläche, nicht in der Abfrage: Die Spalten-
+  // summen sollen sich mit dem Filter mitändern, und dafür muss dieselbe
+  // Rechnung über den gefilterten Bestand laufen.
+  const board = nurMeine && wer.data
+    ? {
+        ...rohboard,
+        columns: rohboard.columns.map((spalte) => {
+          const meine = spalte.deals.filter((d) => d.owner_id === wer.data!.user_id);
+          const summe = meine.reduce((s, d) => s + d.amount_cents, 0);
+          return {
+            ...spalte,
+            deals: meine,
+            sum_amount_cents: summe,
+            weighted_amount_cents: Math.round(summe * spalte.stage.probability),
+          };
+        }),
+      }
+    : rohboard;
+
   const offen = board.columns.filter((s) => s.stage.kind === "open");
   const summeOffen = offen.reduce((s, c) => s + c.sum_amount_cents, 0);
   const gewichtetOffen = offen.reduce((s, c) => s + c.weighted_amount_cents, 0);
@@ -40,6 +70,16 @@ export default function BoardSeite() {
         titel={board.pipeline.name}
         zahl={`${euro(summeOffen)} offen · ${euro(gewichtetOffen)} gewichtet`}
       >
+        {(mitglieder.data?.length ?? 0) > 1 && (
+          <button
+            type="button"
+            className={`btn btn-klein ${nurMeine ? "btn-primaer" : "btn-sekundaer"}`}
+            onClick={() => setNurMeine((m) => !m)}
+            aria-pressed={nurMeine}
+          >
+            {nurMeine ? `Nur ${wer.data?.display_name ?? "meine"}` : "Alle"}
+          </button>
+        )}
         <button type="button" className="btn btn-primaer" onClick={() => setFormularOffen(true)}>
           Deal anlegen
         </button>

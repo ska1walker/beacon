@@ -95,10 +95,9 @@ async def create_company(
             payload.owner_id or user.user_id,
             user.user_id,
         )
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="create",
             entity="companies",
             entity_id=row["id"],
@@ -128,10 +127,9 @@ async def update_company(
         )
         if updated is None:
             raise HTTPException(404, "Firma nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="companies",
             entity_id=company_id,
@@ -156,10 +154,9 @@ async def delete_company(
         )
         if deleted is None:
             raise HTTPException(404, "Firma nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="delete",
             entity="companies",
             entity_id=company_id,

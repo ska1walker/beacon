@@ -25,6 +25,7 @@ from app.routers import (
     eingang,
     fragen,
     ki,
+    mitglieder,
     notiz,
     tasks,
 )
@@ -138,6 +139,7 @@ app.include_router(briefing.router)
 app.include_router(fragen.router)
 app.include_router(eingang.router)
 app.include_router(eingang.quellen_router)
+app.include_router(mitglieder.router)
 app.include_router(sicherung_router.router)
 
 

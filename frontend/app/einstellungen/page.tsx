@@ -9,6 +9,7 @@ import { Fehler, Laedt } from "@/components/zustaende";
 import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
+import { Mitgliederblock } from "@/components/mitglieder";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -134,6 +135,8 @@ export default function EinstellungenSeite() {
             </form>
           </div>
         </section>
+
+        <Mitgliederblock />
 
         <Absenderblock />
 

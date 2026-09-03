@@ -582,6 +582,10 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   /* Herkunftsvermerk — wie der Nachweis nur in der Seitenspalte
      sichtbar; Farbe und Schnitt gelten unabhängig davon. */
+  /* Der Fuß der Navigation: Sitzplatz über der Herkunftszeile. Auf der
+     schmalen Leiste unten am Bildschirm ist dafür kein Platz — dort ist
+     beides ausgeblendet, wie schon vorher der Nachweis. */
+  .huelle-fuss,
   .huelle-herkunft {
     display: none;
   }
@@ -750,12 +754,18 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       color: var(--am-achtung);
     }
 
+    .huelle-fuss {
+      display: flex;
+      flex-direction: column;
+      gap: var(--am-raum-2);
+      margin-top: var(--am-raum-3);
+      padding: 0 var(--am-raum-3);
+    }
+
     .huelle-herkunft {
       display: flex;
       align-items: baseline;
       gap: var(--am-raum-2);
-      margin-top: var(--am-raum-3);
-      padding: 0 var(--am-raum-3);
       font-size: 0.6875rem;
       line-height: 1.4;
     }
@@ -1434,6 +1444,96 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .notiz-feld textarea:focus-visible {
     outline: 2px solid var(--am-fokus-ring);
     outline-offset: 1px;
+  }
+
+  /* ── Sitzplatz-Wahl ───────────────────────────────────────────────
+     Unten in der Navigation, neben dem Darstellungsschalter. Sie sitzt
+     dort und nicht oben rechts wie ein Benutzermenü: Sie IST kein
+     Benutzermenü — angemeldet ist immer derselbe Olares-Zugang. */
+  .sitzplatz {
+    position: relative;
+  }
+
+  .sitzplatz-knopf {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    width: 100%;
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .sitzplatz-knopf:hover { background: var(--am-flaeche-2); }
+
+  .sitzplatz-knopf:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  .sitzplatz-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sitzplatz-liste {
+    position: absolute;
+    bottom: calc(100% + var(--am-raum-2));
+    left: 0;
+    right: 0;
+    min-width: 220px;
+    z-index: 60;
+    padding: var(--am-raum-2);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-3);
+  }
+
+  .sitzplatz-erklaerung {
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: var(--am-text-sekundaer);
+    margin: 0 0 var(--am-raum-2);
+    padding-bottom: var(--am-raum-2);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .sitzplatz-eintrag {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    width: 100%;
+    padding: var(--am-raum-2);
+    border: none;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .sitzplatz-eintrag:hover { background: var(--am-flaeche-1); }
+
+  /* Der gewählte Platz trägt Gold — Auszeichnung, keine Handlung. */
+  .sitzplatz-eintrag.aktiv {
+    color: var(--am-gold-beschriftung);
+    font-weight: 600;
+  }
+
+  .sitzplatz-art {
+    margin-left: auto;
+    font-size: 0.625rem;
+    color: var(--am-text-gedaempft);
+    font-weight: 400;
   }
 
   /* ── Tagesbriefing ────────────────────────────────────────────────

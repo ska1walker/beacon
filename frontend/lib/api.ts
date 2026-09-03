@@ -1,6 +1,8 @@
 // Ein Zugang zur API, nicht viele. Jeder Aufruf geht über denselben
 // Ursprung — auf der Box sieht der Envoy-Sidecar ihn dadurch und prüft ihn.
 
+import { liesSitzplatz } from "@/lib/sitzplatz";
+
 export class ApiFehler extends Error {
   constructor(
     readonly status: number,
@@ -12,10 +14,16 @@ export class ApiFehler extends Error {
 }
 
 async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
+  // Der Sitzplatz geht bei jedem Aufruf mit. Ihn nur beim Anlegen
+  // mitzuschicken wäre nicht genug: Auch das Protokoll einer Änderung
+  // muss auf die richtige Person zeigen.
+  const sitzplatz = liesSitzplatz();
+
   const antwort = await fetch(pfad, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(sitzplatz ? { "X-Aicrm-Sitzplatz": sitzplatz } : {}),
       ...(init?.headers ?? {}),
     },
   });

@@ -449,3 +449,22 @@ export interface Eingangsposten {
   markdown_laenge: number;
   created_at: string;
 }
+
+export interface Mitglied {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  olares_username: string;
+  zugang: "olares" | "sitzplatz";
+  role: string;
+  created_at: string;
+  last_seen_at: string | null;
+}
+
+export interface Wer {
+  user_id: string;
+  display_name: string | null;
+  org_id: string;
+  login_username: string;
+  sitzplatz_gewaehlt: boolean;
+}

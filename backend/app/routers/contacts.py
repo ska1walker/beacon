@@ -90,10 +90,9 @@ async def create_contact(
             payload.owner_id or user.user_id,
             user.user_id,
         )
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="create",
             entity="contacts",
             entity_id=new_id,
@@ -123,10 +122,9 @@ async def update_contact(
         )
         if updated is None:
             raise HTTPException(404, "Kontakt nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="contacts",
             entity_id=contact_id,
@@ -149,10 +147,9 @@ async def delete_contact(
         )
         if deleted is None:
             raise HTTPException(404, "Kontakt nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="delete",
             entity="contacts",
             entity_id=contact_id,

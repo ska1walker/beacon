@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { Darstellungsschalter } from "@/components/darstellung";
+import { Sitzplatzwahl } from "@/components/sitzplatz";
 
 // Die Hülle hat drei Bereiche: Navigation, Inhalt, Ablage. Die Ablage
 // trägt Kontext zum gewählten Ding und ist nie eine zweite Inhaltsspalte —
@@ -81,9 +82,12 @@ export function Huelle({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
-        <div className="huelle-herkunft">
-          <Darstellungsschalter />
-          <span className="huelle-herkunft-recht">läuft auf dieser Box</span>
+        <div className="huelle-fuss">
+          <Sitzplatzwahl />
+          <div className="huelle-herkunft">
+            <Darstellungsschalter />
+            <span className="huelle-herkunft-recht">läuft auf dieser Box</span>
+          </div>
         </div>
       </nav>
 

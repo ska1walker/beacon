@@ -216,10 +216,9 @@ async def create_deal(payload: DealIn, user: CurrentUser = Depends(get_current_u
             payload.owner_id or user.user_id,
             user.user_id,
         )
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="create",
             entity="deals",
             entity_id=new_id,
@@ -254,10 +253,9 @@ async def update_deal(
         )
         if updated is None:
             raise HTTPException(404, "Deal nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="deals",
             entity_id=deal_id,
@@ -327,10 +325,9 @@ async def move_stage(
             orjson.dumps({"von": alt["stage_name"], "nach": neu["name"]}).decode(),
             user.user_id,
         )
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="update",
             entity="deals",
             entity_id=deal_id,
@@ -350,10 +347,9 @@ async def delete_deal(deal_id: UUID, user: CurrentUser = Depends(get_current_use
         )
         if deleted is None:
             raise HTTPException(404, "Deal nicht gefunden")
-        await audit.log(
+        await audit.log_fuer(
             conn,
-            org_id=user.org_id,
-            actor_id=user.user_id,
+            user,
             action="delete",
             entity="deals",
             entity_id=deal_id,
