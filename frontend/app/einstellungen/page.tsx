@@ -8,6 +8,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
+import { Quellenblock } from "@/components/quellen";
 
 export default function EinstellungenSeite() {
   const client = useQueryClient();
@@ -135,6 +136,8 @@ export default function EinstellungenSeite() {
         </section>
 
         <Absenderblock />
+
+        <Quellenblock />
 
         <Sicherungsblock />
 

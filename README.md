@@ -3,10 +3,26 @@
 Schlankes CRM für den Vertrieb von [AImighty](https://aimighty.de) —
 läuft vollständig auf der eigenen Olares-Box.
 
-Firmen, Kontakte, Geschäfte auf einem Pipeline-Board mit Ziehen und
-Ablegen, ein Verlauf an jedem Datensatz, Aufgaben. Dazu ein KI-Teil, der
-den Stand eines Kunden zusammenfasst, den nächsten Schritt an einem
-Geschäft vorschlägt und Anschreiben entwirft.
+Der Weg vom ersten Kontakt bis zum Abschluss, durchgängig:
+
+- **Pipeline** — Firmen, Kontakte, Geschäfte auf einem Board mit Ziehen
+  und Ablegen, ein Verlauf an jedem Datensatz, Aufgaben.
+- **Qualifizierung** — sechs Fragen, die ein Geschäft tragen, mit
+  gerechneter Punktzahl und der Liste dessen, was noch zu klären ist.
+- **Angebote** — Produktkatalog, Positionen, Summen und eine
+  Druckfassung mit Briefkopf, die man verschicken kann.
+- **Prognose** — gewichtete Pipeline, Trefferquote, Verlustanalyse,
+  Zahlen je Produkt.
+- **Eingang** — Besprechungsprotokolle aus
+  [Insilo](https://github.com/ska1walker/insilo) landen am passenden
+  Geschäft.
+
+Und die KI liegt nicht obendrauf, sondern an den Stellen, wo sie Arbeit
+abnimmt: eine hingetippte Gesprächsnotiz wird zu Notiz, Aufgaben,
+nächstem Schritt und Qualifizierung. Ein Tagesbriefing sagt, womit man
+anfängt. Fragen an den eigenen Bestand werden aus dem Bestand
+beantwortet, mit Fundstellen. Angebotsvorschläge nehmen Preise aus dem
+Katalog, nie aus dem Modell.
 
 **Die Bedienung folgt HubSpot, das Aussehen dem AImighty-Designsystem.**
 
@@ -42,9 +58,11 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Ausbaustufe 1 steht und ist geprüft: Schema, API, Oberfläche und der
-KI-Pfad laufen lokal, 13 Tests sind grün. Das Olares-Chart lintet und
-rendert, ist aber **noch nie auf einer echten Box installiert worden**.
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 91
+Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
 
-Das erste offene Stück ist die **Ausfuhr**: Eine Deinstallation löscht die
-Datenbank, und ohne Sicherung wären damit alle Vertriebsdaten weg.
+Was fehlt, ist die Box. Das Olares-Chart lintet, rendert und bringt das
+SQL unversehrt durch — installiert war es nie. Alles, was erst zur
+Laufzeit auffällt, ist damit ungeprüft; besonders der Weg, auf dem
+Insilo den Empfangspfad erreicht (siehe
+[docs/BETRIEB.md](docs/BETRIEB.md)).

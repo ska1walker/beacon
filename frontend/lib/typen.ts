@@ -419,3 +419,33 @@ export interface Frageantwort {
   modell: string;
   hinweis: string | null;
 }
+
+export interface Quelle {
+  id: string;
+  name: string;
+  kind: string;
+  is_active: boolean;
+  created_at: string;
+  last_seen_at: string | null;
+  pfad: string;
+}
+
+export interface QuelleNeu extends Quelle {
+  secret: string;
+}
+
+export interface Eingangsposten {
+  id: string;
+  event: string;
+  titel: string | null;
+  external_id: string | null;
+  occurred_at: string | null;
+  status: string;
+  company_id: string | null;
+  company_name: string | null;
+  deal_id: string | null;
+  deal_name: string | null;
+  zuordnung_grund: string | null;
+  markdown_laenge: number;
+  created_at: string;
+}

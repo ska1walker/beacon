@@ -37,6 +37,7 @@ TABELLEN: list[str] = [
     "pipeline_stages",
     "products",
     "loss_reasons",
+    "webhook_sources",
     "contacts",
     "deals",
     "deal_contacts",
@@ -44,6 +45,7 @@ TABELLEN: list[str] = [
     "quote_items",
     "activities",
     "tasks",
+    "eingang",
 ]
 
 # Spalten, die auf public.users zeigen. Beim Zurückspielen nach einer

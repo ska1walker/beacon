@@ -3,7 +3,7 @@
 > **Produkt:** aicrm — schlankes, KI-gestütztes CRM für den AImighty-Vertrieb
 > **Maintainer:** Kai Böhm (kaivo.studio)
 > **Plattform:** Olares OS (Kubernetes-basiert), wie Insilo
-> **Status:** Ausbaustufe 1 — Kern steht (Firmen, Kontakte, Deals, Board)
+> **Status:** Der Vertriebsprozess ist durchgängig abgebildet
 > **Letzte Aktualisierung:** 3. September 2026
 
 ---
@@ -29,21 +29,25 @@ Produktleiter Assistent / Analyst / Experte, Servicetage, Kaufrollen.
 
 ## Stand
 
-**Fertig und geprüft:**
+Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 
 | Teil | Zustand |
 |---|---|
-| Schema + Zeilensicherheit | 2 Migrationen, 13 Tests grün |
-| Backend | 18 API-Pfade, FastAPI, asyncpg |
-| Oberfläche | Start, Board, Firmen, Kontakte, Aufgaben, Einstellungen, zwei Datensatzseiten |
-| KI | Zusammenfassung, nächster Schritt, Anschreiben-Entwurf |
+| Schema + Zeilensicherheit | 6 Migrationen, alle Fachtabellen unter FORCE |
+| Backend | 50 API-Pfade, FastAPI + asyncpg |
+| Oberfläche | Start, Board, Angebote, Prognose, Firmen, Kontakte, Aufgaben, Fragen, Eingang, Einstellungen |
+| Angebote | Katalog, Positionen, Summen, Druckfassung mit Briefkopf |
+| Qualifizierung | sechs Felder, gerechnete Punktzahl, Verlustgründe |
+| Prognose | gewichtet, Trefferquote, Verlustanalyse, nach Produkt |
+| KI | Notiz→Struktur, Tagesbriefing, Fragen an den Bestand, Angebotsvorschlag, Qualifizierung aus dem Verlauf, Anschreiben |
+| Insilo-Kopplung | signierter Empfang, Zuordnung, Eingangskorb |
+| Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
+| Tests | 91 Backend, 8 Frontend |
 | Olares-Chart | lintet und rendert, **nie auf einer echten Box installiert** |
 
-**Nicht gebaut, bewusst:** Ausfuhr/Sicherung (siehe „Das größte offene
-Risiko"), Mehrsprachigkeit, Hintergrundjobs, Volltextsuche über
-Aktivitäten, E-Mail-Anbindung, Insilo-Kopplung.
-
----
+**Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
+E-Mail-Versand aus der Anwendung, Kampagnen und Sequenzen, Kalender-
+Anbindung, mobile Ansicht über das Responsive hinaus.
 
 ## Plattform-Kontext: Olares OS
 
@@ -163,16 +167,31 @@ der Lieferung und liest die Token über `var(--am-*)`.
 4. **Bei UI-Arbeit:** Erst schauen, ob `globals.css` das Bauteil schon
    hat. Werte nie am Bauteil setzen.
 
-5. **Bei KI-Funktionen:** Ergebnis immer als Aktivität der Art `ai`
-   festhalten, nie in ein Feld schreiben, das jemand von Hand gefüllt
-   hat. Ist kein Endpunkt eingerichtet, sagt die Oberfläche das —
-   niemals in einen Verbindungsfehler laufen lassen.
+5. **Bei KI-Funktionen** gelten vier Regeln, jede teuer bezahlt:
+
+   - **Zahlen kommen nie aus dem Modell.** Preise aus dem Katalog,
+     Zählungen aus der Datenbank. Ein Modell, das einen Betrag erfindet,
+     erfindet ihn plausibel — und plausibel falsch kommt bis zum Kunden
+     durch.
+   - **Kein Datum ausrechnen lassen.** Das Modell kennt das heutige nicht.
+     Es nennt die Zeitangabe aus dem Text, gerechnet wird im Backend.
+   - **Ergebnis als Aktivität der Art `ai` festhalten**, nie in ein Feld
+     schreiben, das jemand von Hand gefüllt hat. Vorschläge füllen die
+     Maske, speichern tut ein Mensch.
+   - **Ohne Fundstelle keine Antwort.** Wo nichts gefunden wurde, wird
+     kein Modell gefragt. Ist kein Endpunkt eingerichtet, sagt die
+     Oberfläche das, statt in einen Verbindungsfehler zu laufen.
 
 6. **Sprache:** Oberfläche und Docs deutsch, Sie-Form. Code und
    Commit-Messages englisch. Bezeichner im Code englisch, Kommentare
    deutsch — wie in Insilo.
 
-7. **Bei Unsicherheit:** stoppen und Kai fragen.
+7. **Bei eingehenden Ereignissen:** Signatur über den **rohen** Body
+   prüfen, zeitkonstant vergleichen, den Idempotenzschlüssel des
+   Absenders achten. Zugeordnet wird nur, was eindeutig ist — ein
+   Protokoll am falschen Kunden ist schlimmer als eines im Eingangskorb.
+
+8. **Bei Unsicherheit:** stoppen und Kai fragen.
 
 ---
 

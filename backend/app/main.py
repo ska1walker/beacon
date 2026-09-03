@@ -22,6 +22,7 @@ from app.routers import (
     companies,
     contacts,
     deals,
+    eingang,
     fragen,
     ki,
     notiz,
@@ -135,6 +136,8 @@ app.include_router(ki.router)
 app.include_router(notiz.router)
 app.include_router(briefing.router)
 app.include_router(fragen.router)
+app.include_router(eingang.router)
+app.include_router(eingang.quellen_router)
 app.include_router(sicherung_router.router)
 
 

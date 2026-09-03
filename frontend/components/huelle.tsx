@@ -7,6 +7,7 @@ import {
   CheckSquare,
   FileText,
   Handshake,
+  Inbox,
   LayoutDashboard,
   MessageCircleQuestion,
   TrendingUp,
@@ -27,6 +28,7 @@ const ZIELE = [
   { pfad: "/kontakte", text: "Kontakte", Zeichen: Users },
   { pfad: "/aufgaben", text: "Aufgaben", Zeichen: CheckSquare },
   { pfad: "/fragen", text: "Fragen", Zeichen: MessageCircleQuestion },
+  { pfad: "/eingang", text: "Eingang", Zeichen: Inbox },
 ];
 
 const NACHRANGIG = [{ pfad: "/einstellungen", text: "Einstellungen", Zeichen: Settings }];

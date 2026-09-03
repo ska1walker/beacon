@@ -65,3 +65,26 @@ async def acquire_as(user_id: UUID) -> AsyncIterator[asyncpg.Connection]:
         async with conn.transaction():
             await conn.execute("select set_config('app.current_user_id', $1, true)", str(user_id))
             yield conn
+
+
+@asynccontextmanager
+async def acquire_als_quelle(source_id: UUID) -> AsyncIterator[asyncpg.Connection]:
+    """Verbindung, die genau eine Webhook-Quelle lesen darf.
+
+    Der Empfangspfad hat keine Olares-Identität — der Absender ist eine
+    Maschine. Um die Signatur prüfen zu können, muss das Backend aber die
+    Zeile dieser einen Quelle lesen; unter FORCE ROW LEVEL SECURITY geht
+    das ohne Kontext nicht.
+
+    Diese Funktion setzt deshalb `app.webhook_source` auf die
+    angesprochene Kennung. Die Policy `webhook_sources_selbstauskunft`
+    gibt daraufhin genau diese eine Zeile frei — keine zweite, und
+    schreiben lässt sich über sie gar nichts.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.webhook_source', $1, true)", str(source_id)
+            )
+            yield conn
