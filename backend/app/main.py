@@ -34,6 +34,7 @@ from app.routers import (
     pipelines,
     post,
     tasks,
+    tickets,
 )
 from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
@@ -49,11 +50,12 @@ async def _stammdaten_nachziehen() -> None:
     Angebot schreiben. Für jede spätere Erweiterung des Katalogs greift
     derselbe Weg.
     """
-    from app.auth import _seed_produkte, _seed_verlustgruende
+    from app.auth import _seed_produkte, _seed_ticketpipeline, _seed_verlustgruende
 
     aufgaben = (
         ("products", _seed_produkte, "Produktkatalog"),
         ("loss_reasons", _seed_verlustgruende, "Verlustgründe"),
+        ("ticket_pipelines", _seed_ticketpipeline, "Ticket-Pipeline"),
     )
     try:
         for tabelle, saeen, bezeichnung in aufgaben:
@@ -155,6 +157,7 @@ app.include_router(post.router)
 app.include_router(sicherung_router.router)
 app.include_router(anreicherung.router)
 app.include_router(ansichten.router)
+app.include_router(tickets.router)
 
 
 # Doppelte E-Mail, doppelte Domain: Das ist kein Serverfehler, sondern

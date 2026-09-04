@@ -13,7 +13,7 @@ import type {
 } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
 
-type Bezug = { company_id?: string; contact_id?: string; deal_id?: string };
+type Bezug = { company_id?: string; contact_id?: string; deal_id?: string; ticket_id?: string };
 
 /**
  * Ein Kasten für die Gesprächsnotiz.

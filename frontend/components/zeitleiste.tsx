@@ -13,7 +13,7 @@ const ARTEN: ActivityKind[] = ["note", "call", "email", "meeting"];
 export function Zeitleiste({
   bezug,
 }: {
-  bezug: { company_id?: string; contact_id?: string; deal_id?: string };
+  bezug: { company_id?: string; contact_id?: string; deal_id?: string; ticket_id?: string };
 }) {
   const client = useQueryClient();
   const schluessel = ["aktivitaeten", bezug];

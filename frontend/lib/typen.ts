@@ -537,7 +537,7 @@ export interface Firmenverknuepfung {
 // Eine Liste ist nie „alle", sondern eine Frage an den Bestand. Wer sie
 // einmal gestellt hat, speichert sie als Ansicht.
 
-export type Objektart = "companies" | "contacts";
+export type Objektart = "companies" | "contacts" | "tickets" | "tasks";
 
 export type Feldart = "text" | "auswahl" | "zahl" | "datum" | "jaNein" | "person";
 
@@ -576,4 +576,74 @@ export interface Feldauskunft {
   personen: { id: string; name: string }[];
   vorgabe_spalten: string[];
   vorgabe_sortierung: { feld: string; richtung: "asc" | "desc" };
+}
+
+// ── Tickets ──────────────────────────────────────────────────────────
+
+export type Ticketprioritaet = "niedrig" | "mittel" | "hoch" | "dringend";
+export type Ticketstufenart = "neu" | "offen" | "wartet_auf_kontakt" | "abgeschlossen";
+export type Ticketquelle = "manuell" | "email" | "telefon" | "insilo" | "formular";
+
+export interface Ticketstufe {
+  id: string;
+  name: string;
+  art: Ticketstufenart;
+  position: number;
+}
+
+export interface Ticketpipeline {
+  id: string;
+  name: string;
+  is_default: boolean;
+  stufen: Ticketstufe[];
+}
+
+export interface Ticketkategorie {
+  id: string;
+  name: string;
+  position: number;
+  is_active: boolean;
+}
+
+export interface Ticket {
+  id: string;
+  nummer: number;
+  kennung: string;
+  betreff: string;
+  beschreibung: string | null;
+  pipeline_id: string;
+  stage_id: string;
+  stufe_name: string;
+  stufe_art: Ticketstufenart;
+  prioritaet: Ticketprioritaet;
+  kategorie: string | null;
+  quelle: Ticketquelle;
+  owner_id: string | null;
+  besitzer_name: string | null;
+  contact_id: string | null;
+  kontakt_name: string | null;
+  kontakt_email: string | null;
+  company_id: string | null;
+  firma_name: string | null;
+  deal_id: string | null;
+  erste_antwort_am: string | null;
+  geschlossen_am: string | null;
+  faellig_am: string | null;
+  letzte_aktivitaet: string | null;
+  custom: Eigenschaftswerte;
+  created_at: string;
+  updated_at: string;
+  offen: boolean;
+  ueberfaellig: boolean;
+}
+
+export interface Ticketspalte {
+  stufe: Ticketstufe;
+  tickets: Ticket[];
+  anzahl: number;
+}
+
+export interface Ticketbrett {
+  pipeline: Ticketpipeline;
+  spalten: Ticketspalte[];
 }

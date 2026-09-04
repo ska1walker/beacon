@@ -2273,4 +2273,144 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     text-decoration: underline;
     text-underline-offset: 2px;
   }
+
+  /* ── Tickets ──────────────────────────────────────────────────────
+     Die Dringlichkeit trägt Punkt UND Wort: Farbe allein unterscheidet
+     vier Stufen nicht für jeden. */
+  .prio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--am-text-sekundaer);
+    white-space: nowrap;
+  }
+
+  .prio-punkt {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--am-radius-voll);
+    flex: none;
+    background: var(--am-text-gedaempft);
+  }
+
+  /* Rot bleibt dem Ernstfall vorbehalten — hier ist es einer. */
+  .prio[data-prio="dringend"] .prio-punkt { background: var(--am-fehler); }
+  .prio[data-prio="hoch"] .prio-punkt { background: var(--am-gold-600); }
+  .prio[data-prio="mittel"] .prio-punkt { background: var(--am-blau-400); }
+  .prio[data-prio="niedrig"] .prio-punkt { background: var(--am-erfolg); }
+
+  .ticket-karte-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+    margin-bottom: var(--am-raum-1);
+  }
+
+  .ticket-kennung {
+    font-family: var(--am-schrift-mono);
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .frist {
+    font-size: 0.75rem;
+    color: var(--am-text-sekundaer);
+    white-space: nowrap;
+  }
+
+  .frist[data-ueberfaellig="true"] {
+    color: var(--am-fehler);
+    font-weight: 600;
+  }
+
+  .board-mehr {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    text-align: center;
+    padding: var(--am-raum-2);
+    margin: 0;
+  }
+
+  /* Umschalter Brett / Tabelle — dieselbe Form wie der
+     Darstellungsschalter, weil es dieselbe Art Entscheidung ist. */
+  .sichtwahl {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-2);
+  }
+
+  .sicht-knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    border: none;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+
+  .sicht-knopf:hover { color: var(--am-text-primaer); }
+
+  .sicht-knopf.aktiv {
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+  }
+
+  .sicht-knopf:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
+
+  /* Die Stufen als Schritte: wo steht das Anliegen, was ist der nächste
+     Schritt — ein Klick, kein Menü. */
+  .stufenleiste {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--am-raum-1);
+    padding: var(--am-raum-3) var(--am-raum-8);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .stufenschritt {
+    padding: var(--am-raum-2) var(--am-raum-4);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-voll);
+    background: var(--am-seite);
+    color: var(--am-text-sekundaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+
+  .stufenschritt:hover:not(.aktiv):not(:disabled) {
+    background: var(--am-flaeche-1);
+    color: var(--am-text-primaer);
+  }
+
+  .stufenschritt.aktiv {
+    background: var(--am-handlung);
+    border-color: var(--am-handlung);
+    color: #fff;
+    font-weight: 600;
+    cursor: default;
+  }
+
+  .dunkel .stufenschritt.aktiv {
+    background: var(--am-gold-500);
+    border-color: var(--am-gold-500);
+    color: var(--am-blau-950);
+  }
+
+  .stufenschritt:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+  }
 }

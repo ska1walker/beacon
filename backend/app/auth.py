@@ -130,6 +130,50 @@ async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
         )
 
 
+# Die vier Stufen, die HubSpot vorgibt und die sich bewährt haben. Die
+# Art dahinter entscheidet, ob die Uhr läuft: „wartet auf Kontakt" ist
+# die einzige offene Stufe, in der die Frist pausiert.
+STANDARD_TICKETSTUFEN = [
+    ("Neu", "neu"),
+    ("Warten auf Kontakt", "wartet_auf_kontakt"),
+    ("Wartet auf uns", "offen"),
+    ("Abgeschlossen", "abgeschlossen"),
+]
+
+STANDARD_TICKETKATEGORIEN = [
+    "Allgemeine Anfrage",
+    "Störung",
+    "Rechnung",
+    "Einrichtung",
+    "Erweiterung",
+]
+
+
+async def _seed_ticketpipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
+    pipeline_id = await conn.fetchval(
+        """
+        insert into public.ticket_pipelines (org_id, name, is_default, position)
+        values ($1, 'Anliegen', true, 0)
+        returning id
+        """,
+        org_id,
+    )
+    for position, (name, art) in enumerate(STANDARD_TICKETSTUFEN):
+        await conn.execute(
+            """
+            insert into public.ticket_stages (org_id, pipeline_id, name, art, position)
+            values ($1, $2, $3, $4::public.ticket_stufenart, $5)
+            """,
+            org_id, pipeline_id, name, art, position,
+        )
+    for position, name in enumerate(STANDARD_TICKETKATEGORIEN):
+        await conn.execute(
+            "insert into public.ticket_kategorien (org_id, name, position) values ($1,$2,$3) "
+            "on conflict do nothing",
+            org_id, name, position,
+        )
+
+
 async def _seed_verlustgruende(conn: asyncpg.Connection, org_id: UUID) -> None:
     for position, grund in enumerate(STANDARD_VERLUSTGRUENDE):
         await conn.execute(
@@ -209,6 +253,7 @@ async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> 
     )
     if not gruende:
         await _seed_verlustgruende(conn, org_id)
+        await _seed_ticketpipeline(conn, org_id)
 
 
 async def _ensure_user_and_org(olares_username: str) -> CurrentUser:

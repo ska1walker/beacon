@@ -13,7 +13,7 @@ from app.db import acquire_as
 
 router = APIRouter(prefix="/api/ansichten", tags=["ansichten"])
 
-Entity = Literal["companies", "contacts"]
+Entity = Literal["companies", "contacts", "tickets"]
 
 
 class Bedingung(BaseModel):

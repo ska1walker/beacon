@@ -162,3 +162,38 @@ export const OPERATOR_TEXT: Record<string, string> = {
 
 /** Operatoren, die ohne Wert auskommen. */
 export const OHNE_WERT = new Set(["leer", "nicht_leer", "ist_wahr", "ist_falsch"]);
+
+/** Wie die Dringlichkeit eines Tickets heißt — und in welcher Reihenfolge. */
+export const PRIORITAET_TEXT: Record<string, string> = {
+  dringend: "Dringend",
+  hoch: "Hoch",
+  mittel: "Mittel",
+  niedrig: "Niedrig",
+};
+
+export const QUELLE_TEXT: Record<string, string> = {
+  manuell: "Von Hand",
+  email: "E-Mail",
+  telefon: "Telefon",
+  insilo: "Insilo",
+  formular: "Formular",
+};
+
+/**
+ * „in 3 Stunden" oder „seit 2 Tagen überfällig".
+ *
+ * Eine Frist als Datum zu zeigen zwingt zum Kopfrechnen. Der Abstand ist
+ * die Angabe, nach der man handelt.
+ */
+export function frist(wert: string | null | undefined, jetzt: Date = new Date()): string {
+  if (!wert) return "ohne Frist";
+  const ziel = new Date(wert);
+  const minuten = Math.round((ziel.getTime() - jetzt.getTime()) / 60000);
+  const spanne = (m: number): string => {
+    const abs = Math.abs(m);
+    if (abs < 60) return `${abs} Min.`;
+    if (abs < 60 * 24) return anzahl(Math.round(abs / 60), "Stunde", "Stunden");
+    return anzahl(Math.round(abs / (60 * 24)), "Tag", "Tagen");
+  };
+  return minuten >= 0 ? `in ${spanne(minuten)}` : `seit ${spanne(minuten)} überfällig`;
+}

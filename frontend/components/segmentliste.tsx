@@ -25,6 +25,7 @@ import type {
 } from "@/lib/typen";
 import { Filterbau } from "@/components/filterbau";
 import { Stufenpille } from "@/components/stufe";
+import { Prioritaetspille } from "@/components/prioritaet";
 import { Fehler, Laedt, Leer } from "@/components/zustaende";
 
 type Datensatz = Record<string, unknown> & { id: string; custom?: Record<string, unknown> };
@@ -558,6 +559,13 @@ function Zelle({
 
   if (feld.schluessel === "lifecycle_stage") {
     return <Stufenpille stufe={String(roh) as LifecycleStage} />;
+  }
+  if (feld.schluessel === "prioritaet") return <Prioritaetspille prioritaet={String(roh)} />;
+  // Ein Auswahlfeld zeigt den Text seiner Option, nicht den gespeicherten
+  // Wert. „wartet_auf_kontakt" ist ein Schlüssel, keine Beschriftung.
+  if (feld.art === "auswahl") {
+    const treffer = feld.optionen.find((o) => o.wert === String(roh));
+    if (treffer) return <>{treffer.text}</>;
   }
   if (feld.schluessel === "open_amount_cents") return <>{euro(Number(roh))}</>;
   if (feld.art === "person") {

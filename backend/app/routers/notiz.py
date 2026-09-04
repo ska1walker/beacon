@@ -31,9 +31,10 @@ class Bezug(BaseModel):
     company_id: UUID | None = None
     contact_id: UUID | None = None
     deal_id: UUID | None = None
+    ticket_id: UUID | None = None
 
     def leer(self) -> bool:
-        return not (self.company_id or self.contact_id or self.deal_id)
+        return not (self.company_id or self.contact_id or self.deal_id or self.ticket_id)
 
 
 class NotizIn(Bezug):
@@ -151,7 +152,7 @@ async def verarbeiten(
     user: CurrentUser = Depends(get_current_user),
 ) -> Notizvorschlag:
     if payload.leer():
-        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt oder Geschäft.")
+        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Geschäft oder Ticket.")
 
     async with acquire_as(user.user_id) as conn:
         cfg = await load_llm_config(conn, user.org_id)
@@ -264,14 +265,15 @@ async def uebernehmen(
     Man sähe die Notiz und hielte die Nacharbeit für erledigt.
     """
     if payload.leer():
-        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt oder Geschäft.")
+        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Geschäft oder Ticket.")
 
     async with acquire_as(user.user_id) as conn:
         aktivitaet = await conn.fetchval(
             """
             insert into public.activities
-              (org_id, kind, subject, body, company_id, contact_id, deal_id, payload, created_by)
-            values ($1, $2::public.activity_kind, $3, $4, $5, $6, $7, $8::jsonb, $9)
+              (org_id, kind, subject, body, company_id, contact_id, deal_id, ticket_id,
+               payload, created_by)
+            values ($1, $2::public.activity_kind, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
             returning id
             """,
             user.org_id,
@@ -281,6 +283,7 @@ async def uebernehmen(
             payload.company_id,
             payload.contact_id,
             payload.deal_id,
+            payload.ticket_id,
             orjson.dumps({"quelle": "notiz"}).decode(),
             user.user_id,
         )
@@ -289,8 +292,9 @@ async def uebernehmen(
             await conn.execute(
                 """
                 insert into public.tasks
-                  (org_id, title, due_at, company_id, contact_id, deal_id, assigned_to, created_by)
-                values ($1,$2,$3,$4,$5,$6,$7,$7)
+                  (org_id, title, due_at, company_id, contact_id, deal_id, ticket_id,
+                   assigned_to, created_by)
+                values ($1,$2,$3,$4,$5,$6,$7,$8,$8)
                 """,
                 user.org_id,
                 aufgabe.titel,
@@ -300,6 +304,7 @@ async def uebernehmen(
                 payload.company_id,
                 payload.contact_id,
                 payload.deal_id,
+                payload.ticket_id,
                 user.user_id,
             )
 

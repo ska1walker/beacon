@@ -30,6 +30,7 @@ async def list_activities(
     company_id: UUID | None = Query(None),
     contact_id: UUID | None = Query(None),
     deal_id: UUID | None = Query(None),
+    ticket_id: UUID | None = Query(None),
     limit: int = Query(50, le=200),
 ) -> list[Activity]:
     """Verlauf zu einem Datensatz, oder — ohne Bezug — der der Organisation.
@@ -59,6 +60,9 @@ async def list_activities(
     if deal_id:
         args.append(deal_id)
         sql += f" and a.deal_id = ${len(args)}"
+    if ticket_id:
+        args.append(ticket_id)
+        sql += f" and a.ticket_id = ${len(args)}"
     args.append(limit)
     sql += f" order by a.occurred_at desc limit ${len(args)}"
 
@@ -72,17 +76,17 @@ async def create_activity(
     payload: ActivityIn,
     user: CurrentUser = Depends(get_current_user),
 ) -> Activity:
-    if not (payload.company_id or payload.contact_id or payload.deal_id):
-        raise HTTPException(400, "Eine Aktivität braucht einen Bezug: Firma, Kontakt oder Deal.")
+    if not (payload.company_id or payload.contact_id or payload.deal_id or payload.ticket_id):
+        raise HTTPException(400, "Eine Aktivität braucht einen Bezug: Firma, Kontakt, Deal oder Ticket.")
 
     async with acquire_as(user.user_id) as conn:
         row = await conn.fetchrow(
             """
             insert into public.activities
-              (org_id, kind, subject, body, occurred_at, company_id, contact_id, deal_id,
+              (org_id, kind, subject, body, occurred_at, company_id, contact_id, deal_id, ticket_id,
                payload, created_by)
-            values ($1, $2::public.activity_kind, $3, $4, coalesce($5, now()), $6, $7, $8,
-                    $9::jsonb, $10)
+            values ($1, $2::public.activity_kind, $3, $4, coalesce($5, now()), $6, $7, $8, $9,
+                    $10::jsonb, $11)
             returning *
             """,
             user.org_id,
@@ -93,6 +97,7 @@ async def create_activity(
             payload.company_id,
             payload.contact_id,
             payload.deal_id,
+            payload.ticket_id,
             orjson.dumps(payload.payload).decode(),
             user.user_id,
         )

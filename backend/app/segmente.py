@@ -116,13 +116,49 @@ KONTAKT_FELDER: list[Feld] = [
     Feld("updated_at", "Zuletzt geändert", "datum", "k.updated_at"),
 ]
 
+PRIORITAETEN = [
+    {"wert": "dringend", "text": "Dringend"},
+    {"wert": "hoch", "text": "Hoch"},
+    {"wert": "mittel", "text": "Mittel"},
+    {"wert": "niedrig", "text": "Niedrig"},
+]
+
+TICKET_FELDER: list[Feld] = [
+    Feld("nummer", "Nummer", "zahl", "t.nummer", zahl=True),
+    Feld("betreff", "Betreff", "text", "t.betreff"),
+    Feld("beschreibung", "Beschreibung", "text", "t.beschreibung"),
+    Feld("stufe_name", "Stufe", "text", "s.name"),
+    Feld("prioritaet", "Priorität", "auswahl", "t.prioritaet::text", optionen=PRIORITAETEN),
+    Feld("kategorie", "Kategorie", "text", "t.kategorie"),
+    Feld(
+        "quelle", "Quelle", "auswahl", "t.quelle::text",
+        optionen=[
+            {"wert": "manuell", "text": "Von Hand"},
+            {"wert": "email", "text": "E-Mail"},
+            {"wert": "telefon", "text": "Telefon"},
+            {"wert": "insilo", "text": "Insilo"},
+            {"wert": "formular", "text": "Formular"},
+        ],
+    ),
+    Feld("owner_id", "Zuständig", "person", "t.owner_id::text"),
+    Feld("kontakt_name", "Kontakt", "text", "coalesce(k.first_name || ' ', '') || coalesce(k.last_name, '')"),
+    Feld("firma_name", "Firma", "text", "f.name"),
+    Feld("faellig_am", "Fällig", "datum", "t.faellig_am"),
+    Feld("erste_antwort_am", "Erste Antwort", "datum", "t.erste_antwort_am"),
+    Feld("geschlossen_am", "Geschlossen", "datum", "t.geschlossen_am"),
+    Feld("created_at", "Angelegt", "datum", "t.created_at"),
+    Feld("updated_at", "Zuletzt geändert", "datum", "t.updated_at"),
+    Feld("letzte_aktivitaet", "Letzte Aktivität", "datum", "letzte_aktivitaet", filterbar=False),
+]
+
 FELDER: dict[str, list[Feld]] = {
     "companies": FIRMEN_FELDER,
     "contacts": KONTAKT_FELDER,
+    "tickets": TICKET_FELDER,
 }
 
 # Die Spalte, in der die selbst angelegten Eigenschaften liegen.
-CUSTOM_SPALTE = {"companies": "c.custom", "contacts": "k.custom"}
+CUSTOM_SPALTE = {"companies": "c.custom", "contacts": "k.custom", "tickets": "t.custom"}
 
 # Welche Spalten der Tabelle die Oberfläche zeigt, wenn niemand etwas
 # ausgewählt hat. Dieselben wie bisher — eine neue Funktion soll die
@@ -130,6 +166,7 @@ CUSTOM_SPALTE = {"companies": "c.custom", "contacts": "k.custom"}
 VORGABE_SPALTEN = {
     "companies": ["name", "industry", "city", "lifecycle_stage", "contact_count", "open_deal_count", "open_amount_cents"],
     "contacts": ["first_name", "last_name", "job_title", "company_name", "buying_role", "email", "lifecycle_stage"],
+    "tickets": ["nummer", "betreff", "stufe_name", "prioritaet", "kategorie", "owner_id", "firma_name", "faellig_am"],
 }
 
 VORGABE_SORTIERUNG = {"feld": "updated_at", "richtung": "desc"}

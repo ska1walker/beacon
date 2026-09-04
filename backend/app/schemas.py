@@ -236,6 +236,7 @@ class ActivityIn(BaseModel):
     company_id: UUID | None = None
     contact_id: UUID | None = None
     deal_id: UUID | None = None
+    ticket_id: UUID | None = None
     payload: dict = {}
 
 
@@ -253,6 +254,7 @@ class TaskIn(BaseModel):
     company_id: UUID | None = None
     contact_id: UUID | None = None
     deal_id: UUID | None = None
+    ticket_id: UUID | None = None
     assigned_to: UUID | None = None
 
 

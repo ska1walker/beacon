@@ -19,6 +19,7 @@ async def list_tasks(
     deal_id: UUID | None = Query(None),
     company_id: UUID | None = Query(None),
     contact_id: UUID | None = Query(None),
+    ticket_id: UUID | None = Query(None),
     limit: int = Query(100, le=300),
 ) -> list[Task]:
     sql = ("select t.*, d.name as deal_name, f.name as company_name from public.tasks t "
@@ -26,7 +27,7 @@ async def list_tasks(
            "left join public.companies f on f.id = t.company_id "
            "where t.status = $1::public.task_status")
     args: list[object] = [status]
-    for spalte, wert in (("deal_id", deal_id), ("company_id", company_id), ("contact_id", contact_id)):
+    for spalte, wert in (("deal_id", deal_id), ("company_id", company_id), ("contact_id", contact_id), ("ticket_id", ticket_id)):
         if wert:
             args.append(wert)
             sql += f" and t.{spalte} = ${len(args)}"
@@ -46,8 +47,8 @@ async def create_task(payload: TaskIn, user: CurrentUser = Depends(get_current_u
         row = await conn.fetchrow(
             """
             insert into public.tasks
-              (org_id, title, body, due_at, company_id, contact_id, deal_id, assigned_to, created_by)
-            values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+              (org_id, title, body, due_at, company_id, contact_id, deal_id, ticket_id, assigned_to, created_by)
+            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             returning *
             """,
             user.org_id,
@@ -57,6 +58,7 @@ async def create_task(payload: TaskIn, user: CurrentUser = Depends(get_current_u
             payload.company_id,
             payload.contact_id,
             payload.deal_id,
+            payload.ticket_id,
             payload.assigned_to or user.user_id,
             user.user_id,
         )
