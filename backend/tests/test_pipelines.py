@@ -62,7 +62,7 @@ async def test_pipeline_mit_geschaeften_bleibt(datenbank):
         await k.post("/api/deals", json={"name": "Liegt hier", "pipeline_id": zweite["id"]})
         antwort = await k.delete(f"/api/pipelines/{zweite['id']}")
     assert antwort.status_code == 409
-    assert "Geschäfte" in antwort.json()["detail"]
+    assert "1 Lead." in antwort.json()["detail"]
 
 
 async def test_letzte_pipeline_bleibt(datenbank):

@@ -15,7 +15,7 @@ import { Fehler, Laedt } from "@/components/zustaende";
 const OBJEKTE: { wert: PropertyEntity; text: string }[] = [
   { wert: "companies", text: "Firmen" },
   { wert: "contacts", text: "Kontakte" },
-  { wert: "deals", text: "Geschäfte" },
+  { wert: "deals", text: "Leads" },
 ];
 
 const TYPEN: { wert: PropertyKind; text: string; hinweis?: string }[] = [

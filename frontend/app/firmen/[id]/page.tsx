@@ -91,7 +91,7 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
             pfad={`/api/companies/${id}`}
             abfrageSchluessel={["firma", id]}
             zurueckNach="/firmen"
-            loeschtext="Die Firma wird aus allen Listen genommen. Kontakte und Geschäfte bleiben bestehen und lassen sich 30 Tage wiederherstellen."
+            loeschtext="Die Firma wird aus allen Listen genommen. Kontakte und Leads bleiben bestehen und lassen sich 30 Tage wiederherstellen."
             kopfrechts={<Stufenpille stufe={f.lifecycle_stage} />}
             werte={f as unknown as Record<string, unknown>}
             felder={[
@@ -139,13 +139,13 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
         <div>
           <section className="block">
             <div className="block-kopf">
-              <h2>Deals</h2>
+              <h2>Leads</h2>
               <button type="button" className="btn btn-still btn-klein" onClick={() => setDealOffen(true)} disabled={!standard}>Anlegen</button>
             </div>
             <div className="block-inhalt">
               {deals.data?.length === 0 && (
                 <p style={{ fontSize: "0.875rem", color: "var(--am-text-gedaempft)" }}>
-                  Noch kein Geschäft.
+                  Noch kein Lead.
                 </p>
               )}
               {deals.data?.map((d) => (

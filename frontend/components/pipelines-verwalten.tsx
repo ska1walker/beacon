@@ -153,7 +153,7 @@ export function Pipelinesblock() {
                 Liegen Geschäfte auf dieser Stufe, wandern sie auf die gewählte — mit Eintrag im Verlauf.
               </p>
               <div className="feld">
-                <label htmlFor="loeschziel">Geschäfte verschieben nach</label>
+                <label htmlFor="loeschziel">Leads verschieben nach</label>
                 <select id="loeschziel" value={ziel} onChange={(e) => setZiel(e.target.value)}>
                   <option value="">— keine liegen dort —</option>
                   {loeschZiel.pipeline.stages.filter((s) => s.id !== loeschZiel.stage.id).map((s) => (

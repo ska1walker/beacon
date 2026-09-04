@@ -10,7 +10,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler } from "@/components/zustaende";
 
 const BEISPIELE = [
-  "Welche Geschäfte hängen an einer Compliance-Auflage?",
+  "Welche Leads hängen an einer Compliance-Auflage?",
   "Wer entscheidet bei Meyer Präzisionstechnik?",
   "Was war der letzte Stand bei Nordlicht?",
   "Wo haben wir wegen des Preises verloren?",
@@ -21,7 +21,7 @@ function pfad(art: string, id: string | null): string | null {
   if (!id) return null;
   if (art === "Firma") return `/firmen/${id}`;
   if (art === "Kontakt") return `/kontakte/${id}`;
-  if (art === "Geschäft") return `/deals/${id}`;
+  if (art === "Lead") return `/deals/${id}`;
   return null;
 }
 
@@ -78,7 +78,7 @@ export default function FragenSeite() {
                   marginBottom: "var(--am-raum-4)",
                 }}
               >
-                Gesucht wird in Firmen, Kontakten, Geschäften und im gesamten Verlauf.
+                Gesucht wird in Firmen, Kontakten, Leads und im gesamten Verlauf.
                 Geantwortet wird ausschließlich aus dem, was gefunden wurde — findet sich
                 nichts, wird kein Modell gefragt.
               </p>

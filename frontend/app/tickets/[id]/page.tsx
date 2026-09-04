@@ -181,7 +181,7 @@ export default function TicketSeite({ params }: { params: Promise<{ id: string }
                   </dd>
                 </div>
                 <div className="eigenschaft">
-                  <dt>Geschäft</dt>
+                  <dt>Lead</dt>
                   <dd>
                     {t.deal_id ? (
                       <Link href={`/deals/${t.deal_id}`} className="zellen-link">

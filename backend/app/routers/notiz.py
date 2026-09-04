@@ -152,7 +152,7 @@ async def verarbeiten(
     user: CurrentUser = Depends(get_current_user),
 ) -> Notizvorschlag:
     if payload.leer():
-        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Geschäft oder Ticket.")
+        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Lead oder Ticket.")
 
     async with acquire_as(user.user_id) as conn:
         cfg = await load_llm_config(conn, user.org_id)
@@ -265,7 +265,7 @@ async def uebernehmen(
     Man sähe die Notiz und hielte die Nacharbeit für erledigt.
     """
     if payload.leer():
-        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Geschäft oder Ticket.")
+        raise HTTPException(400, "Eine Notiz braucht einen Bezug: Firma, Kontakt, Lead oder Ticket.")
 
     async with acquire_as(user.user_id) as conn:
         aktivitaet = await conn.fetchval(

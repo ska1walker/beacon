@@ -203,9 +203,9 @@ export default function AufgabenSeite() {
                 style={{ flex: "1 1 180px" }}
                 value={dealId}
                 onChange={(e) => setDealId(e.target.value)}
-                aria-label="Geschäft"
+                aria-label="Lead"
               >
-                <option value="">— ohne Geschäft —</option>
+                <option value="">— ohne Lead —</option>
                 {deals.data?.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}

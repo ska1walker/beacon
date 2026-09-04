@@ -105,7 +105,7 @@ export default function BoardSeite() {
           </button>
         )}
         <button type="button" className="btn btn-primaer" onClick={() => setFormularOffen(true)}>
-          Deal anlegen
+          Lead anlegen
         </button>
       </Seitenkopf>
 
@@ -169,7 +169,20 @@ export default function BoardSeite() {
                 onDragStart={(e) => e.dataTransfer.setData("text/plain", deal.id)}
               >
                 <div className="deal-karte-name">{deal.name}</div>
-                <div className="deal-karte-firma">{deal.company_name ?? "Ohne Firma"}</div>
+                <div className="deal-karte-firma">
+                  {deal.company_name ?? (
+                    // Kein Fehler, aber es soll auffallen: Ein Lead, den
+                    // niemand zuordnet, verschwindet sonst im Board.
+                    <span className="ohne-zuordnung">noch keine Firma</span>
+                  )}
+                  {deal.kontakt_anzahl > 0 && (
+                    <span className="deal-karte-beteiligte">
+                      {deal.kontakt_anzahl === 1
+                        ? "1 Ansprechpartner"
+                        : `${deal.kontakt_anzahl} Ansprechpartner`}
+                    </span>
+                  )}
+                </div>
                 <div className="deal-karte-fuss">
                   <span className="deal-karte-betrag">{euro(deal.amount_cents)}</span>
                   <span

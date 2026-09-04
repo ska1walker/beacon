@@ -109,8 +109,22 @@ export interface Deal {
   next_step: string | null;
   ai_summary: string | null;
   owner_id: string | null;
+  /** Wie viele Ansprechpartner am Lead hängen. */
+  kontakt_anzahl: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Ein Ansprechpartner an einem Lead, samt seiner Rolle darin. */
+export interface Beteiligter {
+  contact_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  job_title: string | null;
+  company_id: string | null;
+  company_name: string | null;
+  role: string | null;
 }
 
 export interface BoardColumn {

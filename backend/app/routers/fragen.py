@@ -175,7 +175,7 @@ async def _suchen(conn, begriffe: list[str], grenze: int) -> list[Fundstelle]:
     )
     treffer += [
         Fundstelle(
-            art="Geschäft",
+            art="Lead",
             id=z["id"],
             titel=z["name"],
             text=f"{z['firma'] or 'ohne Firma'}, {z['amount_cents'] / 100:.0f} €, "

@@ -47,7 +47,7 @@ export default function AngeboteSeite() {
         {abfrage.isPending && <Laedt />}
         {abfrage.isError && <Fehler text={(abfrage.error as Error).message} />}
         {abfrage.data?.length === 0 && (
-          <Leer titel="Noch kein Angebot" text="Angebote entstehen am Geschäft." />
+          <Leer titel="Noch kein Angebot" text="Angebote entstehen am Lead." />
         )}
         {abfrage.data && abfrage.data.length > 0 && (
           <div className="rollbar">
@@ -56,7 +56,7 @@ export default function AngeboteSeite() {
                 <tr>
                   <th>Nummer</th>
                   <th>Firma</th>
-                  <th>Geschäft</th>
+                  <th>Lead</th>
                   <th>Status</th>
                   <th>Bindefrist</th>
                   <th style={{ textAlign: "right" }}>Netto</th>

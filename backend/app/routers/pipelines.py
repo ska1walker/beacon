@@ -22,6 +22,16 @@ from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.schemas import StageKind
 
+
+def _leads(anzahl: int) -> str:
+    """„1 Lead" oder „3 Leads" — die Zahl bestimmt das Wort.
+
+    An einer Fehlermeldung fällt ein falscher Plural besonders auf:
+    Sie ist ohnehin schon eine schlechte Nachricht.
+    """
+    return f"{anzahl} Lead" if anzahl == 1 else f"{anzahl} Leads"
+
+
 router = APIRouter(prefix="/api/pipelines", tags=["pipelines"])
 
 
@@ -135,7 +145,7 @@ async def loeschen(pipeline_id: UUID, user: CurrentUser = Depends(get_current_us
             "select count(*) from public.deals where pipeline_id = $1 and deleted_at is null", pipeline_id
         )
         if geschaefte:
-            raise HTTPException(409, f"Auf dieser Pipeline liegen noch {geschaefte} Geschäfte. Verschieben Sie sie zuerst.")
+            raise HTTPException(409, f"Auf dieser Pipeline liegen noch {_leads(geschaefte)}. Verschieben Sie sie zuerst.")
         andere = await conn.fetchval(
             "select count(*) from public.pipelines where org_id = $1 and deleted_at is null and id <> $2",
             user.org_id, pipeline_id,
@@ -201,7 +211,7 @@ async def stufe_aendern(stage_id: UUID, payload: StagePatch, user: CurrentUser =
                 "select count(*) from public.deals where stage_id = $1 and deleted_at is null", stage_id
             )
             if liegen:
-                raise HTTPException(409, f"Auf dieser Stufe liegen {liegen} Geschäfte — ihre Art lässt sich nicht mehr ändern.")
+                raise HTTPException(409, f"Auf dieser Stufe liegen {_leads(liegen)} — ihre Art lässt sich nicht mehr ändern.")
         for name, wert in felder.items():
             cast = "::public.stage_kind" if name == "kind" else ""
             await conn.execute(f"update public.pipeline_stages set {name} = $1{cast} where id = $2", wert, stage_id)
@@ -240,7 +250,7 @@ async def stufe_loeschen(stage_id: UUID, payload: Loeschziel, user: CurrentUser 
         )
         if geschaefte:
             if payload.ziel_stage_id is None:
-                raise HTTPException(409, f"Auf „{stufe['name']}“ liegen {len(geschaefte)} Geschäfte. Geben Sie an, wohin sie sollen.")
+                raise HTTPException(409, f"Auf „{stufe['name']}“ liegen {_leads(len(geschaefte))}. Geben Sie an, wohin sie sollen.")
             ziel = await conn.fetchrow(
                 "select name, kind from public.pipeline_stages where id = $1 and pipeline_id = $2",
                 payload.ziel_stage_id, stufe["pipeline_id"],

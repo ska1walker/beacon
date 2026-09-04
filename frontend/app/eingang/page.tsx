@@ -96,7 +96,7 @@ export default function EingangSeite() {
         {posten.data!.length === 0 && (
           <Leer
             titel="Nichts offen"
-            text="Besprechungen aus Insilo, die sich eindeutig zuordnen ließen, stehen direkt am Geschäft."
+            text="Besprechungen aus Insilo, die sich eindeutig zuordnen ließen, stehen direkt am Lead."
           />
         )}
 
@@ -136,7 +136,7 @@ export default function EingangSeite() {
                       onChange={(e) => setZiel(e.target.value)}
                     >
                       <option value="">— wählen —</option>
-                      <optgroup label="Geschäfte">
+                      <optgroup label="Leads">
                         {deals.data?.map((d) => (
                           <option key={d.id} value={`deal:${d.id}`}>
                             {d.name} · {d.company_name ?? "ohne Firma"}

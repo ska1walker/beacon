@@ -11,8 +11,10 @@ import {
   euro,
   PRODUKT_TEXT,
   prozent,
+  vorgangswort,
 } from "@/lib/format";
-import type { Board, Deal, Mitglied, Quote, Verlustgrund } from "@/lib/typen";
+import type { Board, Company, Deal, Mitglied, Quote, Verlustgrund } from "@/lib/typen";
+import { Beteiligtenblock } from "@/components/beteiligte";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
@@ -37,6 +39,13 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
   const deal = useQuery({
     queryKey: ["deal", id],
     queryFn: () => api.get<Deal>(`/api/deals/${id}`),
+  });
+
+  // Für die nachträgliche Zuordnung. Ein Lead entsteht oft, bevor
+  // feststeht, welche Firma dahintersteht.
+  const firmen = useQuery({
+    queryKey: ["firmen-auswahl"],
+    queryFn: () => api.get<Company[]>("/api/companies?limit=200"),
   });
 
   const angebote = useQuery({
@@ -99,6 +108,9 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
   if (deal.isError) return <Fehler text={(deal.error as Error).message} />;
 
   const d = deal.data!;
+  // Offen ist ein Lead, gewonnen ein Deal. Das Wort folgt der Stufe,
+  // damit auf der Seite nichts steht, was noch nicht stimmt.
+  const wort = vorgangswort(d.stage_kind);
   const ueberfaellig =
     d.stage_kind === "open" && d.close_date && new Date(d.close_date) < new Date();
 
@@ -106,7 +118,7 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
     <>
       <Seitenkopf
         titel={d.name}
-        zahl={`${euro(d.amount_cents)} · ${PRODUKT_TEXT[d.product]}`}
+        zahl={`${wort} · ${euro(d.amount_cents)} · ${PRODUKT_TEXT[d.product]}`}
         pfad={{ text: "← Pipeline", href: "/deals" }}
       >
         <KiKnopf
@@ -184,16 +196,33 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
       <div className="datensatz">
         <div>
           <Stammdaten
-            titel="Über dieses Geschäft"
+            titel={`Über diesen ${wort}`}
             pfad={`/api/deals/${id}`}
             abfrageSchluessel={["deal", id]}
             zurueckNach="/deals"
-            loeschtext="Das Geschäft verschwindet vom Board und aus der Prognose. Verlauf und Angebote bleiben 30 Tage wiederherstellbar."
+            loeschtext={`Der ${wort} verschwindet vom Board und aus der Prognose. Verlauf und Angebote bleiben 30 Tage wiederherstellbar.`}
             kopfrechts={<Dealstufe name={d.stage_name} art={d.stage_kind} />}
             werte={d as unknown as Record<string, unknown>}
             felder={[
               { key: "name", text: "Bezeichnung" },
-              { key: "company_name", text: "Firma", zeige: () => d.company_id ? <Link href={`/firmen/${d.company_id}`} style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>{d.company_name}</Link> : "—" },
+              {
+                key: "company_id",
+                text: "Firma",
+                art: "select",
+                optionen: (firmen.data ?? []).map((f) => ({ wert: f.id, text: f.name })),
+                auchLeer: true,
+                // Angezeigt wird der Name als Verweis, bearbeitet die
+                // Kennung: Ein Lead ohne Firma soll sich zuordnen lassen,
+                // ohne dass jemand eine UUID abtippt.
+                zeige: () =>
+                  d.company_id ? (
+                    <Link href={`/firmen/${d.company_id}`} style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                      {d.company_name}
+                    </Link>
+                  ) : (
+                    <span className="ohne-zuordnung">noch keine — über „Bearbeiten“ zuordnen</span>
+                  ),
+              },
               { key: "product", text: "Produkt", art: "select", optionen: Object.entries(PRODUKT_TEXT).map(([wert, text]) => ({ wert, text })) },
               { key: "amount_cents", text: "Betrag netto", art: "number", skala: 100, zeige: (v) => euro(Number(v)) },
               { key: "probability", text: "Wahrscheinlichkeit", zeige: (v) => prozent(Number(v)) },
@@ -204,6 +233,8 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
               { key: "lost_reason", text: "Grund für die Absage", art: "textarea" },
             ]}
           />
+
+          <Beteiligtenblock dealId={id} />
 
           <Eigenschaftswerteblock entity="deals" id={id} werte={d.custom} abfrageSchluessel={["deal", id]} />
 
@@ -289,7 +320,7 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
 
           <section className="block">
             <div className="block-kopf">
-              <h2>Verlauf des Geschäfts</h2>
+              <h2>Verlauf des {wort}s</h2>
             </div>
             <div className="block-inhalt">
               <dl>

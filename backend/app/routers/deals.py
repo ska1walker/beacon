@@ -1,9 +1,18 @@
-"""Deals, Pipelines und das Board."""
+"""Leads, Pipelines und das Board.
+
+Die Tabelle heißt weiter `deals` — ein Datenbankname, der an jedem
+Fremdschlüssel, in jeder Migration und in der veröffentlichten
+Schnittstelle steht. In der Oberfläche heißt derselbe Datensatz **Lead**,
+solange er offen ist, und **Deal** erst, wenn er gewonnen wurde. Der
+Unterschied ist keine Wortklauberei: Wer alles „Deal" nennt, redet sich
+eine Pipeline schön.
+"""
 
 from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app import audit
 from app.auth import CurrentUser, get_current_user
@@ -24,7 +33,10 @@ router = APIRouter(prefix="/api", tags=["deals"])
 
 DEAL_SQL = """
 select d.*, f.name as company_name, s.name as stage_name,
-       s.kind as stage_kind, s.probability
+       s.kind as stage_kind, s.probability,
+       (select count(*) from public.deal_contacts v
+         join public.contacts k on k.id = v.contact_id and k.deleted_at is null
+        where v.deal_id = d.id) as kontakt_anzahl
 from public.deals d
 left join public.companies f on f.id = d.company_id
 join public.pipeline_stages s on s.id = d.stage_id
@@ -373,4 +385,137 @@ async def delete_deal(deal_id: UUID, user: CurrentUser = Depends(get_current_use
             action="delete",
             entity="deals",
             entity_id=deal_id,
+        )
+
+
+# ── Beteiligte ───────────────────────────────────────────────────────
+#
+# Ein Lead entsteht oft vor allem anderen: ein Anruf, eine Anfrage über
+# das Formular, ein Gespräch auf einer Messe. Firma und Ansprechpartner
+# stehen dann noch nicht fest. Wer an dieser Stelle eine Firma erzwingt,
+# bekommt „Firma unbekannt GmbH" im Bestand — und die bleibt für immer.
+#
+# Also: beides nachtragbar. Die Firma hängt direkt am Lead (eine),
+# Ansprechpartner über `deal_contacts` (mehrere, mit Rolle).
+
+
+class BeteiligterIn(BaseModel):
+    contact_id: UUID
+    role: str | None = Field(default=None, max_length=80)
+
+
+class Beteiligter(BaseModel):
+    contact_id: UUID
+    name: str
+    email: str | None = None
+    phone: str | None = None
+    job_title: str | None = None
+    company_id: UUID | None = None
+    company_name: str | None = None
+    role: str | None = None
+
+
+BETEILIGTE_SQL = """
+select v.contact_id,
+       trim(coalesce(k.first_name,'') || ' ' || coalesce(k.last_name,'')) as name,
+       k.email, k.phone, k.job_title, k.company_id, f.name as company_name, v.role
+from public.deal_contacts v
+join public.contacts k on k.id = v.contact_id and k.deleted_at is null
+left join public.companies f on f.id = k.company_id
+where v.deal_id = $1
+order by k.last_name, k.first_name
+"""
+
+
+async def _lead_pruefen(conn, deal_id: UUID) -> None:
+    """Gibt es den Lead überhaupt? RLS beantwortet das gleich mit.
+
+    `deal_contacts` trägt keine org_id — die Zeilenrechte hängen am Lead.
+    Wer hier nicht prüft, verrät über eine Fremd-ID immerhin, ob es sie
+    gibt.
+    """
+    da = await conn.fetchval(
+        "select id from public.deals where id = $1 and deleted_at is null", deal_id
+    )
+    if da is None:
+        raise HTTPException(404, "Lead nicht gefunden")
+
+
+@router.get("/deals/{deal_id}/beteiligte", response_model=list[Beteiligter])
+async def beteiligte(
+    deal_id: UUID, user: CurrentUser = Depends(get_current_user)
+) -> list[Beteiligter]:
+    async with acquire_as(user.user_id) as conn:
+        await _lead_pruefen(conn, deal_id)
+        zeilen = await conn.fetch(BETEILIGTE_SQL, deal_id)
+    return [Beteiligter(**dict(z)) for z in zeilen]
+
+
+@router.post("/deals/{deal_id}/beteiligte", response_model=list[Beteiligter], status_code=201)
+async def beteiligten_hinzufuegen(
+    deal_id: UUID,
+    payload: BeteiligterIn,
+    user: CurrentUser = Depends(get_current_user),
+) -> list[Beteiligter]:
+    """Einen Ansprechpartner verknüpfen.
+
+    Zweimal derselbe Kontakt ist keine Verdopplung, sondern eine
+    Rollenänderung — deshalb `on conflict do update` statt eines
+    Fehlers. Wer jemanden ein zweites Mal hinzufügt, meint das so.
+    """
+    async with acquire_as(user.user_id) as conn:
+        await _lead_pruefen(conn, deal_id)
+        gibt_es = await conn.fetchval(
+            "select id from public.contacts where id = $1 and deleted_at is null",
+            payload.contact_id,
+        )
+        if gibt_es is None:
+            raise HTTPException(404, "Kontakt nicht gefunden")
+
+        await conn.execute(
+            "insert into public.deal_contacts (deal_id, contact_id, role) values ($1,$2,$3) "
+            "on conflict (deal_id, contact_id) do update set role = excluded.role",
+            deal_id, payload.contact_id, payload.role,
+        )
+        # Hat der Lead noch keine Firma, erbt er sie vom ersten
+        # Ansprechpartner. Das ist fast immer gemeint — und bleibt
+        # änderbar, weil es nur eine Vorbelegung ist.
+        geerbt = await conn.fetchval(
+            """
+            update public.deals d
+               set company_id = k.company_id
+              from public.contacts k
+             where d.id = $1 and k.id = $2
+               and d.company_id is null and k.company_id is not null
+            returning d.company_id
+            """,
+            deal_id, payload.contact_id,
+        )
+        await audit.log_fuer(
+            conn, user, action="update", entity="deals", entity_id=deal_id,
+            diff={"beteiligter_hinzu": str(payload.contact_id),
+                  **({"firma_geerbt": str(geerbt)} if geerbt else {})},
+        )
+        zeilen = await conn.fetch(BETEILIGTE_SQL, deal_id)
+    return [Beteiligter(**dict(z)) for z in zeilen]
+
+
+@router.delete("/deals/{deal_id}/beteiligte/{contact_id}", status_code=204)
+async def beteiligten_entfernen(
+    deal_id: UUID,
+    contact_id: UUID,
+    user: CurrentUser = Depends(get_current_user),
+) -> None:
+    """Die Verknüpfung geht, der Kontakt bleibt."""
+    async with acquire_as(user.user_id) as conn:
+        await _lead_pruefen(conn, deal_id)
+        weg = await conn.execute(
+            "delete from public.deal_contacts where deal_id = $1 and contact_id = $2",
+            deal_id, contact_id,
+        )
+        if weg.endswith(" 0"):
+            raise HTTPException(404, "Dieser Kontakt hängt nicht an dem Lead.")
+        await audit.log_fuer(
+            conn, user, action="update", entity="deals", entity_id=deal_id,
+            diff={"beteiligter_entfernt": str(contact_id)},
         )

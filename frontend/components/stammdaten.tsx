@@ -14,6 +14,15 @@ export interface Stammfeld {
   optionen?: { wert: string; text: string }[];
   /** Für die Anzeige, wenn nicht bearbeitet wird. */
   zeige?: (wert: unknown) => React.ReactNode;
+  /**
+   * `zeige` auch bei leerem Wert aufrufen.
+   *
+   * Normalerweise steht bei einem leeren Feld ein Strich, und das ist
+   * richtig: Ein Feld, das nichts enthält, soll nicht so tun als ob.
+   * Es gibt aber Leerstellen, die etwas bedeuten — ein Lead ohne Firma
+   * ist eine offene Aufgabe, kein fehlender Wert. Die dürfen es sagen.
+   */
+  auchLeer?: boolean;
   /** Gespeichert wird wert × skala — Cent in der API, Euro im Feld. */
   skala?: number;
 }
@@ -136,7 +145,7 @@ export function Stammdaten({
               return (
                 <div className="eigenschaft" key={f.key}>
                   <dt>{f.text}</dt>
-                  <dd>{leer ? "—" : f.zeige ? f.zeige(v) : f.art === "select" ? (f.optionen?.find((o) => o.wert === v)?.text ?? String(v)) : String(v)}</dd>
+                  <dd>{leer && !(f.auchLeer && f.zeige) ? "—" : f.zeige ? f.zeige(v) : f.art === "select" ? (f.optionen?.find((o) => o.wert === v)?.text ?? String(v)) : String(v)}</dd>
                 </div>
               );
             })}

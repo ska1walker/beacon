@@ -24,7 +24,7 @@ import { Personenanzeige } from "@/components/person";
 // die Seiten liefern sie über <aside class="huelle-ablage">.
 const ZIELE = [
   { pfad: "/", text: "Start", Zeichen: LayoutDashboard },
-  { pfad: "/deals", text: "Deals", Zeichen: Handshake },
+  { pfad: "/deals", text: "Leads", Zeichen: Handshake },
   { pfad: "/angebote", text: "Angebote", Zeichen: FileText },
   { pfad: "/prognose", text: "Prognose", Zeichen: TrendingUp },
   { pfad: "/firmen", text: "Firmen", Zeichen: Building2 },

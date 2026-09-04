@@ -53,7 +53,7 @@ export default function PrognoseSeite() {
     <>
       <Seitenkopf
         titel="Prognose"
-        zahl={`${p.anzahl_offen} offene Geschäfte · ${euro(p.gewichtet_cents)} gewichtet`}
+        zahl={`${p.anzahl_offen} offene Leads · ${euro(p.gewichtet_cents)} gewichtet`}
       />
 
       <div className="werkzeugleiste">
@@ -66,7 +66,7 @@ export default function PrognoseSeite() {
           <input className="input" type="date" value={bis} onChange={(e) => setBis(e.target.value)} style={{ width: "auto" }} />
         </label>
         <span style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)" }}>
-          Offene Geschäfte zählen immer alle — ein Zeitfilter würde gerade die verstecken,
+          Offene Leads zählen immer alle — ein Zeitfilter würde gerade die verstecken,
           deren Datum längst verstrichen ist.
         </span>
       </div>
@@ -75,7 +75,7 @@ export default function PrognoseSeite() {
         <div className="kennzahl">
           <dt>Offen</dt>
           <dd>{euro(p.offen_cents)}</dd>
-          <div className="kennzahl-fuss">{p.anzahl_offen} Geschäfte</div>
+          <div className="kennzahl-fuss">{p.anzahl_offen} Leads</div>
         </div>
         <div className="kennzahl">
           <dt>Gewichtet</dt>
@@ -122,7 +122,7 @@ export default function PrognoseSeite() {
           <div className="block-inhalt">
             {p.monate.length === 0 ? (
               <p style={{ fontSize: "0.875rem", color: "var(--am-text-gedaempft)" }}>
-                Kein offenes Geschäft trägt ein Abschlussdatum. Ohne Datum lässt sich nichts
+                Kein offener Lead trägt ein Abschlussdatum. Ohne Datum lässt sich nichts
                 prognostizieren — das ist die eigentliche Aussage dieser Kachel.
               </p>
             ) : (

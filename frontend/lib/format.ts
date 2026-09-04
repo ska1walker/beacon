@@ -1,3 +1,4 @@
+import type { StageKind } from "@/lib/typen";
 // Formatieren an einer Stelle. Beträge kommen als Cent aus der API — wer
 // sie irgendwo durch 100 teilt, tut es hier oder gar nicht.
 
@@ -247,4 +248,22 @@ export function firmenschluessel(name: string): string {
     .filter(Boolean);
   while (worte.length > 1 && RECHTSFORMEN.has(worte[worte.length - 1])) worte.pop();
   return worte.join(" ");
+}
+
+/**
+ * Wie ein Vorgang in der Pipeline heißt — Lead oder Deal.
+ *
+ * Solange er offen ist, ist er ein **Lead**: eine Möglichkeit, mehr
+ * nicht. Erst der Abschluss macht daraus einen **Deal**. Das ist keine
+ * Wortklauberei — wer alles „Deal" nennt, redet sich eine Pipeline
+ * schön, in der noch nichts unterschrieben ist.
+ *
+ * Ein verlorener Vorgang bleibt ein Lead. Er ist nie einer geworden.
+ */
+export function vorgangswort(
+  art: StageKind | null | undefined,
+  mehrzahl = false,
+): string {
+  const wort = art === "won" ? "Deal" : "Lead";
+  return mehrzahl ? `${wort}s` : wort;
 }

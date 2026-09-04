@@ -203,6 +203,10 @@ class Deal(MitEigenschaften):
     next_step: str | None = None
     ai_summary: str | None = None
     owner_id: UUID | None = None
+    # Wie viele Ansprechpartner am Lead hängen. Als Zahl statt als Liste:
+    # Das Board zeigt sie an jeder Karte, und dort wäre ein Join je Karte
+    # eine Abfrage zu viel.
+    kontakt_anzahl: int = 0
     created_at: datetime
     updated_at: datetime
 

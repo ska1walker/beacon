@@ -34,7 +34,7 @@ export default function StartSeite() {
 
   return (
     <>
-      <Seitenkopf titel="Start" zahl={`${anzahlOffen} offene Geschäfte`} />
+      <Seitenkopf titel="Start" zahl={`${anzahlOffen} offene Leads`} />
 
       <dl className="kennzahlen">
         <div className="kennzahl">

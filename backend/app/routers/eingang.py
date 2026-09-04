@@ -140,13 +140,13 @@ async def _zuordnen(conn, org_id: UUID, texte: list[str]) -> tuple[UUID | None, 
         firma["id"],
     )
     if len(offene) == 1:
-        return firma["id"], offene[0]["id"], f"{firma['name']} im Titel, ein offenes Geschäft"
+        return firma["id"], offene[0]["id"], f"{firma['name']} im Titel, ein offener Lead"
     if not offene:
-        return firma["id"], None, f"{firma['name']} im Titel, kein offenes Geschäft"
+        return firma["id"], None, f"{firma['name']} im Titel, kein offener Lead"
     return (
         firma["id"],
         None,
-        f"{firma['name']} im Titel, aber {len(offene)} offene Geschäfte",
+        f"{firma['name']} im Titel, aber {len(offene)} offene Leads",
     )
 
 
@@ -351,7 +351,7 @@ async def zuordnen(
 ) -> dict:
     """Ordnet einen Posten von Hand zu und legt die Aktivität an."""
     if not (payload.company_id or payload.deal_id):
-        raise HTTPException(400, "Firma oder Geschäft angeben.")
+        raise HTTPException(400, "Firma oder Lead angeben.")
 
     async with acquire_as(user.user_id) as conn:
         vorhanden = await conn.fetchval(

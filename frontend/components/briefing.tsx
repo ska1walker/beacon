@@ -24,7 +24,7 @@ const GRUPPEN: {
     schluessel: "ueberfaellige_geschaefte",
     titel: "Abschlussdatum verstrichen",
     Zeichen: AlertTriangle,
-    erklaerung: "Offene Geschäfte, deren geplanter Abschluss vorbei ist.",
+    erklaerung: "Offene Leads, deren geplanter Abschluss vorbei ist.",
   },
   {
     schluessel: "ablaufende_angebote",
@@ -36,7 +36,7 @@ const GRUPPEN: {
     schluessel: "verstummte_geschaefte",
     titel: "Seit Wochen still",
     Zeichen: MessageSquareOff,
-    erklaerung: "Offene Geschäfte, bei denen seit über drei Wochen nichts passiert ist.",
+    erklaerung: "Offene Leads, bei denen seit über drei Wochen nichts passiert ist.",
   },
   {
     schluessel: "offener_eingang",
@@ -48,7 +48,7 @@ const GRUPPEN: {
     schluessel: "ohne_naechsten_schritt",
     titel: "Ohne nächsten Schritt",
     Zeichen: Target,
-    erklaerung: "Fortgeschrittene Geschäfte, bei denen nicht steht, was als Nächstes kommt.",
+    erklaerung: "Fortgeschrittene Leads, bei denen nicht steht, was als Nächstes kommt.",
   },
 ];
 

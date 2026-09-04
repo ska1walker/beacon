@@ -247,7 +247,7 @@ async def briefing_text(
     lage = "\n".join(
         [
             *zeilen("Fällige Aufgaben", daten.faellige_aufgaben),
-            *zeilen("Geschäfte mit verstrichenem Abschlussdatum", daten.ueberfaellige_geschaefte),
+            *zeilen("Leads mit verstrichenem Abschlussdatum", daten.ueberfaellige_geschaefte),
             *zeilen(f"Seit über {STILLE_TAGE} Tagen ohne ein Wort", daten.verstummte_geschaefte),
             *zeilen("Angebote, deren Bindefrist abläuft", daten.ablaufende_angebote),
             *zeilen("Fortgeschritten, aber ohne nächsten Schritt", daten.ohne_naechsten_schritt),

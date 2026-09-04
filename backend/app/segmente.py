@@ -196,7 +196,7 @@ AUFGABEN_FELDER: list[Feld] = [
     Feld("assigned_to", "Zugewiesen", "person", "t.assigned_to::text"),
     Feld("company_name", "Firma", "text", "f.name"),
     Feld("kontakt_name", "Kontakt", "text", "coalesce(k.first_name || ' ', '') || coalesce(k.last_name, '')"),
-    Feld("deal_name", "Geschäft", "text", "d.name"),
+    Feld("deal_name", "Lead", "text", "d.name"),
     Feld("ticket_betreff", "Ticket", "text", "ti.betreff"),
     Feld("created_at", "Angelegt", "datum", "t.created_at"),
     Feld("completed_at", "Erledigt am", "datum", "t.completed_at"),

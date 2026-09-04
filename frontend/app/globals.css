@@ -1320,8 +1320,15 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-deaktiviert);
   }
 
+  /* Alle Karten gleich hoch.
+     Ein Board, in dem die Karten unterschiedlich hoch sind, liest sich
+     wie eine Rangfolge, die keine ist: Der Lead mit dem langen Namen
+     wirkt größer als der mit dem kurzen. Deshalb steht die Höhe fest —
+     zwei Zeilen für den Namen, eine für die Firma, eine für den Fuß —
+     und der Name wird abgeschnitten statt die Karte zu dehnen. */
   .deal-karte {
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding: var(--am-raum-3);
     border-radius: var(--am-radius-mittel);
     border: 1px solid var(--am-rand);
@@ -1337,16 +1344,27 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .deal-karte[data-zieht="true"] { opacity: 0.4; }
 
   .deal-karte-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     font-size: 0.875rem;
+    line-height: 1.35;
     font-weight: 500;
     color: var(--am-text-primaer);
     margin-bottom: 2px;
+    /* Reserviert, nicht nur begrenzt: Ein einzeiliger Name muss denselben
+       Platz einnehmen wie ein zweizeiliger, sonst wackelt die Höhe doch. */
+    min-height: calc(2 * 1.35 * 0.875rem);
   }
 
   .deal-karte-firma {
     font-size: 0.75rem;
+    line-height: 1.4;
     color: var(--am-text-gedaempft);
     margin-bottom: var(--am-raum-2);
+    min-height: calc(1.4 * 0.75rem);
+    overflow: hidden;
   }
 
   .deal-karte-fuss {
@@ -1355,6 +1373,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     justify-content: space-between;
     gap: var(--am-raum-2);
     font-size: 0.75rem;
+    /* Drückt den Fuß nach unten, falls oben doch einmal Platz bleibt. */
+    margin-top: auto;
   }
 
   .deal-karte-betrag {
@@ -2863,5 +2883,88 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     background: var(--am-flaeche-2);
     border-color: var(--am-gold-500);
     color: var(--am-gold-beschriftung);
+  }
+}
+
+@layer components {
+  /* ── Beteiligte am Lead ────────────────────────────────────────────
+     Eine Zeile je Person: Name, Rolle und Herkunft darunter, E-Mail
+     rechts. Keine Tabelle — es sind selten mehr als eine Handvoll. */
+
+  .beteiligtenliste { list-style: none; margin: 0; padding: 0; }
+
+  .beteiligtenliste li {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    min-height: var(--am-ziel-zeiger);
+    padding: var(--am-raum-2) 0;
+    border-bottom: var(--am-rand-ruhend) solid var(--am-trennlinie);
+  }
+
+  .beteiligtenliste li:last-child { border-bottom: 0; }
+
+  .beteiligter-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .beteiligter-text span { font-size: 0.75rem; color: var(--am-text-sekundaer); }
+
+  .beteiligter-mail {
+    font-size: 0.8125rem;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .beteiligter-neu {
+    display: flex;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    margin-top: var(--am-raum-3);
+    padding-top: var(--am-raum-3);
+    border-top: var(--am-rand-ruhend) solid var(--am-trennlinie);
+  }
+
+  .beteiligter-neu select { flex: 2 1 12rem; min-width: 0; }
+  .beteiligter-neu input { flex: 1 1 9rem; min-width: 0; }
+
+  .beteiligter-neu select,
+  .beteiligter-neu input {
+    height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+  }
+
+  .dunkel .beteiligter-neu select,
+  .dunkel .beteiligter-neu input { background: var(--am-flaeche-1); }
+
+  /* Eine Karte ohne Firma ist kein Fehler, aber sie soll auffallen —
+     ein Lead, den niemand zuordnet, verschwindet sonst im Board. */
+  .ohne-zuordnung {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    font-size: 0.6875rem;
+    color: var(--am-achtung);
+  }
+
+  .deal-karte-firma {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--am-raum-2);
+    align-items: baseline;
+    white-space: nowrap;
+  }
+
+  .deal-karte-firma > :first-child { overflow: hidden; text-overflow: ellipsis; }
+
+  .deal-karte-beteiligte {
+    flex: none;
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
   }
 }

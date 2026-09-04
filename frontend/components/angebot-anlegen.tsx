@@ -17,7 +17,7 @@ import type {
 import { Fehler } from "@/components/zustaende";
 
 /**
- * Legt ein Angebot zu einem Geschäft an — leer oder aus einem
+ * Legt ein Angebot zu einem Lead an — leer oder aus einem
  * KI-Vorschlag. Der Vorschlag füllt nur das Formular; abgeschickt wird
  * er erst, wenn ein Mensch ihn gesehen hat.
  */
