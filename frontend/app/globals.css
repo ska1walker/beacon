@@ -2479,3 +2479,248 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .zahlpille[data-warnung="true"] { background: var(--am-fehler); }
   .dunkel .zahlpille[data-warnung="true"] { background: var(--am-fehler); color: #fff; }
 }
+
+@layer components {
+  /* ── Mehrfachauswahl ────────────────────────────────────────────────
+     Ein Feld, das aussieht wie eine Eingabe und sich verhält wie eine
+     Liste. Die Plättchen sitzen *im* Feld, damit die Antwort sichtbar
+     ist, ohne dass jemand aufklappen muss. */
+
+  .mehrfach { position: relative; width: 100%; }
+  .mehrfach[data-kompakt="true"] { width: auto; min-width: 14rem; }
+
+  .mehrfach-feld {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--am-raum-1);
+    min-height: var(--am-ziel-zeiger);
+    padding: var(--am-raum-1) var(--am-raum-8) var(--am-raum-1) var(--am-raum-2);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    cursor: text;
+  }
+
+  .mehrfach-feld[data-offen="true"] {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 1px;
+    border-color: var(--am-rand-betont-farbe);
+  }
+
+  .mehrfach-suche {
+    flex: 1 1 5rem;
+    min-width: 5rem;
+    border: 0;
+    outline: 0;
+    padding: 0 var(--am-raum-1);
+    height: 1.75rem;
+    background: transparent;
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+  }
+
+  .mehrfach-pfeil {
+    position: absolute;
+    right: var(--am-raum-2);
+    top: 0.6875rem;
+    color: var(--am-text-gedaempft);
+    pointer-events: none;
+  }
+
+  .mehrfach-plaettchen {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    max-width: 100%;
+    padding: 2px var(--am-raum-1) 2px var(--am-raum-2);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-flaeche-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    color: var(--am-text-primaer);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mehrfach-plaettchen.still { padding: 2px var(--am-raum-2); }
+
+  .mehrfach-plaettchen button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    border: 0;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-sekundaer);
+    cursor: pointer;
+  }
+
+  .mehrfach-plaettchen button:hover { background: var(--am-rand); color: var(--am-text-primaer); }
+  .mehrfach-plaettchen button:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+
+  /* Fest positioniert am Körper — siehe Portal in mehrfachauswahl.tsx. */
+  .mehrfach-tafel {
+    position: fixed;
+    z-index: 200;
+    min-width: 15rem;
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    box-shadow: 0 8px 24px rgb(5 23 41 / 12%);
+    overflow: hidden;
+  }
+
+  .mehrfach-liste {
+    list-style: none;
+    margin: 0;
+    padding: var(--am-raum-1);
+    max-height: 15rem;
+    overflow-y: auto;
+  }
+
+  .mehrfach-eintrag {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    min-height: 2rem;
+    padding: var(--am-raum-1) var(--am-raum-2);
+    border-radius: var(--am-radius-klein);
+    font-size: 0.875rem;
+    color: var(--am-text-primaer);
+    cursor: pointer;
+  }
+
+  .mehrfach-eintrag[data-aktiv="true"] { background: var(--am-flaeche-2); }
+
+  .mehrfach-kasten {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    border: var(--am-rand-ruhend) solid var(--am-rand-betont-farbe);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    color: var(--am-handlung-text);
+  }
+
+  .mehrfach-eintrag[aria-selected="true"] .mehrfach-kasten {
+    background: var(--am-handlung-ruhend);
+    border-color: var(--am-handlung-ruhend);
+  }
+
+  .mehrfach-leer {
+    padding: var(--am-raum-3) var(--am-raum-2);
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .mehrfach-fuss {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border-top: var(--am-rand-ruhend) solid var(--am-trennlinie);
+    background: var(--am-flaeche-1);
+    font-size: 0.75rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  .mehrfach-fuss button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: var(--am-handlung-ruhend);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .mehrfach-anzeige { display: inline-flex; flex-wrap: wrap; gap: var(--am-raum-1); align-items: center; }
+
+  .mehrfach-mehr {
+    font-size: 0.75rem;
+    color: var(--am-text-sekundaer);
+    cursor: default;
+  }
+
+  /* Im Dunkelmodus trägt Blau auf Blau nicht — der gewählte Kasten
+     bekommt darum Gold, wie jede andere Auszeichnung auch. */
+  .dunkel .mehrfach-feld,
+  .dunkel .mehrfach-tafel,
+  .dunkel .mehrfach-kasten { background: var(--am-flaeche-1); }
+
+  .dunkel .mehrfach-eintrag[aria-selected="true"] .mehrfach-kasten {
+    background: var(--am-gold-500);
+    border-color: var(--am-gold-500);
+    color: var(--am-blau-950);
+  }
+
+  .dunkel .mehrfach-fuss button { color: var(--am-gold-beschriftung); }
+
+  .leerwert { color: var(--am-text-gedaempft); }
+
+  /* ── Werteliste im Eigenschafts-Editor ─────────────────────────────
+     Eine Zeile je Option: Beschriftung links, gespeicherter Wert daneben,
+     Reihenfolge und Archiv rechts. */
+
+  .optionsliste {
+    display: flex;
+    flex-direction: column;
+    gap: var(--am-raum-1);
+    align-items: flex-start;
+    width: 100%;
+    max-width: 40rem;
+  }
+
+  .optionszeile {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    width: 100%;
+  }
+
+  /* `min-width: 0` ist hier nicht Kosmetik: Ohne das zählt die
+     Mindestbreite des Feldes zur Mindestbreite der Tabellenzelle, und die
+     Tabelle wächst über ihren Block hinaus. */
+  .optionszeile input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: var(--am-ziel-zeiger);
+    padding: 0 var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.9375rem;
+  }
+
+  .optionszeile input:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+  .dunkel .optionszeile input { background: var(--am-flaeche-1); }
+
+  .optionszeile[data-archiviert="true"] input {
+    color: var(--am-text-gedaempft);
+    text-decoration: line-through;
+  }
+
+  .optionswert {
+    flex: 0 1 auto;
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+}

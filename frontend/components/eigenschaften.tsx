@@ -4,7 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { datum } from "@/lib/format";
-import type { Eigenschaftswerte, PropertyDefinition, PropertyEntity } from "@/lib/typen";
+import type {
+  Eigenschaftsoption,
+  Eigenschaftswert,
+  Eigenschaftswerte,
+  PropertyDefinition,
+  PropertyEntity,
+} from "@/lib/typen";
+import { Mehrfachauswahl } from "@/components/mehrfachauswahl";
 import { Fehler } from "@/components/zustaende";
 
 /**
@@ -12,7 +19,10 @@ import { Fehler } from "@/components/zustaende";
  *
  * Gespeichert wird nur, was geändert wurde: Das Backend führt zusammen,
  * statt zu ersetzen. Ein leeres Feld schickt `null` und löscht damit den
- * Wert — anders bekommt man eine Eigenschaft nicht wieder leer.
+ * Wert — anders bekommt man eine Eigenschaft nicht wieder leer. Für eine
+ * Mehrfachauswahl heißt „leer" die leere Liste, und die wird beim
+ * Speichern ebenfalls zu `null`: Sonst stünde im JSON ein `[]`, das „ist
+ * leer" nicht als leer gelten ließe.
  */
 export function Eigenschaftswerteblock({
   entity,
@@ -26,7 +36,7 @@ export function Eigenschaftswerteblock({
   abfrageSchluessel: unknown[];
 }) {
   const client = useQueryClient();
-  const [entwurf, setEntwurf] = useState<Record<string, string>>({});
+  const [entwurf, setEntwurf] = useState<Record<string, string | string[]>>({});
   const [geaendert, setGeaendert] = useState<Set<string>>(new Set());
 
   const definitionen = useQuery({
@@ -39,7 +49,10 @@ export function Eigenschaftswerteblock({
     if (geaendert.size === 0) {
       setEntwurf(
         Object.fromEntries(
-          Object.entries(werte).map(([k, v]) => [k, v === null || v === undefined ? "" : String(v)]),
+          Object.entries(werte).map(([k, v]) => [
+            k,
+            Array.isArray(v) ? v : v === null || v === undefined ? "" : String(v),
+          ]),
         ),
       );
     }
@@ -53,10 +66,12 @@ export function Eigenschaftswerteblock({
       for (const key of geaendert) {
         const d = definitionen.data?.find((x) => x.key === key);
         const roh = entwurf[key] ?? "";
-        if (roh === "") custom[key] = null;
+        if (d?.kind === "multiselect") {
+          custom[key] = Array.isArray(roh) && roh.length > 0 ? roh : null;
+        } else if (roh === "") custom[key] = null;
         else if (d?.kind === "bool") custom[key] = roh === "true";
         else if (d?.kind === "number") custom[key] = Number(roh);
-        else custom[key] = roh;
+        else custom[key] = String(roh);
       }
       return api.patch(`/api/${pfad}/${id}`, { custom });
     },
@@ -73,9 +88,14 @@ export function Eigenschaftswerteblock({
   );
   if (defs.length === 0 && verwaist.length === 0) return null;
 
-  function setze(key: string, wert: string) {
+  function setze(key: string, wert: string | string[]) {
     setEntwurf((alt) => ({ ...alt, [key]: wert }));
     setGeaendert((alt) => new Set(alt).add(key));
+  }
+
+  function text(key: string): string {
+    const w = entwurf[key];
+    return typeof w === "string" ? w : "";
   }
 
   return (
@@ -88,24 +108,32 @@ export function Eigenschaftswerteblock({
           <div className="feld" key={d.key}>
             <label htmlFor={`eig-${d.key}`}>{d.label}</label>
             {d.kind === "bool" ? (
-              <select id={`eig-${d.key}`} value={entwurf[d.key] ?? ""} onChange={(e) => setze(d.key, e.target.value)}>
+              <select id={`eig-${d.key}`} value={text(d.key)} onChange={(e) => setze(d.key, e.target.value)}>
                 <option value="">—</option>
                 <option value="true">Ja</option>
                 <option value="false">Nein</option>
               </select>
             ) : d.kind === "select" ? (
-              <select id={`eig-${d.key}`} value={entwurf[d.key] ?? ""} onChange={(e) => setze(d.key, e.target.value)}>
+              <select id={`eig-${d.key}`} value={text(d.key)} onChange={(e) => setze(d.key, e.target.value)}>
                 <option value="">—</option>
-                {d.options.map((o) => (
-                  <option key={o} value={o}>{o}</option>
+                {waehlbar(d.options, text(d.key)).map((o) => (
+                  <option key={o.wert} value={o.wert}>{o.text}</option>
                 ))}
               </select>
+            ) : d.kind === "multiselect" ? (
+              <Mehrfachauswahl
+                id={`eig-${d.key}`}
+                ariaLabel={d.label}
+                optionen={waehlbar(d.options, entwurf[d.key])}
+                gewaehlt={Array.isArray(entwurf[d.key]) ? (entwurf[d.key] as string[]) : []}
+                beiAendern={(neu) => setze(d.key, neu)}
+              />
             ) : (
               <input
                 id={`eig-${d.key}`}
                 type={d.kind === "number" ? "number" : d.kind === "date" ? "date" : "text"}
                 step={d.kind === "number" ? "any" : undefined}
-                value={entwurf[d.key] ?? ""}
+                value={text(d.key)}
                 onChange={(e) => setze(d.key, e.target.value)}
               />
             )}
@@ -118,7 +146,7 @@ export function Eigenschaftswerteblock({
             {verwaist.map(([k, v]) => (
               <div className="eigenschaft" key={k}>
                 <dt>{k} <span className="optional">abgeschaltet</span></dt>
-                <dd>{typeof v === "boolean" ? (v ? "Ja" : "Nein") : /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? datum(String(v)) : String(v)}</dd>
+                <dd>{lesbar(v)}</dd>
               </div>
             ))}
           </dl>
@@ -138,4 +166,29 @@ export function Eigenschaftswerteblock({
       </div>
     </section>
   );
+}
+
+/**
+ * Welche Optionen zur Wahl stehen.
+ *
+ * Archivierte fallen weg — außer sie stehen schon an diesem Datensatz.
+ * Sonst verschwände der eingetragene Wert wortlos aus dem Feld, und der
+ * nächste Speichervorgang nähme ihn mit.
+ */
+function waehlbar(
+  optionen: Eigenschaftsoption[],
+  gesetzt: string | string[] | undefined,
+): { wert: string; text: string }[] {
+  const drin = new Set(Array.isArray(gesetzt) ? gesetzt : gesetzt ? [gesetzt] : []);
+  return optionen
+    .filter((o) => !o.verborgen || drin.has(o.wert))
+    .map((o) => ({ wert: o.wert, text: o.verborgen ? `${o.text} (archiviert)` : o.text }));
+}
+
+/** Ein gespeicherter Wert, wie ein Mensch ihn liest. */
+function lesbar(v: Eigenschaftswert): string {
+  if (Array.isArray(v)) return v.join(", ");
+  if (typeof v === "boolean") return v ? "Ja" : "Nein";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return datum(String(v));
+  return String(v);
 }

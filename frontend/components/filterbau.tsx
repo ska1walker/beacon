@@ -2,6 +2,7 @@
 
 import { Plus, X } from "lucide-react";
 import { OHNE_WERT, OPERATOR_TEXT } from "@/lib/format";
+import { Mehrfachauswahl } from "@/components/mehrfachauswahl";
 import type { Bedingung, Feldauskunft, Segmentfeld } from "@/lib/typen";
 
 /**
@@ -74,11 +75,8 @@ export function Filterbau({
               aria-label="Feld"
               onChange={(e) => {
                 const neu = feldVon(e.target.value);
-                setze(i, {
-                  feld: e.target.value,
-                  operator: neu?.operatoren[0] ?? "ist",
-                  wert: "",
-                });
+                const op = neu?.operatoren[0] ?? "ist";
+                setze(i, { feld: e.target.value, operator: op, wert: MEHRWERTIG.has(op) ? [] : "" });
               }}
             >
               {filterbar.map((f) => (
@@ -92,7 +90,12 @@ export function Filterbau({
             <select
               value={b.operator}
               aria-label="Operator"
-              onChange={(e) => setze(i, { operator: e.target.value, wert: "" })}
+              onChange={(e) =>
+                setze(i, {
+                  operator: e.target.value,
+                  wert: MEHRWERTIG.has(e.target.value) ? [] : "",
+                })
+              }
             >
               {(feld?.operatoren ?? []).map((o) => (
                 <option key={o} value={o}>
@@ -123,6 +126,15 @@ export function Filterbau({
   );
 }
 
+/** Vergleiche, die mehrere Werte entgegennehmen. */
+const MEHRWERTIG = new Set([
+  "ist_eines_von",
+  "hat_eines_von",
+  "hat_alle_von",
+  "hat_keines_von",
+  "hat_nicht_alle_von",
+]);
+
 /** Das Eingabefeld richtet sich nach der Art des Feldes — und nach dem Operator. */
 function Wertfeld({
   feld,
@@ -151,23 +163,27 @@ function Wertfeld({
     );
   }
 
-  if (bedingung.operator === "ist_eines_von") {
-    const gewaehlt = Array.isArray(wert) ? wert : [];
+  // Alle Vergleiche, die auf mehrere Werte gehen — „ist eines von" an
+  // einer Auswahl ebenso wie die Listenoperatoren einer Mehrfachauswahl.
+  // Eine Reihe Kontrollkästchen stand hier vorher und wurde bei vierzig
+  // Optionen zur Tapete.
+  if (MEHRWERTIG.has(bedingung.operator)) {
+    const gewaehlt = Array.isArray(wert) ? wert : wert ? [String(wert)] : [];
     return (
-      <span className="filter-mehrfach">
-        {(feld?.optionen ?? []).map((o) => (
-          <label key={o.wert}>
-            <input
-              type="checkbox"
-              checked={gewaehlt.includes(o.wert)}
-              onChange={(e) =>
-                setze(e.target.checked ? [...gewaehlt, o.wert] : gewaehlt.filter((g) => g !== o.wert))
-              }
-            />
-            {o.text}
-          </label>
-        ))}
-      </span>
+      <Mehrfachauswahl
+        kompakt
+        ariaLabel="Werte"
+        platzhalter="Werte wählen …"
+        optionen={(feld?.optionen ?? []).map((o) => ({
+          wert: o.wert,
+          // Archivierte Werte bleiben wählbar: Wer eine Option aus dem
+          // Verkehr zieht, will die Datensätze, die sie noch tragen,
+          // gerade dann finden.
+          text: o.verborgen ? `${o.text} (archiviert)` : o.text,
+        }))}
+        gewaehlt={gewaehlt}
+        beiAendern={setze}
+      />
     );
   }
 

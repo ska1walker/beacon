@@ -15,21 +15,64 @@ from app.db import acquire_as
 router = APIRouter(prefix="/api/eigenschaften", tags=["eigenschaften"])
 
 Entity = Literal["companies", "contacts", "deals"]
-Kind = Literal["text", "number", "date", "bool", "select"]
+Kind = Literal["text", "number", "date", "bool", "select", "multiselect"]
+# Beide führen eine Optionsliste; nur die Anzahl gleichzeitiger Werte
+# unterscheidet sie.
+MIT_OPTIONEN = ("select", "multiselect")
+
+
+class Option(BaseModel):
+    """Eine wählbare Option — mit festem Wert und freier Beschriftung.
+
+    `wert` ist das, was in den Datensätzen steht, und ändert sich nie.
+    `text` ist das, was jemand liest, und darf sich jederzeit ändern.
+    Wer beides gleichsetzt, kann eine Beschriftung nie wieder korrigieren,
+    ohne die vorhandenen Werte zu entwerten — genau der Fehler, den
+    HubSpot mit derselben Trennung vermeidet.
+
+    `verborgen` ist archiviert: aus der Auswahl genommen, in den
+    Datensätzen unverändert gültig.
+    """
+
+    wert: str = Field(default="", max_length=200)
+    text: str = Field(min_length=1, max_length=200)
+    verborgen: bool = False
+
+
+def _optionen_aus(roh: Any) -> list[Option]:
+    """Nimmt Texte oder Objekte entgegen und macht Optionen daraus.
+
+    Die kurze Form (`["Nord", "Süd"]`) bleibt gültig: Ein Import oder ein
+    schnell getippter Aufruf soll nicht an einer Objektform scheitern.
+    Ein neuer Wert ohne `wert` bekommt seine Beschriftung als Wert — so
+    wie HubSpot es bei „Add option" vorbelegt.
+    """
+    fertig: list[Option] = []
+    for o in roh or []:
+        if isinstance(o, str):
+            if o.strip():
+                fertig.append(Option(wert=o.strip(), text=o.strip()))
+            continue
+        opt = o if isinstance(o, Option) else Option(**o)
+        text = opt.text.strip()
+        if not text:
+            continue
+        fertig.append(Option(wert=(opt.wert.strip() or text), text=text, verborgen=opt.verborgen))
+    return fertig
 
 
 class DefinitionIn(BaseModel):
     entity: Entity
     label: str = Field(min_length=1, max_length=80)
     kind: Kind = "text"
-    options: list[str] = []
+    options: list[Option | str] = []
     description: str | None = None
     position: int = 0
 
 
 class DefinitionPatch(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=80)
-    options: list[str] | None = None
+    options: list[Option | str] | None = None
     description: str | None = None
     position: int | None = None
     is_active: bool | None = None
@@ -41,7 +84,7 @@ class Definition(BaseModel):
     key: str
     label: str
     kind: str
-    options: list[str] = []
+    options: list[Option] = []
     description: str | None = None
     position: int
     is_active: bool
@@ -50,8 +93,22 @@ class Definition(BaseModel):
 
 def _aus_zeile(z: Any) -> Definition:
     d = dict(z)
-    d["options"] = eigenschaften._optionen(d.get("options"))
+    d["options"] = [Option(**o) for o in eigenschaften.optionen(d.get("options"))]
     return Definition(**d)
+
+
+def _geprueft(optionen: list[Option], kind: str) -> list[Option]:
+    """Eine Optionsliste, die eine Wahl ist: nicht leer, ohne Doppelte."""
+    if kind in MIT_OPTIONEN and not optionen:
+        raise HTTPException(400, "Eine Auswahl braucht mindestens einen erlaubten Wert.")
+    werte = [o.wert for o in optionen]
+    if len(werte) != len(set(werte)):
+        raise HTTPException(400, "Zwei gleiche Werte in der Auswahl sind keine Wahl.")
+    if kind in MIT_OPTIONEN and all(o.verborgen for o in optionen):
+        raise HTTPException(
+            400, "Alle Werte archiviert — dann bliebe an dieser Eigenschaft nichts zu wählen."
+        )
+    return optionen
 
 
 @router.get("", response_model=list[Definition])
@@ -78,8 +135,7 @@ async def anlegen(
     payload: DefinitionIn,
     user: CurrentUser = Depends(get_current_user),
 ) -> Definition:
-    if payload.kind == "select" and not [o for o in payload.options if o.strip()]:
-        raise HTTPException(400, "Eine Auswahl braucht mindestens einen erlaubten Wert.")
+    optionen = _geprueft(_optionen_aus(payload.options), payload.kind)
     key = eigenschaften.schluessel_aus(payload.label)
 
     async with acquire_as(user.user_id) as conn:
@@ -100,7 +156,7 @@ async def anlegen(
             returning *
             """,
             user.org_id, payload.entity, key, payload.label.strip(), payload.kind,
-            json.dumps([o.strip() for o in payload.options if o.strip()]),
+            json.dumps([o.model_dump() for o in optionen]),
             payload.description, payload.position,
         )
         await audit.log_fuer(
@@ -128,8 +184,9 @@ async def aendern(
     args: list[Any] = []
     for name, wert in felder.items():
         if name == "options":
-            wert = json.dumps([o.strip() for o in (wert or []) if o.strip()])
-            args.append(wert)
+            neue = _optionen_aus(wert)
+            felder[name] = [o.model_dump() for o in neue]
+            args.append(json.dumps(felder[name]))
             zuweisungen.append(f"options = ${len(args)}::jsonb")
         else:
             args.append(wert)
@@ -137,6 +194,8 @@ async def aendern(
     args.append(definition_id)
 
     async with acquire_as(user.user_id) as conn:
+        if "options" in felder:
+            await _optionen_pruefen(conn, definition_id, [Option(**o) for o in felder["options"]])
         zeile = await conn.fetchrow(
             f"update public.property_definitions set {', '.join(zuweisungen)} "
             f"where id = ${len(args)} returning *",
@@ -149,6 +208,59 @@ async def aendern(
             entity_id=definition_id, diff=felder,
         )
     return _aus_zeile(zeile)
+
+
+async def _optionen_pruefen(conn, definition_id: UUID, neu: list[Option]) -> None:
+    """Was an der Optionsliste geändert werden darf — und was nicht.
+
+    **Umbenennen: immer.** Die Beschriftung gehört der Oberfläche, der
+    Wert den Datensätzen. Genau dafür sind es zwei Felder.
+
+    **Archivieren: immer.** Ein archivierter Wert wird nicht mehr
+    angeboten, bleibt aber gültig. Das ist der vorgesehene Weg, eine
+    Option aus dem Verkehr zu ziehen.
+
+    **Entfernen: nur, solange sie niemand benutzt.** Sonst bliebe der
+    Wert zwar lesbar im JSON stehen, aber der Datensatz ließe sich nicht
+    mehr speichern — die Prüfung lehnte ihn ab. Das ist die unangenehmste
+    Sorte Fehler: Er entsteht in den Einstellungen und schlägt Wochen
+    später bei jemand anderem an ganz anderer Stelle zu. Wer wirklich
+    aufräumen will, archiviert.
+    """
+    d = await conn.fetchrow(
+        "select entity, key, kind, options from public.property_definitions where id = $1",
+        definition_id,
+    )
+    if d is None:
+        raise HTTPException(404, "Eigenschaft nicht gefunden")
+    if d["kind"] not in MIT_OPTIONEN:
+        raise HTTPException(
+            400, "Nur eine Auswahl oder Mehrfachauswahl führt eine Werteliste."
+        )
+    _geprueft(neu, d["kind"])
+
+    bleibt = {o.wert for o in neu}
+    entfernt = [o for o in eigenschaften.optionen(d["options"]) if o["wert"] not in bleibt]
+    if not entfernt:
+        return
+
+    tabelle = {"companies": "companies", "contacts": "contacts", "deals": "deals"}[d["entity"]]
+    for option in entfernt:
+        # Ein einzelner Wert steht als jsonb-Text im Feld, eine
+        # Mehrfachauswahl als Liste. `@>` trifft beide Formen.
+        anzahl = await conn.fetchval(
+            f"select count(*) from public.{tabelle} "
+            f"where deleted_at is null and (custom -> $1) @> to_jsonb($2::text)",
+            d["key"], option["wert"],
+        )
+        if anzahl:
+            raise HTTPException(
+                409,
+                f"„{option['text']}“ steht noch an {anzahl} "
+                f"{'Datensatz' if anzahl == 1 else 'Datensätzen'}. "
+                "Archivieren Sie den Wert, statt ihn zu entfernen — dann wird er "
+                "nicht mehr angeboten und bleibt dort trotzdem gültig.",
+            )
 
 
 @router.delete("/{definition_id}", status_code=204)

@@ -168,3 +168,173 @@ async def test_sicherung_nimmt_definitionen_mit(datenbank, tmp_path, monkeypatch
         await k.post("/api/eigenschaften", json={"entity": "deals", "label": "Kammer"})
         bilanz = (await k.post("/api/sicherung")).json()
     assert bilanz["zeilen"]["property_definitions"] == 1
+
+
+# ---- Mehrfachauswahl ----------------------------------------------------
+#
+# Eine Eigenschaft, die mehrere Werte gleichzeitig trägt. Drei Dinge sind
+# daran heikel: dass nur Bekanntes durchkommt, dass die Reihenfolge fest
+# ist, und dass eine leere Auswahl leer heißt und nicht „[]".
+
+ZERTIFIKATE = ["ISO 9001", "ISO 27001", "TISAX"]
+
+
+def test_mehrfachauswahl_nimmt_mehrere_werte():
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    assert pruefen({"zert": ["TISAX", "ISO 9001"]}, defs) == {"zert": ["ISO 9001", "TISAX"]}
+
+
+def test_mehrfachauswahl_ordnet_nach_der_definition():
+    """Zwei Datensätze mit derselben Auswahl sollen gleich aussehen.
+
+    Sonst hängt die Reihenfolge daran, in welcher jemand geklickt hat, und
+    jeder Vergleich zweier Zeilen wird zur Suche.
+    """
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    a = pruefen({"zert": ["TISAX", "ISO 27001"]}, defs)
+    b = pruefen({"zert": ["ISO 27001", "TISAX"]}, defs)
+    assert a == b == {"zert": ["ISO 27001", "TISAX"]}
+
+
+def test_mehrfachauswahl_wirft_doppelte_weg():
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    assert pruefen({"zert": ["TISAX", "TISAX"]}, defs) == {"zert": ["TISAX"]}
+
+
+def test_mehrfachauswahl_lehnt_unbekanntes_ab():
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    with pytest.raises(Ungueltig, match="Erfunden"):
+        pruefen({"zert": ["TISAX", "Erfunden"]}, defs)
+
+
+def test_einzelner_text_wird_zur_liste():
+    """Ein Import liefert selten schon ein Array."""
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    assert pruefen({"zert": "TISAX"}, defs) == {"zert": ["TISAX"]}
+
+
+def test_leere_auswahl_ist_leer_nicht_eine_leere_liste():
+    """`[]` im JSON ließe „ist leer" nicht greifen."""
+    defs = [_def("zert", "multiselect", ZERTIFIKATE)]
+    assert pruefen({"zert": []}, defs) == {"zert": None}
+    assert pruefen({"zert": None}, defs) == {"zert": None}
+
+
+def test_option_traegt_wert_und_beschriftung():
+    """Die alte Kurzform bleibt gültig, die neue trennt beide Namen."""
+    from app.eigenschaften import optionen, optionstexte, optionswerte
+
+    alt = optionen(["Nord", "Süd"])
+    assert alt == [
+        {"wert": "Nord", "text": "Nord", "verborgen": False},
+        {"wert": "Süd", "text": "Süd", "verborgen": False},
+    ]
+
+    neu = [{"wert": "nord", "text": "Region Nord"}, {"wert": "alt", "text": "Alt", "verborgen": True}]
+    assert optionswerte(neu) == ["nord", "alt"]
+    assert optionswerte(neu, auch_verborgene=False) == ["nord"]
+    assert optionstexte(neu) == ["Region Nord", "Alt"]
+
+
+def test_archivierter_wert_bleibt_gueltig():
+    """Wer den Wert aus dem Verkehr zieht, entwertet die Datensätze nicht."""
+    defs = [_def("zert", "multiselect", [
+        {"wert": "ISO 9001", "text": "ISO 9001"},
+        {"wert": "TISAX", "text": "TISAX", "verborgen": True},
+    ])]
+    assert pruefen({"zert": ["TISAX"]}, defs) == {"zert": ["TISAX"]}
+
+
+# ---- Über die Schnittstelle --------------------------------------------
+
+async def test_mehrfachauswahl_am_datensatz(datenbank):
+    async with klient_fuer("eig-multi") as k:
+        d = (await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Zertifikate", "kind": "multiselect",
+            "options": ZERTIFIKATE,
+        })).json()
+        assert d["key"] == "zertifikate"
+        assert [o["wert"] for o in d["options"]] == ZERTIFIKATE
+        assert all(o["text"] == o["wert"] and not o["verborgen"] for o in d["options"])
+
+        firma = (await k.post("/api/companies", json={"name": "Werft Nord"})).json()
+        gesetzt = (await k.patch(f"/api/companies/{firma['id']}", json={
+            "custom": {"zertifikate": ["TISAX", "ISO 9001"]},
+        })).json()
+        assert gesetzt["custom"]["zertifikate"] == ["ISO 9001", "TISAX"]
+
+        # Ein erfundener Wert kommt nicht durch.
+        schief = await k.patch(f"/api/companies/{firma['id']}", json={
+            "custom": {"zertifikate": ["ISO 9001", "Goldstern"]},
+        })
+        assert schief.status_code == 400
+        assert "Goldstern" in schief.json()["detail"]
+
+
+async def test_beschriftung_aendern_laesst_werte_stehen(datenbank):
+    """Der Grund, warum eine Option zwei Namen hat."""
+    async with klient_fuer("eig-umbenennen") as k:
+        d = (await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Region", "kind": "select",
+            "options": ["Nord", "Süd"],
+        })).json()
+        firma = (await k.post("/api/companies", json={"name": "Kai GmbH"})).json()
+        await k.patch(f"/api/companies/{firma['id']}", json={"custom": {"region": "Nord"}})
+
+        umbenannt = (await k.patch(f"/api/eigenschaften/{d['id']}", json={
+            "options": [{"wert": "Nord", "text": "Region Nord"}, {"wert": "Süd", "text": "Region Süd"}],
+        })).json()
+        assert [o["text"] for o in umbenannt["options"]] == ["Region Nord", "Region Süd"]
+
+        # Der Datensatz trägt weiter „Nord" — und lässt sich weiter speichern.
+        gelesen = (await k.get(f"/api/companies/{firma['id']}")).json()
+        assert gelesen["custom"]["region"] == "Nord"
+        wieder = await k.patch(f"/api/companies/{firma['id']}", json={"custom": {"region": "Nord"}})
+        assert wieder.status_code == 200
+
+
+async def test_benutzte_option_laesst_sich_nicht_streichen(datenbank):
+    async with klient_fuer("eig-streichen") as k:
+        d = (await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Zertifikate", "kind": "multiselect",
+            "options": ZERTIFIKATE,
+        })).json()
+        firma = (await k.post("/api/companies", json={"name": "Werft"})).json()
+        await k.patch(f"/api/companies/{firma['id']}", json={"custom": {"zertifikate": ["TISAX"]}})
+
+        weg = await k.patch(f"/api/eigenschaften/{d['id']}", json={
+            "options": ["ISO 9001", "ISO 27001"],
+        })
+        assert weg.status_code == 409
+        assert "TISAX" in weg.json()["detail"]
+
+        # Archivieren geht dagegen — und der Datensatz bleibt gültig.
+        archiviert = (await k.patch(f"/api/eigenschaften/{d['id']}", json={
+            "options": [
+                {"wert": "ISO 9001", "text": "ISO 9001"},
+                {"wert": "ISO 27001", "text": "ISO 27001"},
+                {"wert": "TISAX", "text": "TISAX", "verborgen": True},
+            ],
+        })).json()
+        assert [o["verborgen"] for o in archiviert["options"]] == [False, False, True]
+        assert (await k.get(f"/api/companies/{firma['id']}")).json()["custom"]["zertifikate"] == ["TISAX"]
+
+
+async def test_unbenutzte_option_darf_weg(datenbank):
+    async with klient_fuer("eig-weg") as k:
+        d = (await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Zertifikate", "kind": "multiselect",
+            "options": ZERTIFIKATE,
+        })).json()
+        uebrig = (await k.patch(f"/api/eigenschaften/{d['id']}", json={
+            "options": ["ISO 9001", "TISAX"],
+        })).json()
+        assert [o["wert"] for o in uebrig["options"]] == ["ISO 9001", "TISAX"]
+
+
+async def test_leere_auswahl_wird_abgelehnt(datenbank):
+    async with klient_fuer("eig-leer-auswahl") as k:
+        antwort = await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Nichts", "kind": "multiselect", "options": [],
+        })
+        assert antwort.status_code == 400

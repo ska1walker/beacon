@@ -172,7 +172,10 @@ async def test_filter_auf_eigene_eigenschaft(datenbank):
         felder = (await k.get("/api/ansichten/felder?entity=companies")).json()
         eigen = [x for x in felder["felder"] if x["schluessel"] == "custom.kammer"]
         assert eigen and eigen[0]["art"] == "auswahl"
-        assert eigen[0]["optionen"] == [{"wert": "IHK", "text": "IHK"}, {"wert": "Handwerkskammer", "text": "Handwerkskammer"}]
+        assert eigen[0]["optionen"] == [
+            {"wert": "IHK", "text": "IHK", "verborgen": False},
+            {"wert": "Handwerkskammer", "text": "Handwerkskammer", "verborgen": False},
+        ]
 
 
 async def test_sortierung_wirkt(datenbank):
@@ -299,3 +302,67 @@ async def test_stapel_greift_nicht_in_fremde_organisation(datenbank):
         })).json()
         assert bilanz["geaendert"] == 0
         assert (await x.get(f"/api/companies/{fremd}")).json()["lifecycle_stage"] == "lead"
+
+
+# ---- Mehrfachauswahl im Filter -----------------------------------------
+#
+# Der Unterschied zwischen „hat eines von" und „hat alle von" ist der
+# zwischen einer Zielgruppe und einer Schnittmenge — und er ist der
+# einzige Grund, warum eine Mehrfachauswahl eigene Operatoren braucht.
+
+async def test_listenfilter_auf_mehrfachauswahl(datenbank):
+    async with klient_fuer("segment-multi") as k:
+        await k.post("/api/eigenschaften", json={
+            "entity": "companies", "label": "Zertifikate", "kind": "multiselect",
+            "options": ["ISO 9001", "ISO 27001", "TISAX"],
+        })
+        await k.post("/api/companies", json={
+            "name": "Beide", "custom": {"zertifikate": ["ISO 9001", "TISAX"]},
+        })
+        await k.post("/api/companies", json={
+            "name": "Nur ISO", "custom": {"zertifikate": ["ISO 9001"]},
+        })
+        await k.post("/api/companies", json={"name": "Ohne"})
+
+        async def namen(operator, wert):
+            f = orjson.dumps([{"feld": "custom.zertifikate", "operator": operator, "wert": wert}]).decode()
+            return sorted(c["name"] for c in (await k.get(f"/api/companies?filter={f}")).json())
+
+        assert await namen("hat_eines_von", ["TISAX", "ISO 27001"]) == ["Beide"]
+        assert await namen("hat_eines_von", ["ISO 9001"]) == ["Beide", "Nur ISO"]
+        assert await namen("hat_alle_von", ["ISO 9001", "TISAX"]) == ["Beide"]
+        assert await namen("hat_alle_von", ["ISO 9001"]) == ["Beide", "Nur ISO"]
+
+        # Wer nichts eingetragen hat, hat auch keines davon — das ist die
+        # wörtliche Lesart, und sie ist die nützliche: „zeig mir alle ohne
+        # TISAX" soll die ohne Angabe einschließen.
+        assert await namen("hat_keines_von", ["TISAX"]) == ["Nur ISO", "Ohne"]
+        assert await namen("hat_nicht_alle_von", ["ISO 9001", "TISAX"]) == ["Nur ISO", "Ohne"]
+
+        f = orjson.dumps([{"feld": "custom.zertifikate", "operator": "leer"}]).decode()
+        assert [c["name"] for c in (await k.get(f"/api/companies?filter={f}")).json()] == ["Ohne"]
+
+
+async def test_mehrfachauswahl_steht_mit_ihren_operatoren_in_der_feldliste(datenbank):
+    async with klient_fuer("segment-multi-felder") as k:
+        await k.post("/api/eigenschaften", json={
+            "entity": "contacts", "label": "Interessen", "kind": "multiselect",
+            "options": ["Wartung", "Schulung"],
+        })
+        felder = (await k.get("/api/ansichten/felder?entity=contacts")).json()
+        feld = next(x for x in felder["felder"] if x["schluessel"] == "custom.interessen")
+        assert feld["art"] == "mehrfachauswahl"
+        assert feld["operatoren"] == [
+            "hat_eines_von", "hat_alle_von", "hat_keines_von", "hat_nicht_alle_von",
+            "leer", "nicht_leer",
+        ]
+        # „ist" gibt es hier nicht: Ein Feld mit drei Werten *ist* keiner davon.
+        assert "ist" not in feld["operatoren"]
+
+
+def test_listenoperator_nur_an_eigener_eigenschaft():
+    """`hat eines von` an einer festen Spalte wäre eine stille Falschaussage."""
+    with pytest.raises(segmente.Ungueltig):
+        segmente.bedingung_zu_sql(
+            "companies", Bedingung("name", "hat_eines_von", ["Werft"]), []
+        )

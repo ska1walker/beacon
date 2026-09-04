@@ -525,8 +525,23 @@ export interface Wer {
   sitzplatz_gewaehlt: boolean;
 }
 
-export type PropertyKind = "text" | "number" | "date" | "bool" | "select";
+export type PropertyKind = "text" | "number" | "date" | "bool" | "select" | "multiselect";
 export type PropertyEntity = "companies" | "contacts" | "deals";
+
+/**
+ * Eine wählbare Option einer Auswahl oder Mehrfachauswahl.
+ *
+ * `wert` steht in den Datensätzen und ändert sich nie; `text` ist die
+ * Beschriftung und darf sich jederzeit ändern. Wer beides gleichsetzt,
+ * kann eine Beschriftung nie wieder korrigieren, ohne die vorhandenen
+ * Werte zu entwerten. `verborgen` heißt archiviert: nicht mehr wählbar,
+ * in den Datensätzen weiter gültig.
+ */
+export interface Eigenschaftsoption {
+  wert: string;
+  text: string;
+  verborgen: boolean;
+}
 
 export interface PropertyDefinition {
   id: string;
@@ -534,15 +549,17 @@ export interface PropertyDefinition {
   key: string;
   label: string;
   kind: PropertyKind;
-  options: string[];
+  options: Eigenschaftsoption[];
   description: string | null;
   position: number;
   is_active: boolean;
   created_at: string;
 }
 
-/** Werte eigener Eigenschaften — Schlüssel = key der Definition. */
-export type Eigenschaftswerte = Record<string, string | number | boolean | null>;
+/** Werte eigener Eigenschaften — Schlüssel = key der Definition.
+ *  Eine Mehrfachauswahl steht als Liste; alles andere als ein Wert. */
+export type Eigenschaftswert = string | number | boolean | string[] | null;
+export type Eigenschaftswerte = Record<string, Eigenschaftswert>;
 
 export interface Firmenverknuepfung {
   company_id: string;
@@ -557,13 +574,20 @@ export interface Firmenverknuepfung {
 
 export type Objektart = "companies" | "contacts" | "tickets" | "tasks";
 
-export type Feldart = "text" | "auswahl" | "zahl" | "datum" | "jaNein" | "person";
+export type Feldart =
+  | "text"
+  | "auswahl"
+  | "mehrfachauswahl"
+  | "zahl"
+  | "datum"
+  | "jaNein"
+  | "person";
 
 export interface Segmentfeld {
   schluessel: string;
   text: string;
   art: Feldart;
-  optionen: { wert: string; text: string }[];
+  optionen: { wert: string; text: string; verborgen?: boolean }[];
   filterbar: boolean;
   zahl: boolean;
   eigen: boolean;

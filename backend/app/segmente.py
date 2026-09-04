@@ -27,13 +27,21 @@ from typing import Any, Literal
 
 import asyncpg
 
-Art = Literal["text", "auswahl", "zahl", "datum", "jaNein", "person"]
+Art = Literal["text", "auswahl", "mehrfachauswahl", "zahl", "datum", "jaNein", "person"]
 
 # Welche Operatoren zu welcher Art von Feld passen. Die Oberfläche liest
 # das hier aus; sie soll nicht „enthält“ an einer Zahl anbieten.
 OPERATOREN: dict[str, list[str]] = {
     "text": ["ist", "ist_nicht", "enthaelt", "enthaelt_nicht", "beginnt_mit", "leer", "nicht_leer"],
     "auswahl": ["ist", "ist_nicht", "ist_eines_von", "leer", "nicht_leer"],
+    # Eine Mehrfachauswahl beantwortet andere Fragen als eine Auswahl.
+    # „ist“ gibt es hier nicht: Ein Feld mit drei Werten *ist* keiner
+    # davon, es *hat* sie. Der Unterschied zwischen „eines von“ und
+    # „alle von“ ist der zwischen einer Zielgruppe und einer Schnittmenge.
+    "mehrfachauswahl": [
+        "hat_eines_von", "hat_alle_von", "hat_keines_von", "hat_nicht_alle_von",
+        "leer", "nicht_leer",
+    ],
     "zahl": ["ist", "groesser", "kleiner", "leer", "nicht_leer"],
     "datum": ["nach", "vor", "letzte_tage", "aelter_als_tage", "leer", "nicht_leer"],
     "jaNein": ["ist_wahr", "ist_falsch"],
@@ -43,6 +51,10 @@ OPERATOREN: dict[str, list[str]] = {
 # Operatoren, die keinen Wert brauchen. Ein „leer“ mit Wert wäre ein
 # Bedienfehler, kein Filter.
 OHNE_WERT = {"leer", "nicht_leer", "ist_wahr", "ist_falsch"}
+
+# Operatoren, die auf eine gespeicherte Liste gehen statt auf einen
+# Wert. Sie brauchen den jsonb-Ausdruck, nicht den Textauszug.
+MEHRFACH_OPERATOREN = {"hat_eines_von", "hat_alle_von", "hat_keines_von", "hat_nicht_alle_von"}
 
 
 class Ungueltig(ValueError):  # noqa: N818 — die Fachbegriffe hier sind deutsch
@@ -233,7 +245,6 @@ async def felder_fuer(conn: asyncpg.Connection, entity: str) -> list[dict[str, A
         raise Ungueltig(f"Unbekanntes Objekt: {entity}")
 
     from app import eigenschaften
-    from app.eigenschaften import _optionen
 
     # Die Arten heißen in `property_definitions` englisch (`property_kind`),
     # in der Oberfläche deutsch. Hier ist die eine Stelle, an der beide
@@ -244,6 +255,7 @@ async def felder_fuer(conn: asyncpg.Connection, entity: str) -> list[dict[str, A
         "date": "datum",
         "bool": "jaNein",
         "select": "auswahl",
+        "multiselect": "mehrfachauswahl",
     }
 
     liste = [
@@ -270,7 +282,10 @@ async def felder_fuer(conn: asyncpg.Connection, entity: str) -> list[dict[str, A
                 "schluessel": CUSTOM_PRAEFIX + d["key"],
                 "text": d["label"],
                 "art": art,
-                "optionen": [{"wert": o, "text": o} for o in _optionen(d["options"])],
+                # Archivierte Optionen bleiben im Filter wählbar: Wer den
+                # Wert aus dem Verkehr zieht, will die Datensätze, die ihn
+                # noch tragen, gerade dann finden können.
+                "optionen": eigenschaften.optionen(d["options"]),
                 "filterbar": True,
                 "zahl": art == "zahl",
                 "eigen": True,
@@ -341,8 +356,54 @@ def _sql_und_art(entity: str, schluessel: str, args: list[Any]) -> tuple[str, Ar
     return f.sql, f.art
 
 
+def _mehrfach_sql(entity: str, b: Bedingung, args: list[Any]) -> str:
+    """„hat eines von“, „hat alle von“, „hat keines von“ auf einer Liste.
+
+    Der gespeicherte Wert ist eine jsonb-Liste, also wird auch mit
+    jsonb-Mitteln gefragt: `?|` prüft auf Schnittmenge, `?&` auf
+    Enthaltensein aller. Beide bedient der GIN-Index aus 0015 — ein
+    Umweg über `->> ... ilike '%wert%'` täte es fachlich auch und wäre
+    bei „Nord“ und „Nordost“ falsch.
+
+    `coalesce(..., false)`, weil ein fehlender Schlüssel SQL-NULL liefert
+    und NULL in einer WHERE-Klausel nicht „nein“ heißt, sondern
+    „unbekannt“ — bei `hat_keines_von` wäre das der Unterschied zwischen
+    „alle ohne diese Werte“ und „alle, die überhaupt etwas eingetragen
+    haben“.
+    """
+    if not b.feld.startswith(CUSTOM_PRAEFIX):
+        raise Ungueltig(f"„{b.operator}“ gibt es nur an einer Mehrfachauswahl.")
+    name = b.feld[len(CUSTOM_PRAEFIX) :]
+    if not name:
+        raise Ungueltig("Eine eigene Eigenschaft braucht einen Namen.")
+    if entity not in CUSTOM_SPALTE:
+        raise Ungueltig(f"„{entity}“ kennt keine eigenen Eigenschaften.")
+
+    werte = b.wert if isinstance(b.wert, list) else ([b.wert] if b.wert else [])
+    werte = [str(w) for w in werte if str(w).strip()]
+    if not werte:
+        raise Ungueltig("Dieser Vergleich braucht mindestens einen Wert.")
+
+    args.append(name)
+    ausdruck = f"({CUSTOM_SPALTE[entity]} -> ${len(args)})"
+    args.append(werte)
+    liste = f"${len(args)}::text[]"
+
+    alle = f"coalesce({ausdruck} ?& {liste}, false)"
+    eines = f"coalesce({ausdruck} ?| {liste}, false)"
+    return {
+        "hat_alle_von": alle,
+        "hat_nicht_alle_von": f"not {alle}",
+        "hat_eines_von": eines,
+        "hat_keines_von": f"not {eines}",
+    }[b.operator]
+
+
 def bedingung_zu_sql(entity: str, b: Bedingung, args: list[Any]) -> str:
     """Eine einzelne Bedingung als SQL-Fragment; Werte gehen in `args`."""
+    if b.operator in MEHRFACH_OPERATOREN:
+        return _mehrfach_sql(entity, b, args)
+
     ausdruck, art = _sql_und_art(entity, b.feld, args)
     op = b.operator
 

@@ -25,6 +25,7 @@ import type {
 } from "@/lib/typen";
 import { Filterbau } from "@/components/filterbau";
 import { Stufenpille } from "@/components/stufe";
+import { Mehrfachplaettchen } from "@/components/mehrfachauswahl";
 import { Prioritaetspille } from "@/components/prioritaet";
 import { Fehler, Laedt, Leer } from "@/components/zustaende";
 
@@ -556,6 +557,19 @@ function Zelle({
     : zeile[feld.schluessel];
 
   if (roh === null || roh === undefined || roh === "") return <>—</>;
+
+  // Eine Mehrfachauswahl zeigt Plättchen, keinen Komma-Text: In einer
+  // Zeile von zwölf Spalten ist „ISO 9001, ISO 27001, TISAX" ein Absatz,
+  // und man sieht nicht mehr, wo ein Wert aufhört.
+  if (Array.isArray(roh)) {
+    const werte = roh.map(String);
+    if (werte.length === 0) return <>—</>;
+    return (
+      <Mehrfachplaettchen
+        werte={werte.map((w) => feld.optionen.find((o) => o.wert === w)?.text ?? w)}
+      />
+    );
+  }
 
   if (feld.schluessel === "lifecycle_stage") {
     return <Stufenpille stufe={String(roh) as LifecycleStage} />;

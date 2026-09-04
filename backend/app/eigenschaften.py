@@ -12,7 +12,7 @@ from typing import Any
 import asyncpg
 
 ENTITAETEN = ("companies", "contacts", "deals")
-ARTEN = ("text", "number", "date", "bool", "select")
+ARTEN = ("text", "number", "date", "bool", "select", "multiselect")
 
 
 def schluessel_aus(label: str) -> str:
@@ -80,12 +80,14 @@ def pruefen(werte: dict[str, Any], defs: list[asyncpg.Record]) -> dict[str, Any]
                 else:
                     raise ValueError
             elif art == "select":
-                optionen = _optionen(d["options"])
-                if str(wert) not in optionen:
+                erlaubt = optionswerte(d["options"])
+                if str(wert) not in erlaubt:
                     raise Ungueltig(
-                        f"„{label}“ erlaubt nur: {', '.join(optionen) or 'nichts'}."
+                        f"„{label}“ erlaubt nur: {', '.join(optionstexte(d['options'])) or 'nichts'}."
                     )
                 ergebnis[key] = str(wert)
+            elif art == "multiselect":
+                ergebnis[key] = _mehrfach(wert, d, label)
             else:
                 raise Ungueltig(f"„{label}“ hat einen unbekannten Typ.")
         except Ungueltig:
@@ -98,8 +100,55 @@ def pruefen(werte: dict[str, Any], defs: list[asyncpg.Record]) -> dict[str, Any]
     return ergebnis
 
 
-def _optionen(roh: Any) -> list[str]:
-    """asyncpg liefert jsonb als Text; hier kommt beides an."""
+def _mehrfach(wert: Any, d: Any, label: str) -> list[str] | None:
+    """Eine Mehrfachauswahl prüfen: Liste, bekannte Werte, feste Reihenfolge.
+
+    Drei Entscheidungen stecken darin:
+
+    - **Ein einzelner Text wird zur einelementigen Liste.** Ein Import
+      oder die Erfassung aus einer Signatur liefert selten schon ein
+      Array; das hier abzulehnen wäre Formalismus.
+    - **Doppelte fallen weg.** Zweimal „ISO 9001“ ist keine Aussage.
+    - **Sortiert wird nach der Definition, nicht nach dem Anklicken.**
+      Sonst zeigen zwei Datensätze mit derselben Auswahl verschiedene
+      Reihenfolgen, und jeder Vergleich zweier Zeilen wird zur Suche.
+
+    Eine leere Auswahl ist kein leeres Array, sondern `None` — dieselbe
+    Bedeutung wie bei jedem anderen Feld, und nur so greift „ist leer“.
+    """
+    erlaubt = optionswerte(d["options"])
+    if isinstance(wert, str):
+        roh = [wert]
+    elif isinstance(wert, (list, tuple)):
+        roh = list(wert)
+    else:
+        raise Ungueltig(f"„{label}“ erwartet eine Liste von Werten.")
+
+    gewaehlt = {str(w) for w in roh if str(w).strip()}
+    unbekannt = sorted(gewaehlt - set(erlaubt))
+    if unbekannt:
+        raise Ungueltig(
+            f"„{label}“ kennt {', '.join(chr(8222) + u + chr(8220) for u in unbekannt)} nicht. "
+            f"Erlaubt ist: {', '.join(optionstexte(d['options'])) or 'nichts'}."
+        )
+    geordnet = [o for o in erlaubt if o in gewaehlt]
+    return geordnet or None
+
+
+def optionen(roh: Any) -> list[dict[str, Any]]:
+    """Die Optionsliste in einheitlicher Form: `wert`, `text`, `verborgen`.
+
+    Zwei Formen kommen hier an. Die alte war eine Liste von Texten, in
+    der Anzeige und Speicherwert dasselbe waren; die neue trennt beide,
+    damit sich eine Beschriftung ändern lässt, ohne die Datensätze zu
+    entwerten. 0015 stellt den Bestand um — diese Funktion nimmt trotzdem
+    weiter beides an, denn eine Migration, die einmal nicht durchlief,
+    soll nicht die Anwendung mitnehmen.
+
+    `verborgen` heißt archiviert: nicht mehr wählbar, aber weiterhin
+    gültig. Ein Wert, der an dreihundert Firmen steht, verschwindet nicht
+    dadurch, dass ihn niemand mehr vergeben soll.
+    """
     import json
 
     if isinstance(roh, str):
@@ -107,4 +156,30 @@ def _optionen(roh: Any) -> list[str]:
             roh = json.loads(roh)
         except json.JSONDecodeError:
             return []
-    return [str(o) for o in roh] if isinstance(roh, list) else []
+    if not isinstance(roh, list):
+        return []
+
+    fertig: list[dict[str, Any]] = []
+    for o in roh:
+        if isinstance(o, dict):
+            wert = str(o.get("wert") or "").strip()
+            if not wert:
+                continue
+            fertig.append({
+                "wert": wert,
+                "text": str(o.get("text") or wert),
+                "verborgen": bool(o.get("verborgen")),
+            })
+        elif str(o).strip():
+            fertig.append({"wert": str(o), "text": str(o), "verborgen": False})
+    return fertig
+
+
+def optionswerte(roh: Any, *, auch_verborgene: bool = True) -> list[str]:
+    """Nur die Speicherwerte — das, wogegen geprüft wird."""
+    return [o["wert"] for o in optionen(roh) if auch_verborgene or not o["verborgen"]]
+
+
+def optionstexte(roh: Any) -> list[str]:
+    """Nur die Beschriftungen — das, was in einer Fehlermeldung steht."""
+    return [o["text"] for o in optionen(roh)]
