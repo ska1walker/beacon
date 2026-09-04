@@ -2413,4 +2413,69 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline: 2px solid var(--am-fokus-ring);
     outline-offset: 1px;
   }
+
+  /* ── Aufgabenliste ────────────────────────────────────────────────
+     Eine Zeile je Aufgabe: abhaken, sehen worum es geht, Phase setzen.
+     Alles ohne die Zeile zu verlassen — sonst plant niemand damit. */
+  .aufgabe {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    padding: var(--am-raum-3) var(--am-raum-8);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .aufgabe:hover { background: var(--am-flaeche-1); }
+
+  .aufgabe[data-erledigt="true"] .aufgabe-titel {
+    text-decoration: line-through;
+    color: var(--am-text-gedaempft);
+  }
+
+  .aufgabe-haken {
+    display: inline-flex;
+    flex: none;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+
+  .aufgabe-haken:hover { color: var(--am-handlung); }
+  .aufgabe[data-erledigt="true"] .aufgabe-haken { color: var(--am-erfolg); }
+
+  .aufgabe-haken:focus-visible {
+    outline: 2px solid var(--am-fokus-ring);
+    outline-offset: 2px;
+    border-radius: var(--am-radius-voll);
+  }
+
+  .aufgabe-mitte { flex: 1; min-width: 0; }
+
+  .aufgabe-titel {
+    font-size: 0.9375rem;
+    color: var(--am-text-primaer);
+  }
+
+  .aufgabe-zeile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--am-raum-3);
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+    margin-top: 2px;
+  }
+
+  .aufgabe-phase {
+    flex: none;
+    width: auto;
+    height: 30px;
+    font-size: 0.75rem;
+    padding-block: 0;
+  }
+
+  /* Die Zahl der überfälligen ist die einzige, die rot sein darf. */
+  .zahlpille[data-warnung="true"] { background: var(--am-fehler); }
+  .dunkel .zahlpille[data-warnung="true"] { background: var(--am-fehler); color: #fff; }
 }

@@ -140,20 +140,38 @@ export interface Activity {
   created_at: string;
 }
 
+export type AufgabenArt = "todo" | "anruf" | "email" | "termin";
+export type AufgabenPhase = "nicht_gestartet" | "in_arbeit" | "wartet";
+
 export interface Task {
   id: string;
   title: string;
   body: string | null;
   status: "open" | "done" | "cancelled";
+  art: AufgabenArt;
+  phase: AufgabenPhase;
+  prioritaet: Ticketprioritaet;
   due_at: string | null;
   company_id: string | null;
   contact_id: string | null;
   deal_id: string | null;
+  ticket_id: string | null;
   assigned_to: string | null;
   completed_at: string | null;
   created_at: string;
   deal_name: string | null;
   company_name: string | null;
+  kontakt_name: string | null;
+  ticket_betreff: string | null;
+  zustaendig_name: string | null;
+}
+
+export interface Aufgabenuebersicht {
+  offen: number;
+  heute: number;
+  ueberfaellig: number;
+  bevorstehend: number;
+  meine: number;
 }
 
 export interface Absender {

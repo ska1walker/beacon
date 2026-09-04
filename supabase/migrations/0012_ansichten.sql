@@ -10,7 +10,7 @@
 create table public.ansichten (
   id          uuid primary key default uuid_generate_v4(),
   org_id      uuid not null references public.orgs(id) on delete cascade,
-  entity      text not null check (entity in ('companies', 'contacts', 'tickets')),
+  entity      text not null check (entity in ('companies', 'contacts', 'tickets', 'tasks')),
   name        text not null,
   -- [{feld, operator, wert}] — geprüft in app/segmente.py, nie roh in SQL.
   filter      jsonb not null default '[]'::jsonb,

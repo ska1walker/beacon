@@ -155,4 +155,4 @@ create policy ticket_kategorien_org on public.ticket_kategorien
 -- sie noch nicht.
 alter table public.ansichten drop constraint if exists ansichten_entity_check;
 alter table public.ansichten add constraint ansichten_entity_check
-  check (entity in ('companies', 'contacts', 'tickets'));
+  check (entity in ('companies', 'contacts', 'tickets', 'tasks'));

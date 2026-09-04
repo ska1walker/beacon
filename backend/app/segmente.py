@@ -151,10 +151,50 @@ TICKET_FELDER: list[Feld] = [
     Feld("letzte_aktivitaet", "Letzte Aktivität", "datum", "letzte_aktivitaet", filterbar=False),
 ]
 
+AUFGABEN_FELDER: list[Feld] = [
+    Feld("title", "Titel", "text", "t.title"),
+    Feld("body", "Notiz", "text", "t.body"),
+    Feld(
+        "art", "Art", "auswahl", "t.art::text",
+        optionen=[
+            {"wert": "todo", "text": "To-do"},
+            {"wert": "anruf", "text": "Anruf"},
+            {"wert": "email", "text": "E-Mail"},
+            {"wert": "termin", "text": "Termin"},
+        ],
+    ),
+    Feld(
+        "phase", "Phase", "auswahl", "t.phase::text",
+        optionen=[
+            {"wert": "nicht_gestartet", "text": "Nicht gestartet"},
+            {"wert": "in_arbeit", "text": "In Arbeit"},
+            {"wert": "wartet", "text": "Wartet"},
+        ],
+    ),
+    Feld("prioritaet", "Dringlichkeit", "auswahl", "t.prioritaet::text", optionen=PRIORITAETEN),
+    Feld(
+        "status", "Zustand", "auswahl", "t.status::text",
+        optionen=[
+            {"wert": "open", "text": "Offen"},
+            {"wert": "done", "text": "Erledigt"},
+            {"wert": "cancelled", "text": "Verworfen"},
+        ],
+    ),
+    Feld("due_at", "Fällig", "datum", "t.due_at"),
+    Feld("assigned_to", "Zugewiesen", "person", "t.assigned_to::text"),
+    Feld("company_name", "Firma", "text", "f.name"),
+    Feld("kontakt_name", "Kontakt", "text", "coalesce(k.first_name || ' ', '') || coalesce(k.last_name, '')"),
+    Feld("deal_name", "Geschäft", "text", "d.name"),
+    Feld("ticket_betreff", "Ticket", "text", "ti.betreff"),
+    Feld("created_at", "Angelegt", "datum", "t.created_at"),
+    Feld("completed_at", "Erledigt am", "datum", "t.completed_at"),
+]
+
 FELDER: dict[str, list[Feld]] = {
     "companies": FIRMEN_FELDER,
     "contacts": KONTAKT_FELDER,
     "tickets": TICKET_FELDER,
+    "tasks": AUFGABEN_FELDER,
 }
 
 # Die Spalte, in der die selbst angelegten Eigenschaften liegen.
@@ -167,6 +207,7 @@ VORGABE_SPALTEN = {
     "companies": ["name", "industry", "city", "lifecycle_stage", "contact_count", "open_deal_count", "open_amount_cents"],
     "contacts": ["first_name", "last_name", "job_title", "company_name", "buying_role", "email", "lifecycle_stage"],
     "tickets": ["nummer", "betreff", "stufe_name", "prioritaet", "kategorie", "owner_id", "firma_name", "faellig_am"],
+    "tasks": ["title", "phase", "art", "prioritaet", "due_at", "assigned_to", "kontakt_name", "company_name"],
 }
 
 VORGABE_SORTIERUNG = {"feld": "updated_at", "richtung": "desc"}
@@ -218,6 +259,9 @@ async def felder_fuer(conn: asyncpg.Connection, entity: str) -> list[dict[str, A
         }
         for f in FELDER[entity]
     ]
+
+    if entity not in CUSTOM_SPALTE:
+        return liste
 
     for d in await eigenschaften.definitionen(conn, entity):
         art = art_aus_eigenschaft.get(d["kind"], "text")
@@ -284,6 +328,8 @@ def _sql_und_art(entity: str, schluessel: str, args: list[Any]) -> tuple[str, Ar
         name = schluessel[len(CUSTOM_PRAEFIX) :]
         if not name:
             raise Ungueltig("Eine eigene Eigenschaft braucht einen Namen.")
+        if entity not in CUSTOM_SPALTE:
+            raise Ungueltig(f"„{entity}“ kennt keine eigenen Eigenschaften.")
         args.append(name)
         return f"({CUSTOM_SPALTE[entity]} ->> ${len(args)})", "text"
 

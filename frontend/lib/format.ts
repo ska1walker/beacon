@@ -197,3 +197,18 @@ export function frist(wert: string | null | undefined, jetzt: Date = new Date())
   };
   return minuten >= 0 ? `in ${spanne(minuten)}` : `seit ${spanne(minuten)} überfällig`;
 }
+
+/** Wie eine Aufgabenart heißt. Ein Anruf wird anders erledigt als eine Mail. */
+export const AUFGABEN_ART_TEXT: Record<string, string> = {
+  todo: "To-do",
+  anruf: "Anruf",
+  email: "E-Mail",
+  termin: "Termin",
+};
+
+/** Die Phase innerhalb von „offen“ — „angefangen“ ist kein Zustand von status. */
+export const AUFGABEN_PHASE_TEXT: Record<string, string> = {
+  nicht_gestartet: "Nicht gestartet",
+  in_arbeit: "In Arbeit",
+  wartet: "Wartet",
+};

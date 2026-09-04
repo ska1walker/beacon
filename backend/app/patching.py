@@ -16,6 +16,9 @@ CASTS: dict[str, str] = {
     "lifecycle_stage": "::public.lifecycle_stage",
     "product": "::public.deal_product",
     "status": "::public.task_status",
+    "art": "::public.aufgaben_art",
+    "phase": "::public.aufgaben_phase",
+    "prioritaet": "::public.ticket_prioritaet",
 }
 
 

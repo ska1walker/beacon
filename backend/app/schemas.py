@@ -247,10 +247,21 @@ class Activity(ActivityIn):
     created_at: datetime
 
 
+AufgabenArt = Literal["todo", "anruf", "email", "termin"]
+# „Nicht gestartet“ ist weder offen noch erledigt — ohne diesen
+# Zwischenstand steht eine halbfertige Aufgabe jeden Morgen wieder da,
+# als hätte niemand sie angefasst.
+AufgabenPhase = Literal["nicht_gestartet", "in_arbeit", "wartet"]
+Prioritaet = Literal["niedrig", "mittel", "hoch", "dringend"]
+
+
 class TaskIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     body: str | None = None
     due_at: datetime | None = None
+    art: AufgabenArt = "todo"
+    phase: AufgabenPhase = "nicht_gestartet"
+    prioritaet: Prioritaet = "mittel"
     company_id: UUID | None = None
     contact_id: UUID | None = None
     deal_id: UUID | None = None
@@ -262,8 +273,15 @@ class TaskPatch(BaseModel):
     title: str | None = None
     body: str | None = None
     status: Literal["open", "done", "cancelled"] | None = None
+    art: AufgabenArt | None = None
+    phase: AufgabenPhase | None = None
+    prioritaet: Prioritaet | None = None
     due_at: datetime | None = None
     assigned_to: UUID | None = None
+    company_id: UUID | None = None
+    contact_id: UUID | None = None
+    deal_id: UUID | None = None
+    ticket_id: UUID | None = None
 
 
 class Task(TaskIn):
@@ -271,6 +289,9 @@ class Task(TaskIn):
     status: Literal["open", "done", "cancelled"]
     deal_name: str | None = None
     company_name: str | None = None
+    kontakt_name: str | None = None
+    ticket_betreff: str | None = None
+    zustaendig_name: str | None = None
     completed_at: datetime | None = None
     created_at: datetime
 
