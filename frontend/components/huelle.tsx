@@ -15,7 +15,8 @@ import {
   Users,
 } from "lucide-react";
 import { Darstellungsschalter } from "@/components/darstellung";
-import { Sitzplatzwahl } from "@/components/sitzplatz";
+import { Marke } from "@/components/marke";
+import { Personenanzeige } from "@/components/person";
 
 // Die Hülle hat drei Bereiche: Navigation, Inhalt, Ablage. Die Ablage
 // trägt Kontext zum gewählten Ding und ist nie eine zweite Inhaltsspalte —
@@ -46,9 +47,9 @@ export function Huelle({ children }: { children: React.ReactNode }) {
     <div className="huelle">
       <nav className="huelle-nav" aria-label="Hauptnavigation">
         <div className="huelle-kopfecke">
-          <Link href="/" className="marke">
-            <span className="marke-punkt" aria-hidden="true" />
-            <span className="marke-text">aicrm</span>
+          <Link href="/" className="marke" aria-label="AImighty CRM — zur Startseite">
+            <Marke />
+            <span className="marke-produkt" aria-hidden="true">CRM</span>
           </Link>
         </div>
 
@@ -83,7 +84,7 @@ export function Huelle({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="huelle-fuss">
-          <Sitzplatzwahl />
+          <Personenanzeige />
           <div className="huelle-herkunft">
             <Darstellungsschalter />
             <span className="huelle-herkunft-recht">läuft auf dieser Box</span>

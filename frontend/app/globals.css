@@ -843,14 +843,30 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-primaer);
   }
 
-  /* Der goldene Punkt ist die Signatur — Gold zeichnet aus, es handelt
-     nicht. Deshalb sitzt er hier und nicht auf einer Schaltfläche. */
-  .marke-punkt {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--am-radius-voll);
-    background: var(--am-gold-500);
-    flex: none;
+  /* Die Wortmarke, nicht nachgebaut: zwei gelieferte Dateien, von denen
+     je nach Darstellung eine sichtbar ist. Beide tragen dasselbe goldene
+     Wappen — nur „mighty" wechselt die Farbe. */
+  .marke-logo { display: block; flex: none; line-height: 0; }
+
+  .marke-logo-bild {
+    display: block;
+    width: auto;
+    height: 22px;   /* 472×167 → 62 px breit, über der Mindestgröße von 45 px */
+  }
+
+  .marke-logo-bild.dunkel { display: none; }
+  .dunkel .marke-logo-bild.hell { display: none; }
+  .dunkel .marke-logo-bild.dunkel { display: block; }
+
+  /* Welche der AImighty-Anwendungen das hier ist. Gedämpft: Die Marke
+     trägt, das Produktwort ordnet nur ein. */
+  .marke-produkt {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--am-text-gedaempft);
+    padding-left: var(--am-raum-2);
+    border-left: 1px solid var(--am-trennlinie);
   }
 
   /* ── Darstellungsschalter ─────────────────────────────────────────── */
@@ -1446,44 +1462,90 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline-offset: 1px;
   }
 
-  /* ── Sitzplatz-Wahl ───────────────────────────────────────────────
-     Unten in der Navigation, neben dem Darstellungsschalter. Sie sitzt
-     dort und nicht oben rechts wie ein Benutzermenü: Sie IST kein
-     Benutzermenü — angemeldet ist immer derselbe Olares-Zugang. */
-  .sitzplatz {
-    position: relative;
-  }
+  /* ── Wer gerade arbeitet ──────────────────────────────────────────
+     Unten in der Navigation, immer sichtbar — auch allein. Die Frage
+     „unter welchem Namen schreibe ich das gerade" hängt an Besitz,
+     Zuordnung und Protokoll. Es ist trotzdem kein Benutzermenü:
+     angemeldet ist immer derselbe Olares-Zugang. */
+  .person { position: relative; }
 
-  .sitzplatz-knopf {
+  .person-knopf {
     display: flex;
     align-items: center;
     gap: var(--am-raum-2);
     width: 100%;
-    padding: var(--am-raum-2) var(--am-raum-3);
+    padding: var(--am-raum-2);
     border: 1px solid var(--am-rand);
     border-radius: var(--am-radius-mittel);
     background: var(--am-seite);
     color: var(--am-text-primaer);
     font-family: var(--am-schrift-sans);
-    font-size: 0.8125rem;
-    cursor: pointer;
     text-align: left;
+    cursor: pointer;
   }
 
-  .sitzplatz-knopf:hover { background: var(--am-flaeche-2); }
+  /* Ohne zweite Person gibt es nichts zu wählen — dann ist es eine
+     Anzeige und darf sich nicht wie eine Schaltfläche anfühlen. */
+  .person-knopf[data-still="true"] {
+    cursor: default;
+    background: transparent;
+    border-color: transparent;
+    padding-inline: 0;
+  }
 
-  .sitzplatz-knopf:focus-visible {
+  .person-knopf:not([data-still="true"]):hover { background: var(--am-flaeche-2); }
+
+  .person-knopf:focus-visible {
     outline: 2px solid var(--am-fokus-ring);
     outline-offset: 1px;
   }
 
-  .sitzplatz-name {
+  .person-kreis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-blau-600);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .person-kreis.klein { width: 22px; height: 22px; font-size: 0.625rem; }
+
+  /* Im Dunkelmodus trägt Blau auf Blau nicht — der Kreis wird hell. */
+  .dunkel .person-kreis { background: var(--am-blau-400); color: var(--am-blau-950); }
+
+  .person-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .person-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .sitzplatz-liste {
+  .person-rolle {
+    font-size: 0.6875rem;
+    color: var(--am-text-gedaempft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .person-pfeil { margin-left: auto; flex: none; color: var(--am-text-gedaempft); }
+
+  .person-liste {
     position: absolute;
     bottom: calc(100% + var(--am-raum-2));
     left: 0;
@@ -1496,7 +1558,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     background: var(--am-flaeche-3);
   }
 
-  .sitzplatz-erklaerung {
+  .person-erklaerung {
     font-size: 0.6875rem;
     line-height: 1.5;
     color: var(--am-text-sekundaer);
@@ -1505,7 +1567,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     border-bottom: 1px solid var(--am-trennlinie);
   }
 
-  .sitzplatz-eintrag {
+  .person-eintrag {
     display: flex;
     align-items: center;
     gap: var(--am-raum-2);
@@ -1517,24 +1579,16 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-primaer);
     font-family: var(--am-schrift-sans);
     font-size: 0.8125rem;
-    cursor: pointer;
     text-align: left;
+    cursor: pointer;
   }
 
-  .sitzplatz-eintrag:hover { background: var(--am-flaeche-1); }
+  .person-eintrag:hover { background: var(--am-flaeche-2); }
+  .person-eintrag.aktiv { font-weight: 600; }
 
-  /* Der gewählte Platz trägt Gold — Auszeichnung, keine Handlung. */
-  .sitzplatz-eintrag.aktiv {
-    color: var(--am-gold-beschriftung);
-    font-weight: 600;
-  }
+  .person-eintrag-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 
-  .sitzplatz-art {
-    margin-left: auto;
-    font-size: 0.625rem;
-    color: var(--am-text-gedaempft);
-    font-weight: 400;
-  }
+  .person-art { font-size: 0.625rem; color: var(--am-text-gedaempft); }
 
   /* ── Tagesbriefing ────────────────────────────────────────────────
      Gruppen mit einer Erklärzeile. Ohne sie wüsste niemand, warum ein

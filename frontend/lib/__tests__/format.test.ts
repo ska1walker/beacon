@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anzahl, euro, euroGenau, prozent, personName, initialen } from "@/lib/format";
+import { anzahl, euro, euroGenau, prozent, personName, initialen, initialenAusName } from "@/lib/format";
 
 /**
  * Intl setzt vor das Währungszeichen ein geschütztes Leerzeichen (U+00A0),
@@ -65,5 +65,22 @@ describe("Ein- und Mehrzahl", () => {
     expect(anzahl(1, "Punkt", "Punkte")).toBe("1 Punkt");
     expect(anzahl(0, "Punkt", "Punkte")).toBe("0 Punkte");
     expect(anzahl(2, "Punkt", "Punkte")).toBe("2 Punkte");
+  });
+});
+
+describe("Initialen aus einem ganzen Namen", () => {
+  it("nimmt die Anfangsbuchstaben zweier Wörter", () => {
+    expect(initialenAusName("Kai Böhm")).toBe("KB");
+    expect(initialenAusName("marc-bayer")).toBe("MB");
+  });
+
+  it("nimmt bei einem Wort zwei Buchstaben", () => {
+    // Ein einzelnes „K" im Kreis sieht aus, als fehle etwas.
+    expect(initialenAusName("kaivostudio")).toBe("KA");
+  });
+
+  it("bleibt bei fehlendem Namen ruhig", () => {
+    expect(initialenAusName(null)).toBe("?");
+    expect(initialenAusName("   ")).toBe("?");
   });
 });

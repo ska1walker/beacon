@@ -69,6 +69,23 @@ export function initialen(vorname: string | null, nachname: string | null): stri
   return (a + b).toUpperCase() || "?";
 }
 
+/**
+ * Initialen aus einem ganzen Namen: „Kai Böhm" → „KB", „kaivostudio" → „KA".
+ *
+ * Zwei Zeichen, nie drei — im Kreis wird das dritte unleserlich. Bei einem
+ * einzelnen Wort werden die ersten beiden Buchstaben genommen; ein
+ * einzelnes „K" sähe aus, als fehle etwas. Trennzeichen wie in
+ * „marc-bayer" zählen als Wortgrenze, denn das ist die Kennung einer
+ * Person ohne eigenen Zugang.
+ */
+export function initialenAusName(name: string | null | undefined): string {
+  const sauber = (name ?? "").trim();
+  if (!sauber) return "?";
+  const teile = sauber.split(/[\s._-]+/).filter(Boolean);
+  if (teile.length >= 2) return (teile[0][0] + teile[1][0]).toUpperCase();
+  return sauber.slice(0, 2).toUpperCase();
+}
+
 export const STUFEN_TEXT: Record<string, string> = {
   lead: "Kontakt",
   qualified: "Qualifiziert",
