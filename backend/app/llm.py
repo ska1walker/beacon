@@ -68,18 +68,32 @@ async def chat(
     *,
     temperature: float = 0.3,
     max_tokens: int = 900,
+    bilder: list[str] | None = None,
 ) -> str:
+    """Eine Frage an das Modell. Mit `bilder` wird sie multimodal.
+
+    Die Bilder gehen als `data:`-URL im OpenAI-Format mit — dasselbe, was
+    LiteLLM und vLLM erwarten. Kann das eingestellte Modell keine Bilder,
+    antwortet der Endpunkt mit einem Fehler; den zu deuten ist Sache des
+    Aufrufers, denn „das Modell sieht nichts" ist eine andere Auskunft
+    als „der Endpunkt ist aus".
+    """
     if not cfg.eingerichtet:
         raise LLMNichtEingerichtet(
             "Es ist kein Sprachmodell hinterlegt. Adresse und Modellname stehen unter Einstellungen."
         )
 
     url = cfg.base_url.rstrip("/") + "/chat/completions"
+    inhalt: Any = user
+    if bilder:
+        inhalt = [{"type": "text", "text": user}] + [
+            {"type": "image_url", "image_url": {"url": b}} for b in bilder
+        ]
     payload = {
         "model": cfg.model or "default",
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "user", "content": inhalt},
         ],
         "temperature": temperature,
         "max_tokens": max_tokens,
