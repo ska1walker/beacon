@@ -1,10 +1,13 @@
 """Firmen."""
 
+from typing import Any
 from uuid import UUID
 
+import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
-from app import anreicherung, audit
+from app import anreicherung, audit, segmente
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -43,28 +46,128 @@ async def _custom_pruefen(conn, entity: str, werte: dict | None) -> str:
     return json.dumps(geprueft)
 
 
-@router.get("", response_model=list[Company])
-async def list_companies(
-    user: CurrentUser = Depends(get_current_user),
-    q: str | None = Query(None, description="Freitext über Name, Domain, Ort"),
-    stage: str | None = Query(None),
-    limit: int = Query(50, le=200),
-    offset: int = Query(0, ge=0),
-) -> list[Company]:
-    sql = LIST_SQL
-    args: list[object] = []
+def _bedingungen(sql: str, args: list[Any], q: str | None, stage: str | None, filter: str | None) -> str:
+    """Freitext, Stufe und das Segment — in dieser Reihenfolge."""
     if q:
         args.append(f"%{q}%")
         sql += f" and (c.name ilike ${len(args)} or c.domain ilike ${len(args)} or c.city ilike ${len(args)})"
     if stage:
         args.append(stage)
         sql += f" and c.lifecycle_stage = ${len(args)}::public.lifecycle_stage"
+    if filter:
+        try:
+            bedingungen = segmente.bedingungen_aus(orjson.loads(filter))
+            sql += segmente.filter_zu_sql("companies", bedingungen, args)
+        except (orjson.JSONDecodeError, segmente.Ungueltig) as exc:
+            raise HTTPException(400, f"Filter nicht verwendbar: {exc}") from exc
+    return sql
+
+
+@router.get("", response_model=list[Company])
+async def list_companies(
+    user: CurrentUser = Depends(get_current_user),
+    q: str | None = Query(None, description="Freitext über Name, Domain, Ort"),
+    stage: str | None = Query(None),
+    filter: str | None = Query(None, description="Bedingungen als JSON-Liste"),
+    sort: str | None = Query(None),
+    richtung: str | None = Query(None),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[Company]:
+    args: list[Any] = []
+    sql = _bedingungen(LIST_SQL, args, q, stage, filter)
+    try:
+        sql += segmente.sortierung_zu_sql("companies", sort, richtung)
+    except segmente.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
     args.extend([limit, offset])
-    sql += f" order by c.updated_at desc limit ${len(args) - 1} offset ${len(args)}"
+    sql += f" limit ${len(args) - 1} offset ${len(args)}"
 
     async with acquire_as(user.user_id) as conn:
         rows = await conn.fetch(sql, *args)
     return [Company(**dict(r)) for r in rows]
+
+
+@router.get("/anzahl")
+async def anzahl_companies(
+    user: CurrentUser = Depends(get_current_user),
+    q: str | None = Query(None),
+    stage: str | None = Query(None),
+    filter: str | None = Query(None),
+) -> dict[str, int]:
+    """Wie viele es insgesamt sind — die Liste selbst ist begrenzt."""
+    args: list[Any] = []
+    sql = _bedingungen(
+        "select count(*) from public.companies c where c.deleted_at is null",
+        args, q, stage, filter,
+    )
+    async with acquire_as(user.user_id) as conn:
+        return {"anzahl": await conn.fetchval(sql, *args) or 0}
+
+
+class Stapel(BaseModel):
+    ids: list[UUID]
+
+
+class StapelAenderung(Stapel):
+    lifecycle_stage: str | None = None
+    owner_id: UUID | None = None
+    industry: str | None = None
+    source: str | None = None
+
+
+@router.post("/mehrere")
+async def mehrere_aendern(
+    payload: StapelAenderung,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, int]:
+    """Setzt ein Feld an vielen Firmen auf einmal."""
+    if not payload.ids:
+        raise HTTPException(400, "Keine Firmen gewählt")
+    if len(payload.ids) > 500:
+        raise HTTPException(400, "Höchstens 500 auf einmal")
+
+    felder = payload.model_dump(exclude_unset=True, exclude={"ids"})
+    if not felder:
+        raise HTTPException(400, "Keine Änderung übergeben")
+
+    zuweisungen: list[str] = []
+    args: list[Any] = []
+    for name, wert in felder.items():
+        args.append(wert)
+        guss = "::public.lifecycle_stage" if name == "lifecycle_stage" else ""
+        zuweisungen.append(f"{name} = ${len(args)}{guss}")
+    args.append(payload.ids)
+
+    async with acquire_as(user.user_id) as conn:
+        rows = await conn.fetch(
+            f"update public.companies set {', '.join(zuweisungen)}, updated_at = now() "
+            f"where id = any(${len(args)}::uuid[]) and deleted_at is null returning id",
+            *args,
+        )
+        for r in rows:
+            await audit.log_fuer(
+                conn, user, action="update", entity="companies", entity_id=r["id"], diff=felder
+            )
+    return {"geaendert": len(rows)}
+
+
+@router.post("/mehrere/loeschen")
+async def mehrere_loeschen(
+    payload: Stapel,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, int]:
+    if not payload.ids:
+        raise HTTPException(400, "Keine Firmen gewählt")
+    async with acquire_as(user.user_id) as conn:
+        rows = await conn.fetch(
+            "update public.companies set deleted_at = now() "
+            "where id = any($1::uuid[]) and deleted_at is null returning id",
+            payload.ids,
+        )
+        for r in rows:
+            await audit.log_fuer(conn, user, action="delete", entity="companies", entity_id=r["id"])
+    return {"geloescht": len(rows)}
 
 
 @router.get("/{company_id}", response_model=Company)

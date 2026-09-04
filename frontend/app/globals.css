@@ -2024,4 +2024,253 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     background: var(--am-flaeche-1);
     color: var(--am-text-sekundaer);
   }
+
+  /* ── Segmentierung: Ansichten, Filter, Stapel ─────────────────────
+     Der Kern der Listenarbeit. Eine Liste ist nie „alle“, sondern eine
+     Frage an den Bestand — die Reiter sind die gespeicherten Fragen. */
+  .ansichtsleiste {
+    display: flex;
+    align-items: stretch;
+    gap: var(--am-raum-1);
+    padding: 0 var(--am-raum-8);
+    border-bottom: 1px solid var(--am-trennlinie);
+    background: var(--am-seite);
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .ansicht-reiter-huelle {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .ansicht-reiter {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    padding: var(--am-raum-3) var(--am-raum-3);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--am-text-sekundaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .ansicht-reiter:hover { color: var(--am-text-primaer); }
+
+  /* Der Balken sagt, welche Frage gerade gestellt ist. Farbe allein
+     würde das nicht tragen — die Kante schon. */
+  .ansicht-reiter.aktiv {
+    color: var(--am-text-primaer);
+    font-weight: 600;
+    border-bottom-color: var(--am-handlung);
+  }
+
+  .dunkel .ansicht-reiter.aktiv { border-bottom-color: var(--am-gold-500); }
+
+  .ansicht-privat { color: var(--am-gold-600); font-weight: 700; }
+
+  .ansicht-weg {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    margin-left: calc(-1 * var(--am-raum-1));
+    border: none;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+
+  .ansicht-weg:hover { color: var(--am-fehler); background: var(--am-flaeche-2); }
+
+  .werkzeug-zahl {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+    white-space: nowrap;
+  }
+
+  /* Ein Filter, der greift, muss man sehen, ohne ihn zu öffnen. */
+  .btn.traegt {
+    border-color: var(--am-handlung);
+    color: var(--am-handlung);
+  }
+
+  .dunkel .btn.traegt { border-color: var(--am-gold-500); color: var(--am-gold-400); }
+
+  .zahlpille {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding: 0 4px;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-handlung);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 600;
+  }
+
+  .dunkel .zahlpille { background: var(--am-gold-500); color: var(--am-blau-950); }
+
+  .filterbau { display: flex; flex-direction: column; gap: var(--am-raum-2); align-items: flex-start; }
+
+  .filterbau-leer {
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+    margin: 0 0 var(--am-raum-2);
+    max-width: 46rem;
+  }
+
+  .filterzeile {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+  }
+
+  .filterzeile select,
+  .filterzeile input {
+    height: var(--am-ziel-zeiger);
+    max-width: 16rem;
+  }
+
+  .filter-verknuepfung {
+    min-width: 4.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .filter-verknuepfung.leer {
+    display: inline-flex;
+    align-items: center;
+    height: var(--am-ziel-zeiger);
+    color: var(--am-text-gedaempft);
+    font-size: 0.8125rem;
+  }
+
+  .filter-mehrfach {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--am-raum-3);
+    font-size: 0.8125rem;
+  }
+
+  .filter-mehrfach label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    cursor: pointer;
+  }
+
+  .filterchips {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    padding: var(--am-raum-2) var(--am-raum-8);
+  }
+
+  .filterchip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    padding: 2px var(--am-raum-2);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-voll);
+    background: var(--am-flaeche-1);
+    font-size: 0.75rem;
+    color: var(--am-text-sekundaer);
+  }
+
+  .filterchip button {
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+
+  .filterchip button:hover { color: var(--am-fehler); }
+
+  .spaltenwahl {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: var(--am-raum-2);
+    font-size: 0.8125rem;
+  }
+
+  .spaltenwahl label {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    cursor: pointer;
+  }
+
+  /* Die Leiste erscheint nur mit Auswahl — sie ist die Antwort darauf,
+     nicht ein Dauerzustand. */
+  .stapelleiste {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    margin: 0 var(--am-raum-8) var(--am-raum-3);
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: 1px solid var(--am-handlung);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+    font-size: 0.8125rem;
+  }
+
+  .dunkel .stapelleiste { border-color: var(--am-gold-600); }
+
+  .stapelleiste select,
+  .stapelleiste input { height: 32px; max-width: 12rem; font-size: 0.8125rem; }
+
+  .stapel-luecke { flex: 1; }
+
+  .stapel-frage { color: var(--am-fehler); font-weight: 600; }
+
+  .btn-gefahr {
+    background: var(--am-fehler);
+    color: #fff;
+    border-color: var(--am-fehler);
+  }
+
+  .btn-gefahr:hover { filter: brightness(0.92); }
+
+  /* Die Auswahlspalte ist schmal und klickt nicht die Zeile mit. */
+  .tabelle th.wahlspalte,
+  .tabelle td.wahlspalte {
+    width: 2.5rem;
+    padding-right: 0;
+  }
+
+  .tabelle tr[data-gewaehlt="true"] { background: var(--am-flaeche-1); }
+
+  .spaltenkopf {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .spaltenkopf:hover { color: var(--am-text-primaer); }
+
+  .zahl .spaltenkopf { justify-content: flex-end; }
+
+  .zellen-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }

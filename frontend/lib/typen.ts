@@ -532,3 +532,48 @@ export interface Firmenverknuepfung {
   role: string | null;
   ist_haupt: boolean;
 }
+
+// ── Segmentierung ────────────────────────────────────────────────────
+// Eine Liste ist nie „alle", sondern eine Frage an den Bestand. Wer sie
+// einmal gestellt hat, speichert sie als Ansicht.
+
+export type Objektart = "companies" | "contacts";
+
+export type Feldart = "text" | "auswahl" | "zahl" | "datum" | "jaNein" | "person";
+
+export interface Segmentfeld {
+  schluessel: string;
+  text: string;
+  art: Feldart;
+  optionen: { wert: string; text: string }[];
+  filterbar: boolean;
+  zahl: boolean;
+  eigen: boolean;
+  operatoren: string[];
+}
+
+export interface Bedingung {
+  feld: string;
+  operator: string;
+  wert?: string | number | string[] | null;
+}
+
+export interface Ansicht {
+  id: string;
+  entity: Objektart;
+  name: string;
+  filter: Bedingung[];
+  verknuepfung: "und" | "oder";
+  spalten: string[];
+  sort_feld: string | null;
+  sort_richtung: "asc" | "desc";
+  owner_id: string | null;
+  position: number;
+}
+
+export interface Feldauskunft {
+  felder: Segmentfeld[];
+  personen: { id: string; name: string }[];
+  vorgabe_spalten: string[];
+  vorgabe_sortierung: { feld: string; richtung: "asc" | "desc" };
+}

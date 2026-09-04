@@ -20,6 +20,7 @@ from app.routers import (
     activities,
     angebote,
     anreicherung,
+    ansichten,
     briefing,
     companies,
     contacts,
@@ -153,6 +154,7 @@ app.include_router(pipelines.router)
 app.include_router(post.router)
 app.include_router(sicherung_router.router)
 app.include_router(anreicherung.router)
+app.include_router(ansichten.router)
 
 
 # Doppelte E-Mail, doppelte Domain: Das ist kein Serverfehler, sondern

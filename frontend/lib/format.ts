@@ -139,3 +139,26 @@ export const ANGEBOT_STATUS_ART: Record<string, "open" | "won" | "lost"> = {
 export function anzahl(n: number, einzahl: string, mehrzahl: string): string {
   return `${n} ${n === 1 ? einzahl : mehrzahl}`;
 }
+
+/** Wie ein Operator in der Filterleiste heißt. */
+export const OPERATOR_TEXT: Record<string, string> = {
+  ist: "ist",
+  ist_nicht: "ist nicht",
+  enthaelt: "enthält",
+  enthaelt_nicht: "enthält nicht",
+  beginnt_mit: "beginnt mit",
+  ist_eines_von: "ist eines von",
+  groesser: "größer als",
+  kleiner: "kleiner als",
+  nach: "nach dem",
+  vor: "vor dem",
+  letzte_tage: "in den letzten … Tagen",
+  aelter_als_tage: "älter als … Tage",
+  leer: "ist leer",
+  nicht_leer: "ist nicht leer",
+  ist_wahr: "ist ja",
+  ist_falsch: "ist nein",
+};
+
+/** Operatoren, die ohne Wert auskommen. */
+export const OHNE_WERT = new Set(["leer", "nicht_leer", "ist_wahr", "ist_falsch"]);

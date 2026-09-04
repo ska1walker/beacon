@@ -1,10 +1,13 @@
 """Kontakte."""
 
+from typing import Any
 from uuid import UUID
 
+import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
-from app import anreicherung, audit
+from app import anreicherung, audit, segmente
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -33,16 +36,8 @@ async def _custom_pruefen(conn, entity: str, werte: dict | None) -> str:
     return json.dumps(geprueft)
 
 
-@router.get("", response_model=list[Contact])
-async def list_contacts(
-    user: CurrentUser = Depends(get_current_user),
-    q: str | None = Query(None),
-    company_id: UUID | None = Query(None),
-    limit: int = Query(50, le=200),
-    offset: int = Query(0, ge=0),
-) -> list[Contact]:
-    sql = LIST_SQL
-    args: list[object] = []
+def _bedingungen(sql: str, args: list[Any], q: str | None, company_id: UUID | None, filter: str | None) -> str:
+    """Freitext, Firmenbezug und das Segment — in dieser Reihenfolge."""
     if q:
         args.append(f"%{q}%")
         n = len(args)
@@ -57,12 +52,132 @@ async def list_contacts(
             f" and (k.company_id = ${len(args)} or exists ("
             f"select 1 from public.contact_companies v where v.contact_id = k.id and v.company_id = ${len(args)}))"
         )
+    if filter:
+        try:
+            bedingungen = segmente.bedingungen_aus(orjson.loads(filter))
+            sql += segmente.filter_zu_sql("contacts", bedingungen, args)
+        except (orjson.JSONDecodeError, segmente.Ungueltig) as exc:
+            raise HTTPException(400, f"Filter nicht verwendbar: {exc}") from exc
+    return sql
+
+
+@router.get("", response_model=list[Contact])
+async def list_contacts(
+    user: CurrentUser = Depends(get_current_user),
+    q: str | None = Query(None),
+    company_id: UUID | None = Query(None),
+    filter: str | None = Query(None, description="Bedingungen als JSON-Liste"),
+    sort: str | None = Query(None),
+    richtung: str | None = Query(None),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[Contact]:
+    args: list[Any] = []
+    sql = _bedingungen(LIST_SQL, args, q, company_id, filter)
+    try:
+        sql += segmente.sortierung_zu_sql("contacts", sort, richtung)
+    except segmente.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
     args.extend([limit, offset])
-    sql += f" order by k.updated_at desc limit ${len(args) - 1} offset ${len(args)}"
+    sql += f" limit ${len(args) - 1} offset ${len(args)}"
 
     async with acquire_as(user.user_id) as conn:
         rows = await conn.fetch(sql, *args)
     return [Contact(**dict(r)) for r in rows]
+
+
+@router.get("/anzahl")
+async def anzahl_contacts(
+    user: CurrentUser = Depends(get_current_user),
+    q: str | None = Query(None),
+    company_id: UUID | None = Query(None),
+    filter: str | None = Query(None),
+) -> dict[str, int]:
+    """Wie viele es insgesamt sind — die Liste selbst ist begrenzt.
+
+    „50 Einträge“ wäre gelogen, wenn 312 gemeint sind; und eine
+    Segmentierung ohne Gesamtzahl beantwortet die Frage nicht, für die
+    man sie gebaut hat.
+    """
+    args: list[Any] = []
+    sql = _bedingungen(
+        "select count(*) from public.contacts k "
+        "left join public.companies f on f.id = k.company_id "
+        "where k.deleted_at is null",
+        args, q, company_id, filter,
+    )
+    async with acquire_as(user.user_id) as conn:
+        return {"anzahl": await conn.fetchval(sql, *args) or 0}
+
+
+class Stapel(BaseModel):
+    ids: list[UUID]
+
+
+class StapelAenderung(Stapel):
+    lifecycle_stage: str | None = None
+    owner_id: UUID | None = None
+    source: str | None = None
+
+
+@router.post("/mehrere")
+async def mehrere_aendern(
+    payload: StapelAenderung,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, int]:
+    """Setzt ein Feld an vielen Kontakten auf einmal.
+
+    Nur drei Felder: Stufe, Besitzer, Herkunft. Ein Stapel, der alles
+    ändern kann, ändert irgendwann versehentlich alles — und diese drei
+    sind es, die man nach einer Messe oder einem Import wirklich in einem
+    Zug setzt.
+    """
+    if not payload.ids:
+        raise HTTPException(400, "Keine Kontakte gewählt")
+    if len(payload.ids) > 500:
+        raise HTTPException(400, "Höchstens 500 auf einmal")
+
+    felder = payload.model_dump(exclude_unset=True, exclude={"ids"})
+    if not felder:
+        raise HTTPException(400, "Keine Änderung übergeben")
+
+    zuweisungen: list[str] = []
+    args: list[Any] = []
+    for name, wert in felder.items():
+        args.append(wert)
+        guss = "::public.lifecycle_stage" if name == "lifecycle_stage" else ""
+        zuweisungen.append(f"{name} = ${len(args)}{guss}")
+    args.append(payload.ids)
+
+    async with acquire_as(user.user_id) as conn:
+        rows = await conn.fetch(
+            f"update public.contacts set {', '.join(zuweisungen)}, updated_at = now() "
+            f"where id = any(${len(args)}::uuid[]) and deleted_at is null returning id",
+            *args,
+        )
+        for r in rows:
+            await audit.log_fuer(
+                conn, user, action="update", entity="contacts", entity_id=r["id"], diff=felder
+            )
+    return {"geaendert": len(rows)}
+
+
+@router.post("/mehrere/loeschen")
+async def mehrere_loeschen(
+    payload: Stapel,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, int]:
+    if not payload.ids:
+        raise HTTPException(400, "Keine Kontakte gewählt")
+    async with acquire_as(user.user_id) as conn:
+        rows = await conn.fetch(
+            "update public.contacts set deleted_at = now() "
+            "where id = any($1::uuid[]) and deleted_at is null returning id",
+            payload.ids,
+        )
+        for r in rows:
+            await audit.log_fuer(conn, user, action="delete", entity="contacts", entity_id=r["id"])
+    return {"geloescht": len(rows)}
 
 
 @router.get("/{contact_id}", response_model=Contact)
@@ -247,7 +362,7 @@ async def firma_verknuepfen(
             raise HTTPException(404, "Firma nicht gefunden")
         if kontakt["company_id"] is None:
             # Ohne Hauptfirma wird die erste Verknüpfung zur Hauptfirma —
-            # sonst stünde der Kontakt in jeder Liste weiter „ohne Firma".
+            # sonst stünde der Kontakt in jeder Liste weiter „ohne Firma“.
             await conn.execute("update public.contacts set company_id = $1 where id = $2", payload.company_id, contact_id)
         else:
             await conn.execute(

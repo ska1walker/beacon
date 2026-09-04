@@ -20,6 +20,9 @@ Der Weg vom ersten Kontakt bis zum Abschluss, durchgängig:
   und Protokoll je Person, ohne zweites Konto.
 - **Anpassbar** — eigene Eigenschaften je Objekt, mehrere Pipelines mit
   frei geordneten Stufen, Kontakte mit mehreren Firmen.
+- **Segmentiert** — Listen sind Fragen an den Bestand: Bedingungen auf
+  jedes Feld, gespeichert als Ansicht, mit wählbaren Spalten, Sortierung
+  und Aktionen für den ganzen Stapel.
 - **Post** — E-Mail hinein und hinaus über Relay, nach einem kleinen
   signierten Vertrag; der Entwurf kommt vom Modell, gesendet wird von Hand.
 - **Angereichert** — neue Firmen und Kontakte werden aus der Firmen-Website,
@@ -77,8 +80,8 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 
 ## Stand
 
-Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 164
-Backend-Tests, 8 Frontend-Tests, jede Ansicht im Browser gesehen.
+Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 184
+Backend-Tests, 11 Frontend-Tests, jede Ansicht im Browser gesehen.
 
 Seit dem 3. September 2026 läuft aicrm auf einer echten Olares-Box und
 steht im AImighty-Markt. Offen ist nur noch der Weg, auf dem Insilo und
