@@ -216,3 +216,35 @@ export const AUFGABEN_PHASE_TEXT: Record<string, string> = {
   in_arbeit: "In Arbeit",
   wartet: "Wartet",
 };
+
+/**
+ * Ein Firmenname, auf das Vergleichbare eingedampft.
+ *
+ * „Hanseatic Legal Partner mbB" und „Hanseatic Legal Partner" sind
+ * dieselbe Kanzlei; eine Signatur schreibt die Rechtsform hin, der
+ * Bestand oft nicht. Wer stur zeichenweise vergleicht, legt dieselbe
+ * Firma ein zweites Mal an — und der Kontakt hängt danach an der
+ * falschen.
+ *
+ * Bewusst zurückhaltend: Kleinschreibung, Satzzeichen weg, und nur
+ * **hinten** stehende Rechtsformen. „Partner" bleibt stehen, es gehört
+ * bei Kanzleien zum Namen. Ein Abgleich, der zu viel wegwirft, führt
+ * zwei verschiedene Firmen zusammen — das ist der teurere Fehler.
+ */
+const RECHTSFORMEN = new Set([
+  "gmbh", "mbh", "mbb", "ug", "ag", "kg", "kgaa", "ohg", "gbr", "se", "ev",
+  "ek", "partg", "partgmbb", "co", "haftungsbeschraenkt",
+  "ltd", "limited", "inc", "llc", "llp", "plc", "bv", "nv", "sa", "sarl",
+  "srl", "spa", "oy", "ab", "as",
+]);
+
+export function firmenschluessel(name: string): string {
+  const worte = name
+    .toLowerCase()
+    .replace(/[.,()]/g, " ")
+    .replace(/&/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  while (worte.length > 1 && RECHTSFORMEN.has(worte[worte.length - 1])) worte.pop();
+  return worte.join(" ");
+}

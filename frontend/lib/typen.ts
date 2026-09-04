@@ -561,6 +561,20 @@ export interface PropertyDefinition {
 export type Eigenschaftswert = string | number | boolean | string[] | null;
 export type Eigenschaftswerte = Record<string, Eigenschaftswert>;
 
+// ── Erfassung aus Hingeworfenem ──────────────────────────────────────
+
+/** Was das Modell aus Text oder Bild gelesen hat. Noch nichts davon ist
+ *  gespeichert — es füllt die Maske, ein Mensch drückt auf Anlegen. */
+export interface Erfassungsvorschlag {
+  art: "contact" | "company";
+  felder: Record<string, string>;
+  /** Was dastand und in kein Feld passte. Wird nicht verschluckt. */
+  rest: string | null;
+  modell: string;
+  /** Ein vorhandener Datensatz, der dasselbe sein könnte. */
+  dublette: Record<string, string | null> | null;
+}
+
 export interface Firmenverknuepfung {
   company_id: string;
   company_name: string;

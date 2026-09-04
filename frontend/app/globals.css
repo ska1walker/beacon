@@ -2724,3 +2724,144 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-gedaempft);
   }
 }
+
+@layer components {
+  /* ── Erfassung aus Hingeworfenem ──────────────────────────────────
+     Sitzt oben im Anlegen-Dialog. Bewusst abgesetzt, aber nicht laut:
+     Es ist eine Abkürzung, kein Assistent, der etwas von einem will. */
+
+  .dialog-karte { max-height: calc(100vh - var(--am-raum-8)); overflow-y: auto; }
+
+  .erfassung {
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+    padding: var(--am-raum-3);
+    margin-bottom: var(--am-raum-4);
+  }
+
+  .erfassung-kopf {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    margin-bottom: var(--am-raum-2);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--am-text-sekundaer);
+  }
+
+  .erfassung-kopf svg { color: var(--am-gold-beschriftung); flex: none; }
+
+  .erfassung-wurf {
+    position: relative;
+    border-radius: var(--am-radius-klein);
+  }
+
+  .erfassung-wurf[data-ueber="true"]::after {
+    content: "Loslassen";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: var(--am-rand-betont) dashed var(--am-handlung-ruhend);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    color: var(--am-handlung-ruhend);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .erfassung-wurf textarea {
+    width: 100%;
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font-family: var(--am-schrift-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .erfassung-wurf textarea:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+  .erfassung-wurf textarea::placeholder { color: var(--am-text-deaktiviert); }
+
+  .erfassung-bild {
+    position: relative;
+    display: inline-block;
+    margin-top: var(--am-raum-2);
+  }
+
+  .erfassung-bild img {
+    max-height: 7rem;
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    display: block;
+  }
+
+  .erfassung-bild button {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 1.125rem;
+    height: 1.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-voll);
+    background: var(--am-seite);
+    color: var(--am-text-sekundaer);
+    cursor: pointer;
+  }
+
+  .erfassung-leiste {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    margin-top: var(--am-raum-2);
+  }
+
+  .erfassung-tipp {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--am-raum-1);
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .erfassung-hinweis {
+    margin: var(--am-raum-2) 0 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--am-text-sekundaer);
+  }
+
+  .erfassung-hinweis.warnung { color: var(--am-achtung); }
+  .erfassung-hinweis a { color: inherit; font-weight: 500; }
+
+  /* Ein Knopf, der wie ein Verweis aussieht — er führt keine Sache aus,
+     die man rückgängig machen müsste, sondern ergänzt die Maske. */
+  .alsLink {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: var(--am-handlung-ruhend);
+    font: inherit;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .dunkel .alsLink { color: var(--am-gold-beschriftung); }
+  .dunkel .erfassung-wurf textarea,
+  .dunkel .erfassung-bild button { background: var(--am-flaeche-2); }
+  .dunkel .erfassung-wurf[data-ueber="true"]::after {
+    background: var(--am-flaeche-2);
+    border-color: var(--am-gold-500);
+    color: var(--am-gold-beschriftung);
+  }
+}

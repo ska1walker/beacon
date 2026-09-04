@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anzahl, euro, euroGenau, prozent, personName, initialen, initialenAusName } from "@/lib/format";
+import { anzahl, euro, euroGenau, firmenschluessel, initialen, initialenAusName, personName, prozent } from "@/lib/format";
 
 /**
  * Intl setzt vor das Währungszeichen ein geschütztes Leerzeichen (U+00A0),
@@ -82,5 +82,30 @@ describe("Initialen aus einem ganzen Namen", () => {
   it("bleibt bei fehlendem Namen ruhig", () => {
     expect(initialenAusName(null)).toBe("?");
     expect(initialenAusName("   ")).toBe("?");
+  });
+});
+
+describe("firmenschluessel", () => {
+  it("lässt die Rechtsform am Ende weg", () => {
+    // Die Signatur schreibt sie hin, der Bestand meist nicht.
+    expect(firmenschluessel("Hanseatic Legal Partner mbB")).toBe(
+      firmenschluessel("Hanseatic Legal Partner"),
+    );
+    expect(firmenschluessel("Nordwind Logistik GmbH")).toBe("nordwind logistik");
+    expect(firmenschluessel("Meyer Präzisionstechnik GmbH & Co. KG")).toBe(
+      "meyer präzisionstechnik",
+    );
+  });
+
+  it("wirft nichts weg, was zum Namen gehört", () => {
+    // „Partner" trägt hier den Namen; „GmbH" wäre allein nichts.
+    expect(firmenschluessel("Krüger Partner")).toBe("krüger partner");
+    expect(firmenschluessel("GmbH")).toBe("gmbh");
+  });
+
+  it("führt verschiedene Firmen nicht zusammen", () => {
+    expect(firmenschluessel("Nordwind Logistik")).not.toBe(
+      firmenschluessel("Nordwind Logistik Nord"),
+    );
   });
 });

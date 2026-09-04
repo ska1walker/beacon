@@ -19,14 +19,15 @@ async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
   // muss auf die richtige Person zeigen.
   const sitzplatz = liesSitzplatz();
 
-  const antwort = await fetch(pfad, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(sitzplatz ? { "X-Aicrm-Sitzplatz": sitzplatz } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
+  const koepfe: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(sitzplatz ? { "X-Aicrm-Sitzplatz": sitzplatz } : {}),
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  // Ein leerer Wert heißt „diesen Kopf nicht setzen" — siehe `postForm`.
+  for (const [name, wert] of Object.entries(koepfe)) if (!wert) delete koepfe[name];
+
+  const antwort = await fetch(pfad, { ...init, headers: koepfe });
 
   if (!antwort.ok) {
     // FastAPI legt den Grund unter `detail` ab. Steht dort nichts
@@ -54,6 +55,15 @@ export const api = {
   put: <T>(pfad: string, koerper: unknown) =>
     anfrage<T>(pfad, { method: "PUT", body: JSON.stringify(koerper) }),
   del: (pfad: string) => anfrage<void>(pfad, { method: "DELETE" }),
+
+  /**
+   * Ein Formular mit Datei. Setzt **kein** `Content-Type`: Bei
+   * `multipart/form-data` gehört die Trennmarke dazu, und die kennt nur
+   * der Browser. Wer den Kopf hier von Hand setzt, schickt eine Grenze,
+   * die es nicht gibt — der Server findet dann kein einziges Feld.
+   */
+  postForm: <T>(pfad: string, formular: FormData) =>
+    anfrage<T>(pfad, { method: "POST", body: formular, headers: { "Content-Type": "" } }),
 };
 
 export function suchparameter(werte: Record<string, string | number | undefined | null>): string {
