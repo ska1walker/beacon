@@ -52,6 +52,8 @@ export interface Company {
   open_amount_cents: number;
 }
 
+export type Einwilligung = "keine" | "angefragt" | "bestaetigt" | "bestandskunde" | "abgemeldet";
+
 export interface Contact {
   id: string;
   custom: Eigenschaftswerte;
@@ -67,6 +69,14 @@ export interface Contact {
   company_name: string | null;
   lifecycle_stage: LifecycleStage;
   source: string | null;
+  /** Marketing-Einwilligung mit Beleg (0018). `keine` heißt: keine
+   *  Marketing-Post. `bestandskunde` ist die Ausnahme aus §7 Abs. 3 UWG
+   *  und wird bewusst gesetzt, nie abgeleitet. */
+  marketing_einwilligung: Einwilligung;
+  einwilligung_am: string | null;
+  einwilligung_quelle: string | null;
+  einwilligung_nachweis: Record<string, string | null> | null;
+  abgemeldet_am: string | null;
   notes: string | null;
   ai_summary: string | null;
   created_at: string;
