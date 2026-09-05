@@ -19,11 +19,13 @@ metadata:
     app: aicrm
     component: links
 spec:
-  # `index` statt Punktzugriff, und `default` dahinter: Ein Upgrade spielt
-  # die bei der Installation gespeicherten Werte zurück (Constraint 9) —
-  # auf einer Box, die vor diesem Deployment installiert wurde, fehlt der
-  # Schlüssel schlicht.
-  replicas: {{ ((index .Values.workloads "aicrm-links") | default (dict "replicaCount" 1)).replicaCount }}
+  # `index`, weil der Name einen Bindestrich trägt. Kein `default`
+  # dahinter: Olares' Linter verlangt genau diese Form — und braucht
+  # sie nicht: `workloads` kommt bei jedem Markt-Upgrade frisch aus
+  # `workloadReplicas` im Manifest (auf der Box gemessen: user-supplied,
+  # genau die Schlüssel des jeweiligen Manifests), nicht aus den
+  # eingefrorenen Installationswerten.
+  replicas: {{ (index .Values.workloads "aicrm-links").replicaCount }}
   selector:
     matchLabels:
       app: aicrm
