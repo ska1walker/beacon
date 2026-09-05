@@ -132,8 +132,21 @@ class Contact(ContactIn):
     id: UUID
     company_name: str | None = None
     ai_summary: str | None = None
+    # Marketing-Einwilligung mit Beleg (0018). `keine` ist die Vorgabe und
+    # heißt: keine Marketing-Post. `bestandskunde` wird bewusst gesetzt,
+    # nie abgeleitet — es ist die Ausnahme aus §7 Abs. 3 UWG.
+    marketing_einwilligung: str = "keine"
+    einwilligung_am: datetime | None = None
+    einwilligung_quelle: str | None = None
+    einwilligung_nachweis: dict[str, Any] | None = None
+    abgemeldet_am: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("einwilligung_nachweis", mode="before")
+    @classmethod
+    def _nachweis_lesen(cls, wert: Any) -> dict[str, Any] | None:
+        return _json_dict(wert) if wert not in (None, "") else None
 
 
 # ── Pipeline ────────────────────────────────────────────────────────────

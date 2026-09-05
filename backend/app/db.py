@@ -88,3 +88,21 @@ async def acquire_als_quelle(source_id: UUID) -> AsyncIterator[asyncpg.Connectio
                 "select set_config('app.webhook_source', $1, true)", str(source_id)
             )
             yield conn
+
+
+@asynccontextmanager
+async def acquire_als_link(token: str) -> AsyncIterator[asyncpg.Connection]:
+    """Verbindung, die genau einen öffentlichen Link lesen darf.
+
+    Dasselbe Muster wie `acquire_als_quelle`: kein Nutzerkontext, weil
+    der Aufrufer ein Empfänger ist, der auf einen Link geklickt hat. Die
+    Policy `oeffentliche_links_selbstauskunft` gibt die eine Zeile mit
+    diesem Token frei — sonst nichts, und schreiben geht darüber nicht.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.oeffentlicher_link', $1, true)", token
+            )
+            yield conn

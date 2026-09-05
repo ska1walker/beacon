@@ -201,6 +201,50 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 30
 
+        # Der öffentliche Pfad: dasselbe Abbild, eine andere Anwendung, ein
+        # eigener Port. Hinter dem öffentlichen Entrance liegt nur er —
+        # drei Token-Wege, kein Datenzugriff (app/oeffentlich.py). Ein
+        # zweiter Prozess im selben Container wäre kürzer; ein zweiter
+        # Container ist das, was Kubernetes dafür vorsieht, und er lässt
+        # sich einzeln beobachten.
+        - name: oeffentlich
+          image: "{{ .Values.images.backend.repository }}:{{ .Values.images.backend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          command: ["uvicorn", "app.oeffentlich:app", "--host", "0.0.0.0", "--port", "8001"]
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8001
+              name: oeffentlich
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.postgres.port }}"
+            - name: DB_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: DB_PASSWORD
+              value: "{{ .Values.postgres.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.postgres.databases.aicrm }}"
+            - name: APP_DATA_DIR
+              value: "/app/data"
+            - name: DEV_USER
+              value: ""
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
       volumes:
         - name: app-data
           hostPath:

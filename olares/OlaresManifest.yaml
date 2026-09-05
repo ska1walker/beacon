@@ -49,6 +49,23 @@ entrances:
     invisible: false
     openMethod: window
 
+  # Der öffentliche Pfad für Links aus Mails: Einwilligung bestätigen,
+  # abmelden, Klick zählen. Muss von überall erreichbar sein — der
+  # Empfänger klickt aus seinem Mailprogramm. Dahinter liegt eine eigene
+  # Anwendung (app/oeffentlich.py), die genau diese drei Dinge kann und
+  # nichts liest. `invisible`, weil es keine Seite zum Öffnen ist.
+  # Gemessen: `internal` hat keine öffentliche Adresse, eine `policies`-
+  # Regel allein öffnet nichts (docs/BETRIEB.md). Deshalb ein eigener
+  # Entrance und nicht eine Regel am bestehenden.
+  - name: aicrmlinks
+    host: aicrm-backend
+    port: 8001
+    title: aicrm Links
+    icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+    authLevel: public
+    invisible: true
+    openMethod: window
+
 # ---- System-Middleware ------------------------------------------------------
 # Olares stellt PostgreSQL bereit und reicht die Zugangsdaten als
 # .Values.postgres.* herein. Kein Redis: Es gibt noch keine Hintergrund-
