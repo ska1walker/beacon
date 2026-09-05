@@ -694,6 +694,72 @@ export interface Feldauskunft {
   vorgabe_sortierung: { feld: string; richtung: "asc" | "desc" };
 }
 
+// ── Listen, Kampagnen, Vorlagen ──────────────────────────────────────
+
+export interface Liste {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  art: "statisch" | "aktiv";
+  filter: Bedingung[];
+  verknuepfung: "und" | "oder";
+  /** Gerechnet: wie viele die Liste meint, wie vielen man schreiben darf. */
+  gemeint: number;
+  berechtigt: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Listenmitglied {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  company_name: string | null;
+  einwilligung: Einwilligung;
+  hinzugefuegt_am: string | null;
+}
+
+export type Kampagnenstatus = "entwurf" | "laeuft" | "abgeschlossen" | "abgebrochen";
+
+export interface Kampagne {
+  id: string;
+  name: string;
+  betreff: string;
+  text: string;
+  liste_id: string | null;
+  liste_name: string | null;
+  status: Kampagnenstatus;
+  gestartet_am: string | null;
+  empfaenger: number;
+  uebergangen: number;
+  gesendet: number;
+  wartend: number;
+  fehlgeschlagen: number;
+  klicks: number;
+  klicker: number;
+  abgemeldet: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Kampagnenvorschau {
+  gemeint: number;
+  berechtigt: number;
+  uebergangen: number;
+  beispiel_betreff: string;
+  beispiel_text: string;
+}
+
+export interface Vorlage {
+  id: string;
+  name: string;
+  betreff: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Tickets ──────────────────────────────────────────────────────────
 
 export type Ticketprioritaet = "niedrig" | "mittel" | "hoch" | "dringend";

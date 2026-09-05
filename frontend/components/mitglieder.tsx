@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
 import type { Mitglied, Wer } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 export function Mitgliederblock() {
   const client = useQueryClient();
@@ -61,11 +62,9 @@ export function Mitgliederblock() {
         )}
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Olares installiert Apps pro Nutzer und lässt an einem Zugang keinen zweiten
+        <Erklaerung kurz="Wer mit Ihnen in Beacon arbeitet. Alle sehen und ändern alles." lang={<>Olares installiert Apps pro Nutzer und lässt an einem Zugang keinen zweiten
           Menschen zusätzlich herein. Wer zu zweit dasselbe CRM benutzt, teilt deshalb einen
-          Olares-Zugang — und Beacon unterscheidet die Personen selbst.
-        </p>
+          Olares-Zugang — und Beacon unterscheidet die Personen selbst.</>} />
         <div className="hinweis" data-art="achtung" style={{ marginBottom: "var(--am-raum-4)" }}>
           <span>
             Der Sitzplatz ist <strong>Zuschreibung, keine Anmeldung.</strong> Wer den

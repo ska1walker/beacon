@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
 import type { Sicherungsbilanz, Sicherungsstand, Wiederherstellung } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 function zeilenSumme(zeilen: Record<string, number>): number {
   return Object.values(zeilen).reduce((s, n) => s + n, 0);
@@ -50,6 +51,10 @@ export function Sicherungsblock() {
         )}
       </div>
       <div className="block-inhalt">
+        <Erklaerung
+          kurz="Beacon sichert Ihren Bestand regelmäßig auf dieser Box — und stellt ihn nach einer Neuinstallation von selbst wieder her."
+          lang={<>Alle sechs Stunden entsteht ein Abzug unter <code>/app/data</code>; die letzten vierzehn bleiben. Die Ausfuhr unten ist derselbe Stand als Datei — ohne den Zugangsschlüssel zum Sprachmodell.</>}
+        />
         <div className="hinweis" data-art="achtung">
           <AlertTriangle size={16} aria-hidden="true" />
           <span>

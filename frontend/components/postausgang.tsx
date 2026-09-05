@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 /** Der Postausgang — Marcs Relay oder jeder Dienst, der den Vertrag bedient. */
 export function Postausgangblock() {
@@ -19,16 +20,14 @@ export function Postausgangblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Postausgang</h2>
+        <h2>Versand über Relay</h2>
         <span className="stufe" data-art={einst.data?.mail_endpoint_url ? "won" : undefined}>{einst.data?.mail_endpoint_url ? "eingerichtet" : "nicht eingerichtet"}</span>
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          E-Mails gehen nicht aus Beacon selbst hinaus, sondern an einen Dienst auf der Box — Relay, die Outlook-Alternative.
+        <Erklaerung kurz="Optional: E-Mails über Relay statt über das eigene E-Mail-Konto verschicken." lang={<>E-Mails gehen nicht aus Beacon selbst hinaus, sondern an einen Dienst auf der Box — Relay, die Outlook-Alternative.
           Beacon schickt je Nachricht einen signierten POST mit <code>to</code>, <code>subject</code>, <code>text</code>; eingehende Mails
           nimmt es unter <code>/api/post/eingang/&lt;Quelle&gt;</code> entgegen (Quelle unter „Eingehende Quellen" anlegen).
-          Der Vertrag steht in <code>backend/app/routers/post.py</code>.
-        </p>
+          Der Vertrag steht in <code>backend/app/routers/post.py</code>.</>} />
         <form onSubmit={(e) => { e.preventDefault(); speichern.mutate(); }}>
           <div className="feld"><label htmlFor="po-url">Adresse des Postausgangs</label><input id="po-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://relay-…olares.com/api/send" /></div>
           <div className="feld"><label htmlFor="po-von">Absenderadresse</label><input id="po-von" type="email" value={absender} onChange={(e) => setAbsender(e.target.value)} placeholder="kai@aimighty.de" /></div>

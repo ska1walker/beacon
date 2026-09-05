@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { euro } from "@/lib/format";
 import type { Product, Verlustgrund } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 const ART: Record<string, string> = { system: "System", hardware: "Hardware", service: "Leistung", subscription: "Laufend" };
 
@@ -25,9 +26,7 @@ export function Katalogblock() {
     <section className="block">
       <div className="block-kopf"><h2>Produktkatalog</h2></div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Die Listenpreise für Angebote. Ein Angebot kopiert den Preis beim Anlegen — spätere Änderungen hier ändern kein liegendes Angebot.
-        </p>
+        <Erklaerung kurz="Ihre Produkte mit Listenpreis — die Grundlage jedes Angebots." lang={<>Die Listenpreise für Angebote. Ein Angebot kopiert den Preis beim Anlegen — spätere Änderungen hier ändern kein liegendes Angebot.</>} />
         <table className="tabelle" style={{ marginBottom: "var(--am-raum-4)" }}>
           <thead><tr><th>Produkt</th><th>Art</th><th style={{ textAlign: "right" }}>Netto €</th><th style={{ textAlign: "right" }}>Servicetage</th><th /></tr></thead>
           <tbody>

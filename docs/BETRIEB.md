@@ -277,6 +277,31 @@ erlaubt einen eigenen Wert (eigene Domain, oder eine Box, die ihre
 Domain nicht mitteilt). Ohne Adresse geht keine Bestätigungsmail hinaus,
 und der Block sagt das.
 
+## Listen und Kampagnen
+
+Seit 0.2.1. Eine **Liste** sagt, wen man meint — statisch (von Hand
+gefüllt, auch per Stapel aus der Kontaktliste) oder aktiv (ein Filter im
+Format der Ansichten; wer passt, ist drin). Ob man jemandem schreiben
+darf, sagt der **Kontakt** (`marketing_einwilligung`, jetzt auch als
+Filterfeld). Eine **Kampagne** ist Betreff, Text und Liste; beim Start
+schreibt sie jedem berechtigten Empfänger eine Zeile ins Buch (`mails`,
+`art = marketing`), die Schleife schickt. Wer keine Einwilligung oder
+Adresse hat, wird übergangen und gezählt — die Liste bleibt unangetastet.
+
+Jeder Link im Text wird je Empfänger zu einem Klick-Link
+(`oeffentliche_links`, `art = klick`, mit `kampagne_id`), der Abmeldelink
+hängt ebenfalls an der Kampagne. Kennzahlen (gesendet, wartend,
+fehlgeschlagen, Klicks, Klicker, abgemeldet) entstehen beim Lesen aus
+den Zeilen; `abgeschlossen` ist `laeuft` ohne wartende Zeile. Marketing-
+Post geht über das SMTP-Konto oder — wenn gewählt und eingerichtet —
+über Brevo (`app/versand.py`, `marketing_konto`). Vorlagen sind Betreff
+und Text mit Platzhaltern, mehr nicht.
+
+Die Einstellungen sind seit 0.2.1 in fünf Unterpunkte gegliedert (Firma
+und Team, Vertrieb, E-Mail, KI und Programme, Daten); jeder Block sagt in
+einem Satz, wozu er da ist, und hält das Kleingedruckte hinter dem
+Symbol (`components/erklaerung.tsx`).
+
 ## Post anschließen — Relay oder ein anderer Dienst
 
 E-Mails gehen nicht aus Beacon selbst hinaus und kommen nicht direkt

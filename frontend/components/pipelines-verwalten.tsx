@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import type { Pipeline, Stage, StageKind } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 const ART_TEXT: Record<StageKind, string> = { open: "offen", won: "gewonnen", lost: "verloren" };
 
@@ -77,11 +78,9 @@ export function Pipelinesblock() {
     <section className="block">
       <div className="block-kopf"><h2>Pipelines und Stufen</h2></div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Neugeschäft und Bestandskunden laufen anders — dafür gibt es mehrere Pipelines. Neue
+        <Erklaerung kurz="Die Stufen, die ein Geschäft durchläuft — bei Bedarf mehrere Pipelines." lang={<>Neugeschäft und Bestandskunden laufen anders — dafür gibt es mehrere Pipelines. Neue
           Geschäfte landen ohne Angabe in der Standard-Pipeline. Die Wahrscheinlichkeit einer
-          Stufe geht in die gewichtete Prognose ein.
-        </p>
+          Stufe geht in die gewichtete Prognose ein.</>} />
         {fehler && <Fehler text={(fehler.error as Error).message} />}
 
         {pipelines.data!.map((pl) => (

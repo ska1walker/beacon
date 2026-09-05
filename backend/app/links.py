@@ -33,6 +33,7 @@ async def anlegen(
     contact_id: UUID | None = None,
     ziel_url: str | None = None,
     payload: dict | None = None,
+    kampagne_id: UUID | None = None,
 ) -> str:
     """Legt den Link an und gibt sein Token zurück."""
     if art not in ART:
@@ -48,11 +49,11 @@ async def anlegen(
     await conn.execute(
         """
         insert into public.oeffentliche_links
-          (org_id, token, art, contact_id, ziel_url, einmalig, gueltig_bis, payload)
-        values ($1,$2,$3::public.link_art,$4,$5,$6,$7,$8::jsonb)
+          (org_id, token, art, contact_id, ziel_url, einmalig, gueltig_bis, payload, kampagne_id)
+        values ($1,$2,$3::public.link_art,$4,$5,$6,$7,$8::jsonb,$9)
         """,
         org_id, token, art, contact_id, ziel_url, einmalig, gueltig_bis,
-        orjson.dumps(payload or {}).decode(),
+        orjson.dumps(payload or {}).decode(), kampagne_id,
     )
     return token
 

@@ -177,6 +177,20 @@ export const EINWILLIGUNG_TEXT: Record<string, string> = {
   abgemeldet: "abgemeldet",
 };
 
+export const KAMPAGNE_STATUS_TEXT: Record<string, string> = {
+  entwurf: "Entwurf",
+  laeuft: "läuft",
+  abgeschlossen: "abgeschlossen",
+  abgebrochen: "abgebrochen",
+};
+
+export const KAMPAGNE_STATUS_ART: Record<string, string | undefined> = {
+  entwurf: undefined,
+  laeuft: "open",
+  abgeschlossen: "won",
+  abgebrochen: "lost",
+};
+
 export const PRIORITAET_TEXT: Record<string, string> = {
   dringend: "Dringend",
   hoch: "Hoch",

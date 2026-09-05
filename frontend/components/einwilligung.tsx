@@ -39,9 +39,9 @@ export function Einwilligungsblock({ kontakt }: { kontakt: Contact }) {
   const beleg = kontakt.einwilligung_nachweis;
   const versandBereit = einstellungen.data?.smtp_ready && !!einstellungen.data?.links_basis_wirksam;
   const versandHinweis = !einstellungen.data?.smtp_ready
-    ? "Kein SMTP-Konto — unter Einstellungen → Versand einrichten."
+    ? "Kein SMTP-Konto — unter Einstellungen → E-Mail einrichten."
     : !einstellungen.data?.links_basis_wirksam
-      ? "Die Adresse der öffentlichen Links fehlt — unter Einstellungen → Marketing-Versand."
+      ? "Die Adresse der öffentlichen Links fehlt — unter Einstellungen → E-Mail."
       : undefined;
 
   return (

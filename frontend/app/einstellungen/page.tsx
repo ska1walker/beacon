@@ -1,11 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { OrgSettings } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
@@ -18,34 +21,40 @@ import { Postausgangblock } from "@/components/postausgang";
 import { Marketingversandblock, Versandblock } from "@/components/versand";
 import { AnreicherungEinstellungen } from "@/components/anreicherung-einstellungen";
 
-export default function EinstellungenSeite() {
+/**
+ * Die Einstellungen in fünf Unterpunkten.
+ *
+ * Eine Seite mit vierzehn Blöcken untereinander liest niemand. Jeder
+ * Unterpunkt trägt, was zusammengehört; jeder Block sagt in einem Satz,
+ * wozu er da ist, und hält das Kleingedruckte hinter dem Symbol.
+ */
+const BEREICHE = [
+  { schluessel: "firma", text: "Firma und Team" },
+  { schluessel: "vertrieb", text: "Vertrieb" },
+  { schluessel: "email", text: "E-Mail" },
+  { schluessel: "ki", text: "KI und Programme" },
+  { schluessel: "daten", text: "Daten" },
+] as const;
+
+type Bereich = (typeof BEREICHE)[number]["schluessel"];
+
+/** Der KI-Assistent: Adresse, Modell, Schlüssel. */
+function KIBlock({ e }: { e: OrgSettings }) {
   const client = useQueryClient();
-
-  const abfrage = useQuery({
-    queryKey: ["einstellungen"],
-    queryFn: () => api.get<OrgSettings>("/api/settings"),
-  });
-
-  const [adresse, setAdresse] = useState("");
-  const [modell, setModell] = useState("");
+  const [adresse, setAdresse] = useState(e.llm_base_url);
+  const [modell, setModell] = useState(e.llm_model);
   const [schluessel, setSchluessel] = useState("");
-
   useEffect(() => {
-    if (abfrage.data) {
-      setAdresse(abfrage.data.llm_base_url);
-      setModell(abfrage.data.llm_model);
-    }
-  }, [abfrage.data]);
+    setAdresse(e.llm_base_url);
+    setModell(e.llm_model);
+  }, [e.llm_base_url, e.llm_model]);
 
   const speichern = useMutation({
     mutationFn: () =>
       api.put<OrgSettings>("/api/settings", {
         llm_base_url: adresse,
         llm_model: modell,
-        // Leer heißt „nicht angefasst" — das Backend lässt den
-        // hinterlegten Schlüssel dann stehen. Er kommt nie zurück an
-        // die Oberfläche, also käme er sonst bei jedem Speichern leer
-        // an und wäre nach dem ersten Feldwechsel weg.
+        // Leer heißt „nicht angefasst“ — der hinterlegte Schlüssel bleibt.
         llm_api_key: schluessel,
       }),
     onSuccess: () => {
@@ -55,154 +64,151 @@ export default function EinstellungenSeite() {
     },
   });
 
+  return (
+    <section className="block">
+      <div className="block-kopf">
+        <h2>KI-Assistent</h2>
+        <span className="stufe" data-art={e.llm_ready ? "won" : undefined}>
+          {e.llm_ready ? "eingerichtet" : "nicht eingerichtet"}
+        </span>
+      </div>
+      <div className="block-inhalt">
+        <Erklaerung
+          kurz="Der KI-Assistent braucht ein Sprachmodell — meist die LiteLLM-App auf dieser Box."
+          lang={<>Beacon bringt kein eigenes Modell mit. Es spricht einen OpenAI-kompatiblen Endpunkt an. Es gibt bewusst keine Vorgabe: Jede geratene Adresse wäre auf einer anderen Box falsch. Solange hier nichts steht, bleiben die KI-Funktionen gesperrt und sagen das — statt in einen Verbindungsfehler zu laufen.</>}
+        />
+        <form onSubmit={(ev) => { ev.preventDefault(); speichern.mutate(); }}>
+          <div className="feld">
+            <label htmlFor="adresse">Adresse</label>
+            <input id="adresse" value={adresse} onChange={(ev) => setAdresse(ev.target.value)} placeholder="https://litellm-beispiel.olares.com/v1" />
+            <p className="feld-hinweis">Mit <code>/v1</code> am Ende.</p>
+          </div>
+          <div className="feld">
+            <label htmlFor="modell">Modell</label>
+            <input id="modell" value={modell} onChange={(ev) => setModell(ev.target.value)} placeholder="aim-qwen3.6-35b" />
+          </div>
+          <div className="feld">
+            <label htmlFor="schluessel">Zugangsschlüssel <span className="optional">optional</span></label>
+            <input
+              id="schluessel"
+              type="password"
+              value={schluessel}
+              onChange={(ev) => setSchluessel(ev.target.value)}
+              placeholder={e.llm_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
+              autoComplete="off"
+            />
+          </div>
+          {speichern.isError && <Fehler text={(speichern.error as Error).message} />}
+          <div className="btn-reihe">
+            <button type="submit" className="btn btn-primaer" disabled={speichern.isPending}>
+              {speichern.isPending ? "Wird gespeichert …" : "Speichern"}
+            </button>
+            {speichern.isSuccess && <span style={{ fontSize: "0.8125rem", color: "var(--am-erfolg)" }}>Gespeichert.</span>}
+          </div>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+/** Wohin Daten gehen — gemessen an dem, was eingetragen ist. */
+function Datenwege({ e }: { e: OrgSettings }) {
+  return (
+    <section className="block">
+      <div className="block-kopf"><h2>Wohin Daten gehen</h2></div>
+      <div className="block-inhalt">
+        <Erklaerung
+          kurz="Alles bleibt auf dieser Box — außer dem, was Sie hier ausdrücklich an eine fremde Adresse schicken."
+          lang={<>Steht bei KI-Assistent oder Suchdienst eine fremde Adresse, gehen die Inhalte der Anfragen dorthin. Diese Übersicht nennt sie beim Namen, statt pauschal „lokal“ zu behaupten.</>}
+        />
+        <dl>
+          <div className="eigenschaft"><dt>Datenbank, Suche, Anhänge</dt><dd>auf dieser Box</dd></div>
+          <div className="eigenschaft"><dt>KI-Assistent</dt><dd>{e.llm_ready ? e.llm_base_url : "nicht eingerichtet — keine Anfragen"}</dd></div>
+          <div className="eigenschaft"><dt>Automatisch ergänzen</dt><dd>{e.suche_endpoint_url ? `Firmen- und Personennamen an ${e.suche_endpoint_url}; Websites der Firmen` : "nur die Websites der Firmen — kein Suchdienst eingetragen"}</dd></div>
+          <div className="eigenschaft"><dt>E-Mail</dt><dd>{e.smtp_ready ? `über ${e.smtp_host}` : "kein Konto eingetragen"}{e.marketing_versand === "brevo" && e.brevo_api_key_set ? " · Marketing über Brevo" : ""}</dd></div>
+          <div className="eigenschaft"><dt>Telemetrie</dt><dd>keine</dd></div>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function Inhalt() {
+  const suche = useSearchParams();
+  const gewaehlt = (suche.get("bereich") as Bereich | null) ?? "firma";
+  const bereich: Bereich = BEREICHE.some((b) => b.schluessel === gewaehlt) ? gewaehlt : "firma";
+
+  const abfrage = useQuery({
+    queryKey: ["einstellungen"],
+    queryFn: () => api.get<OrgSettings>("/api/settings"),
+  });
+
   if (abfrage.isPending) return <Laedt />;
   if (abfrage.isError) return <Fehler text={(abfrage.error as Error).message} />;
-
   const e = abfrage.data!;
 
   return (
     <>
       <Seitenkopf titel="Einstellungen" />
 
+      <nav className="unterpunkte" aria-label="Bereiche der Einstellungen">
+        {BEREICHE.map((b) => (
+          <Link
+            key={b.schluessel}
+            href={`/einstellungen?bereich=${b.schluessel}`}
+            className={`unterpunkt${b.schluessel === bereich ? " aktiv" : ""}`}
+            aria-current={b.schluessel === bereich ? "page" : undefined}
+          >
+            {b.text}
+          </Link>
+        ))}
+      </nav>
+
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 640px)" }}>
-        <section className="block">
-          <div className="block-kopf">
-            <h2>Sprachmodell</h2>
-            <span className="stufe" data-art={e.llm_ready ? "won" : undefined}>
-              {e.llm_ready ? "eingerichtet" : "nicht eingerichtet"}
-            </span>
-          </div>
-          <div className="block-inhalt">
-            <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-6)" }}>
-              Beacon bringt kein eigenes Modell mit. Es spricht einen OpenAI-kompatiblen Endpunkt
-              an — üblicherweise die LiteLLM-App auf dieser Box. Es gibt bewusst keine Vorgabe:
-              Jede geratene Adresse wäre auf einer anderen Box falsch. Solange hier nichts steht,
-              bleiben die KI-Funktionen gesperrt und sagen das — statt in einen Verbindungsfehler
-              zu laufen.
-            </p>
-
-            <form
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                speichern.mutate();
-              }}
-            >
-              <div className="feld">
-                <label htmlFor="adresse">Adresse des Endpunkts</label>
-                <input
-                  id="adresse"
-                  value={adresse}
-                  onChange={(ev) => setAdresse(ev.target.value)}
-                  placeholder="https://litellm-beispiel.olares.com/v1"
-                />
-                <p className="feld-hinweis">
-                  Mit <code>/v1</code> am Ende. Beacon hängt <code>/chat/completions</code> an.
-                </p>
-              </div>
-
-              <div className="feld">
-                <label htmlFor="modell">Modellname</label>
-                <input
-                  id="modell"
-                  value={modell}
-                  onChange={(ev) => setModell(ev.target.value)}
-                  placeholder="aim-qwen3.6-35b"
-                />
-              </div>
-
-              <div className="feld">
-                <label htmlFor="schluessel">
-                  Zugangsschlüssel <span className="optional">optional</span>
-                </label>
-                <input
-                  id="schluessel"
-                  type="password"
-                  value={schluessel}
-                  onChange={(ev) => setSchluessel(ev.target.value)}
-                  placeholder={e.llm_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
-                  autoComplete="off"
-                />
-                <p className="feld-hinweis">
-                  Ein Endpunkt auf der eigenen Box verlangt meist keinen.
-                </p>
-              </div>
-
-              {speichern.isError && <Fehler text={(speichern.error as Error).message} />}
-
-              <div className="btn-reihe">
-                <button type="submit" className="btn btn-primaer" disabled={speichern.isPending}>
-                  {speichern.isPending ? "Wird gespeichert …" : "Speichern"}
-                </button>
-                {speichern.isSuccess && (
-                  <span style={{ fontSize: "0.8125rem", color: "var(--am-erfolg)" }}>
-                    Gespeichert.
-                  </span>
-                )}
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <AnreicherungEinstellungen einstellungen={e} />
-
-        <Mitgliederblock />
-
-        <Pipelinesblock />
-
-        <Eigenschaftenblock />
-
-        <Katalogblock />
-
-        <Verlustgruendeblock />
-
-        <Versandblock />
-
-        <Marketingversandblock />
-
-        <Postausgangblock />
-
-        <Absenderblock />
-
-        <Postfachblock />
-
-        <Quellenblock />
-
-        <Sicherungsblock />
-
-        <section className="block">
-          <div className="block-kopf">
-            <h2>Wohin Daten gehen</h2>
-          </div>
-          <div className="block-inhalt">
-            <dl>
-              <div className="eigenschaft">
-                <dt>Datenbank, Suche, Anhänge</dt>
-                <dd>auf dieser Box</dd>
-              </div>
-              <div className="eigenschaft">
-                <dt>Sprachmodell</dt>
-                <dd>{e.llm_ready ? adresse : "nicht eingerichtet — keine Anfragen"}</dd>
-              </div>
-              <div className="eigenschaft">
-                <dt>Anreicherung</dt>
-                <dd>
-                  {e.suche_endpoint_url
-                    ? `Firmen- und Personennamen an ${e.suche_endpoint_url}; Websites der Firmen`
-                    : "nur die Websites der Firmen — kein Suchdienst eingetragen"}
-                </dd>
-              </div>
-              <div className="eigenschaft">
-                <dt>Telemetrie</dt>
-                <dd>keine</dd>
-              </div>
-            </dl>
-            <p style={{ fontSize: "0.8125rem", color: "var(--am-text-gedaempft)", marginTop: "var(--am-raum-4)" }}>
-              Steht oben eine fremde Adresse, gehen die Inhalte der Anfragen dorthin. Diese Zeile
-              nennt sie deshalb beim Namen, statt pauschal „lokal" zu behaupten.
-            </p>
-          </div>
-        </section>
+        {bereich === "firma" && (
+          <>
+            <Absenderblock />
+            <Mitgliederblock />
+          </>
+        )}
+        {bereich === "vertrieb" && (
+          <>
+            <Pipelinesblock />
+            <Katalogblock />
+            <Verlustgruendeblock />
+            <Eigenschaftenblock />
+          </>
+        )}
+        {bereich === "email" && (
+          <>
+            <Versandblock />
+            <Marketingversandblock />
+            <Postfachblock />
+            <Postausgangblock />
+          </>
+        )}
+        {bereich === "ki" && (
+          <>
+            <KIBlock e={e} />
+            <AnreicherungEinstellungen einstellungen={e} />
+            <Quellenblock />
+          </>
+        )}
+        {bereich === "daten" && (
+          <>
+            <Sicherungsblock />
+            <Datenwege e={e} />
+          </>
+        )}
       </div>
     </>
+  );
+}
+
+export default function EinstellungenSeite() {
+  return (
+    <Suspense fallback={<Laedt />}>
+      <Inhalt />
+    </Suspense>
   );
 }

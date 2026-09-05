@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { anzahl as anzahlText, datum, euro, OHNE_WERT, OPERATOR_TEXT } from "@/lib/format";
 import type {
+  Liste,
   Ansicht,
   Bedingung,
   Feldauskunft,
@@ -224,6 +225,20 @@ export function Segmentliste({
       setGewaehlt([]);
       client.invalidateQueries({ queryKey: ["segment", entity] });
       client.invalidateQueries({ queryKey: ["segment-anzahl", entity] });
+    },
+  });
+
+  // Nur für Kontakte: mehrere auf einmal in eine statische Liste legen.
+  const listen = useQuery({
+    queryKey: ["listen"],
+    queryFn: () => api.get<Liste[]>("/api/listen"),
+    enabled: entity === "contacts",
+  });
+  const zurListe = useMutation({
+    mutationFn: (liste_id: string) => api.post(`/api/listen/${liste_id}/mitglieder`, { contact_ids: gewaehlt }),
+    onSuccess: () => {
+      setGewaehlt([]);
+      client.invalidateQueries({ queryKey: ["listen"] });
     },
   });
 
@@ -458,10 +473,12 @@ export function Segmentliste({
           anzahl={gewaehlt.length}
           felder={stapelfelder}
           auskunft={auskunft.data!}
-          laeuft={stapel.isPending || stapelLoeschen.isPending}
+          laeuft={stapel.isPending || stapelLoeschen.isPending || zurListe.isPending}
           beiSetzen={(feld, wert) => stapel.mutate({ [feld]: wert })}
           beiLoeschen={() => stapelLoeschen.mutate()}
           beiAbwahl={() => setGewaehlt([])}
+          listen={entity === "contacts" ? (listen.data ?? []).filter((l) => l.art === "statisch") : undefined}
+          beiZurListe={(liste_id) => zurListe.mutate(liste_id)}
         />
       )}
 
@@ -620,6 +637,8 @@ function Stapelleiste({
   beiSetzen,
   beiLoeschen,
   beiAbwahl,
+  listen,
+  beiZurListe,
 }: {
   anzahl: number;
   felder: { schluessel: string; text: string }[];
@@ -628,10 +647,14 @@ function Stapelleiste({
   beiSetzen: (feld: string, wert: string) => void;
   beiLoeschen: () => void;
   beiAbwahl: () => void;
+  /** Statische Listen, in die die Auswahl gelegt werden kann — nur bei Kontakten. */
+  listen?: Liste[];
+  beiZurListe?: (liste_id: string) => void;
 }) {
   const [feld, setFeld] = useState(felder[0]?.schluessel ?? "");
   const [wert, setWert] = useState("");
   const [sicher, setSicher] = useState(false);
+  const [liste, setListe] = useState("");
 
   const definition = auskunft.felder.find((f) => f.schluessel === feld);
 
@@ -673,6 +696,20 @@ function Stapelleiste({
       >
         Setzen
       </button>
+
+      {listen && listen.length > 0 && beiZurListe && (
+        <>
+          <select value={liste} onChange={(e) => setListe(e.target.value)} aria-label="Zur Liste">
+            <option value="">Zur Liste …</option>
+            {listen.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <button type="button" className="btn btn-sekundaer btn-klein" disabled={!liste || laeuft} onClick={() => { beiZurListe(liste); setListe(""); }}>
+            Hinzufügen
+          </button>
+        </>
+      )}
 
       <span className="stapel-luecke" />
 

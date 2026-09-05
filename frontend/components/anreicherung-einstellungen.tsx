@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 /**
  * Woher die Anreicherung liest und was sie von selbst schreiben darf.
@@ -47,19 +48,17 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Anreicherung</h2>
+        <h2>Automatisch ergänzen</h2>
         <span className="stufe" data-art={eingerichtet ? "won" : undefined}>
           {eingerichtet ? "mit Suchdienst" : "nur Firmen-Website"}
         </span>
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-6)" }}>
-          Neue Firmen und Kontakte werden aus öffentlichen Quellen ergänzt: Impressum, Kontakt- und
+        <Erklaerung kurz="Neue Firmen und Kontakte werden automatisch aus öffentlichen Quellen ergänzt — nie überschrieben." lang={<>Neue Firmen und Kontakte werden aus öffentlichen Quellen ergänzt: Impressum, Kontakt- und
           Team-Seiten der Firmen-Website, dazu die Treffer eines Suchdienstes — darüber auch
           LinkedIn-Seiten und -Profile, ohne LinkedIn selbst abzurufen. Jeder Wert nennt seine
           Quelle; Kontaktdaten müssen wörtlich dort stehen. Was schon eingetragen ist, wird nie
-          überschrieben.
-        </p>
+          überschrieben.</>} />
 
         <form
           onSubmit={(ev) => {

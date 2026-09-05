@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Absender, OrgSettings } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 /**
  * Der Briefkopf. Steht unter jedem Angebot, das das Haus verlässt.
@@ -71,7 +72,7 @@ export function Absenderblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Absender für Angebote</h2>
+        <h2>Firmendaten für Angebote</h2>
         {fehlend.length > 0 && (
           <span className="stufe" data-art="lost">
             {fehlend.length} Angaben fehlen
@@ -79,10 +80,8 @@ export function Absenderblock() {
         )}
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-6)" }}>
-          Diese Angaben stehen auf jedem Angebot, das das Haus verlässt. Ohne sie ist die
-          Druckfassung kein versandfähiges Dokument.
-        </p>
+        <Erklaerung kurz="Ihre Firmendaten, wie sie auf jedem Angebot stehen." lang={<>Diese Angaben stehen auf jedem Angebot, das das Haus verlässt. Ohne sie ist die
+          Druckfassung kein versandfähiges Dokument.</>} />
 
         <form
           onSubmit={(e) => {

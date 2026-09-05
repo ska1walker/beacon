@@ -55,7 +55,7 @@ export function Ticketantwort({ ticket }: { ticket: Ticket }) {
         )}
         {an && !bereit && (
           <div className="hinweis" data-art="achtung">
-            <span>Kein SMTP-Konto eingerichtet — unter Einstellungen → Versand nachholen.</span>
+            <span>Kein SMTP-Konto eingerichtet — unter Einstellungen → E-Mail nachholen.</span>
           </div>
         )}
         {an && (

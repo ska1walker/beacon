@@ -11,6 +11,7 @@ import type {
   PropertyKind,
 } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 const OBJEKTE: { wert: PropertyEntity; text: string }[] = [
   { wert: "companies", text: "Firmen" },
@@ -94,7 +95,7 @@ export function Eigenschaftenblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Eigene Eigenschaften</h2>
+        <h2>Eigene Felder</h2>
         <select
           className="input"
           style={{ width: "auto" }}
@@ -108,11 +109,9 @@ export function Eigenschaftenblock() {
         </select>
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Was nur dieser Vertrieb braucht — „Serverraum vorhanden“, „Kammer“, „Wartungsvertrag
+        <Erklaerung kurz="Eigene Felder für das, was nur Ihr Vertrieb braucht." lang={<>Was nur dieser Vertrieb braucht — „Serverraum vorhanden“, „Kammer“, „Wartungsvertrag
           bis“ — kommt hier dazu und erscheint dann an jedem Datensatz. Typ und Schlüssel stehen
-          nach dem Anlegen fest; Beschriftung und Werteliste lassen sich ändern.
-        </p>
+          nach dem Anlegen fest; Beschriftung und Werteliste lassen sich ändern.</>} />
 
         {definitionen.isPending && <Laedt />}
         {definitionen.data && definitionen.data.length > 0 && (

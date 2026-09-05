@@ -195,7 +195,7 @@ def nachricht_bauen(
     an: str,
     betreff: str,
     text: str,
-    konto: Smtp,
+    konto: Smtp | Brevo,
     message_id: str,
     in_reply_to: str | None = None,
     referenzen: str | None = None,
@@ -234,6 +234,7 @@ async def einreihen(
     referenzen: str | None = None,
     created_by: UUID | None = None,
     payload: dict[str, Any] | None = None,
+    kampagne_id: UUID | None = None,
 ) -> UUID:
     """Eine Zeile, noch kein Versand."""
     an = (an or "").strip()
@@ -243,12 +244,12 @@ async def einreihen(
         """
         insert into public.mails
           (org_id, art, contact_id, ticket_id, an, betreff, text, in_reply_to, referenzen,
-           created_by, payload)
-        values ($1, $2::public.mail_art, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)
+           created_by, payload, kampagne_id)
+        values ($1, $2::public.mail_art, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12)
         returning id
         """,
         org_id, art, contact_id, ticket_id, an, betreff.strip(), text, in_reply_to, referenzen,
-        created_by, orjson.dumps(payload or {}).decode(),
+        created_by, orjson.dumps(payload or {}).decode(), kampagne_id,
     )
 
 
@@ -257,14 +258,74 @@ async def _einstellungen(conn, org_id: UUID) -> dict[str, Any]:
     return dict(z) if z else {}
 
 
-async def _abmelde_url(conn, org_id: UUID, contact_id: UUID | None, einst: dict[str, Any]) -> str | None:
+async def _abmelde_url(
+    conn, org_id: UUID, contact_id: UUID | None, einst: dict[str, Any], kampagne_id: UUID | None = None
+) -> str | None:
     if contact_id is None:
         return None
     basis = basis_url(einst)
     if not basis:
         return None
-    token = await links.anlegen(conn, org_id, "abmelden", contact_id=contact_id)
+    token = await links.anlegen(conn, org_id, "abmelden", contact_id=contact_id, kampagne_id=kampagne_id)
     return links.adresse(basis, "abmelden", token)
+
+
+# ── Brevo: der zweite Weg für Marketing-Post ─────────────────────────────
+
+@dataclass(frozen=True)
+class Brevo:
+    api_key: str
+    absender: str
+    absender_name: str | None
+
+    @property
+    def von(self) -> str:
+        return formataddr((self.absender_name or "", self.absender))
+
+
+def brevo_aus(einst: dict[str, Any] | None) -> Brevo | None:
+    e = einst or {}
+    key = (e.get("brevo_api_key") or "").strip()
+    absender = (e.get("marketing_absender") or e.get("smtp_absender") or "").strip()
+    if not key or not absender:
+        return None
+    return Brevo(api_key=key, absender=absender, absender_name=(e.get("marketing_absender_name") or e.get("smtp_absender_name") or None))
+
+
+async def senden_brevo(konto: Brevo, nachricht: EmailMessage) -> None:
+    """Dieselbe Nachricht, über die Brevo-API statt über SMTP."""
+    import httpx
+
+    kopf = {k: nachricht[k] for k in ("In-Reply-To", "References", "List-Unsubscribe", "List-Unsubscribe-Post") if nachricht.get(k)}
+    daten = {
+        "sender": {"email": konto.absender, **({"name": konto.absender_name} if konto.absender_name else {})},
+        "to": [{"email": nachricht["To"]}],
+        "subject": nachricht["Subject"],
+        "textContent": nachricht.get_content(),
+        "headers": {**kopf, "Message-ID": nachricht["Message-ID"]},
+    }
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        antwort = await client.post("https://api.brevo.com/v3/smtp/email", json=daten,
+                                    headers={"api-key": konto.api_key, "accept": "application/json"})
+    if antwort.status_code >= 300:
+        raise RuntimeError(f"Brevo {antwort.status_code}: {antwort.text[:200]}")
+
+
+def marketing_konto(einst: dict[str, Any]) -> Smtp | Brevo | None:
+    """Wohin Marketing-Post geht: Brevo, wenn gewählt und eingerichtet,
+    sonst das SMTP-Konto — mit dem Marketing-Absender, falls einer steht."""
+    if (einst.get("marketing_versand") or "smtp") == "brevo":
+        b = brevo_aus(einst)
+        if b is not None:
+            return b
+    konto = smtp_aus(einst)
+    if konto is None:
+        return None
+    absender = (einst.get("marketing_absender") or "").strip()
+    if absender:
+        from dataclasses import replace
+        konto = replace(konto, absender=absender, absender_name=einst.get("marketing_absender_name") or konto.absender_name)
+    return konto
 
 
 async def versenden(
@@ -280,9 +341,8 @@ async def versenden(
     Transaktion auf, und eine Exception darin nähme die Zeile samt
     Fehlergrund mit zurück. Der Aufrufer liest `status` und `fehler`.
     """
-    # Erst hier aufgelöst, nicht in der Signatur: So greift eine Attrappe
-    # am Modul auch für die Router, die keinen Sender mitgeben.
-    sender = sender or senden_smtp
+    # Der Sender wird erst unten aufgelöst, wenn das Konto feststeht: So
+    # greift eine Attrappe am Modul auch für die Router, die keinen mitgeben.
     zeile = await conn.fetchrow("select * from public.mails where id = $1 and org_id = $2", mail_id, org_id)
     if zeile is None:
         raise Unmoeglich("Diese Mail gibt es nicht.")
@@ -290,15 +350,17 @@ async def versenden(
         return dict(zeile)
 
     einst = await _einstellungen(conn, org_id)
-    konto = smtp_aus(einst)
+    konto: Smtp | Brevo | None = marketing_konto(einst) if zeile["art"] == "marketing" else smtp_aus(einst)
     if konto is None:
-        raise Unmoeglich("Kein SMTP-Konto hinterlegt. Server und Absenderadresse stehen unter Einstellungen → Versand.")
+        raise Unmoeglich("Kein SMTP-Konto hinterlegt. Server und Absenderadresse stehen unter Einstellungen → E-Mail.")
+    if sender is None:
+        sender = senden_brevo if isinstance(konto, Brevo) else senden_smtp
 
     message_id = zeile["message_id"] or neue_message_id(konto.absender)
     text = zeile["text"]
     abmelde_url = None
     if zeile["art"] == "marketing":
-        abmelde_url = await _abmelde_url(conn, org_id, zeile["contact_id"], einst)
+        abmelde_url = await _abmelde_url(conn, org_id, zeile["contact_id"], einst, zeile["kampagne_id"])
         if abmelde_url and "{{abmeldelink}}" not in text and abmelde_url not in text:
             text = f"{text.rstrip()}\n\n—\nKeine weiteren Mails? Hier abmelden: {abmelde_url}\n"
         text = rendern(text, {"abmeldelink": abmelde_url or ""})
@@ -407,10 +469,10 @@ async def einwilligung_anfragen(
     basis = basis_url(einst)
     if not basis:
         raise Unmoeglich(
-            "Die Adresse der öffentlichen Links ist nicht bekannt. Unter Einstellungen → Versand eintragen."
+            "Die Adresse der öffentlichen Links ist nicht bekannt. Unter Einstellungen → E-Mail eintragen."
         )
     if smtp_aus(einst) is None:
-        raise Unmoeglich("Kein SMTP-Konto hinterlegt. Server und Absenderadresse stehen unter Einstellungen → Versand.")
+        raise Unmoeglich("Kein SMTP-Konto hinterlegt. Server und Absenderadresse stehen unter Einstellungen → E-Mail.")
 
     token = await links.anlegen(conn, org_id, "bestaetigen", contact_id=contact_id, payload={"durch": str(actor)})
     werte = platzhalter_aus(dict(kontakt), bestaetigungslink=links.adresse(basis, "bestaetigen", token))

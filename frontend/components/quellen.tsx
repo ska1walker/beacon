@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
 import type { Quelle, Quellenart, QuelleNeu } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 /** Wie eine Quelle heißt, die kein Mensch ist. */
 const ART_TEXT: Record<string, string> = {
@@ -55,15 +56,13 @@ export function Quellenblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Eingehende Quellen</h2>
+        <h2>Verbundene Programme</h2>
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Wer hier eingetragen ist, darf Ereignisse schicken: Insilo ein fertiges
+        <Erklaerung kurz="Andere Programme, die Beacon etwas schicken dürfen — Protokolle, Tickets, Ereignisse." lang={<>Wer hier eingetragen ist, darf Ereignisse schicken: Insilo ein fertiges
           Besprechungsprotokoll, eine Schnittstelle oder ein Bot ein Ticket. Jede Quelle
           bekommt eine eigene Adresse und ein eigenes Geheimnis; ohne gültige Signatur kommt
-          nichts durch.
-        </p>
+          nichts durch.</>} />
 
         {neu && (
           <div className="ki-block" style={{ marginBottom: "var(--am-raum-4)" }}>

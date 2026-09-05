@@ -29,7 +29,9 @@ from app.routers import (
     eingang,
     erfassen,
     fragen,
+    kampagnen,
     ki,
+    listen,
     mitglieder,
     notiz,
     pipelines,
@@ -247,6 +249,9 @@ app.include_router(anreicherung.router)
 app.include_router(ansichten.router)
 app.include_router(tickets.router)
 app.include_router(erfassen.router)
+app.include_router(listen.router)
+app.include_router(kampagnen.router)
+app.include_router(kampagnen.vorlagen_router)
 
 
 # Doppelte E-Mail, doppelte Domain: Das ist kein Serverfehler, sondern

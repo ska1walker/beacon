@@ -122,6 +122,10 @@ KONTAKT_FELDER: list[Feld] = [
     Feld("company_name", "Firma", "text", "f.name"),
     Feld("lifecycle_stage", "Stufe", "auswahl", "k.lifecycle_stage::text", optionen=STUFEN),
     Feld("source", "Herkunft", "text", "k.source"),
+    Feld("marketing_einwilligung", "Marketing-Einwilligung", "auswahl", "k.marketing_einwilligung::text",
+         optionen=[{"wert": w, "text": t} for w, t in (
+             ("keine", "keine"), ("angefragt", "angefragt"), ("bestaetigt", "bestätigt"),
+             ("bestandskunde", "Bestandskunde"), ("abgemeldet", "abgemeldet"))]),
     Feld("notes", "Notizen", "text", "k.notes"),
     Feld("owner_id", "Besitzer", "person", "k.owner_id::text"),
     Feld("created_at", "Angelegt", "datum", "k.created_at"),

@@ -3037,3 +3037,30 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   .quelle-freigabe input { margin-top: 2px; flex: none; }
 }
+
+/* ── Erklärung: ein Satz, der Rest hinter dem Symbol ─────────────────── */
+.erklaerung { margin-bottom: var(--am-raum-4); }
+.erklaerung-kurz { font-size: 0.875rem; color: var(--am-text-sekundaer); margin: 0; display: inline; }
+.erklaerung-knopf {
+  display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 24px; block-size: 24px; margin-inline-start: var(--am-raum-1);
+  vertical-align: middle; border: 0; border-radius: 999px; background: transparent;
+  color: var(--am-text-gedaempft); cursor: pointer;
+}
+.erklaerung-knopf:hover, .erklaerung-knopf[aria-expanded="true"] { color: var(--am-gold-beschriftung); background: var(--am-flaeche-2); }
+.erklaerung-lang {
+  margin-top: var(--am-raum-2); padding: var(--am-raum-3) var(--am-raum-4);
+  font-size: 0.8125rem; line-height: 1.55; color: var(--am-text-sekundaer);
+  background: var(--am-flaeche-2); border-inline-start: 2px solid var(--am-gold-auszeichnung); border-radius: 0 var(--am-radius-mittel) var(--am-radius-mittel) 0;
+}
+.erklaerung-lang code { font-size: 0.75rem; }
+
+/* ── Unterpunkte der Einstellungen ───────────────────────────────────── */
+.unterpunkte { display: flex; flex-wrap: wrap; gap: var(--am-raum-1); padding: 0 var(--am-raum-8) var(--am-raum-5); }
+.unterpunkt {
+  display: inline-flex; align-items: center; block-size: 40px; padding: 0 var(--am-raum-4);
+  border-radius: 999px; border: 1px solid var(--am-rand); background: transparent;
+  color: var(--am-text-sekundaer); font: inherit; font-size: 0.875rem; cursor: pointer; text-decoration: none;
+}
+.unterpunkt:hover { color: var(--am-text-primaer); }
+.unterpunkt.aktiv { background: var(--am-gold-auszeichnung); border-color: var(--am-gold-auszeichnung); color: var(--am-blau-900); font-weight: 600; }

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 /**
  * Das SMTP-Konto, aus dem transaktionale Post kommt: Ticket-Antworten,
@@ -74,17 +75,15 @@ export function Versandblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Versand</h2>
+        <h2>E-Mail-Konto</h2>
         <span className="stufe" data-art={e?.smtp_ready ? "won" : undefined}>
           {e?.smtp_ready ? "eingerichtet" : "nicht eingerichtet"}
         </span>
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Das Konto, aus dem Antworten auf Tickets, Bestätigungsmails und die Ansprache aus dem
+        <Erklaerung kurz="Das E-Mail-Konto, aus dem Beacon Antworten und Bestätigungen schickt." lang={<>Das Konto, aus dem Antworten auf Tickets, Bestätigungsmails und die Ansprache aus dem
           Kontakt kommen. Ein gewöhnliches SMTP-Konto — dasselbe, das Relay oder Ihr Mailprogramm
-          benutzt. Jede Mail steht danach im Verlauf des Kontakts, mit dem Faden zur Anfrage.
-        </p>
+          benutzt. Jede Mail steht danach im Verlauf des Kontakts, mit dem Faden zur Anfrage.</>} />
 
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr)", gap: "0 var(--am-raum-4)" }}>
           <div className="feld">
@@ -223,7 +222,7 @@ export function Marketingversandblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Marketing-Versand</h2>
+        <h2>Marketing-Mails</h2>
         {e?.links_basis_wirksam ? (
           <span className="stufe" data-art="won">Links erreichbar</span>
         ) : (
@@ -231,11 +230,9 @@ export function Marketingversandblock() {
         )}
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Marketing-Post geht nur an Kontakte mit belegter Einwilligung — Double-Opt-In oder
+        <Erklaerung kurz="Marketing-Mails gehen nur an Kontakte mit Einwilligung und tragen immer einen Abmeldelink." lang={<>Marketing-Post geht nur an Kontakte mit belegter Einwilligung — Double-Opt-In oder
           Bestandskunde — und trägt immer einen Abmeldelink. Bestätigen und Abmelden laufen
-          über den öffentlichen Entrance von Beacon; alles andere bleibt hinter der Anmeldung.
-        </p>
+          über den öffentlichen Entrance von Beacon; alles andere bleibt hinter der Anmeldung.</>} />
 
         <div className="feld">
           <label htmlFor="mk-weg">Versandweg</label>

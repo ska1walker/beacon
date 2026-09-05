@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
+import { Erklaerung } from "@/components/erklaerung";
 
 type Bilanz = { gelesen: number; tickets: number; uebergangen: number; doppelt: number };
 
@@ -79,16 +80,14 @@ export function Postfachblock() {
   return (
     <section className="block">
       <div className="block-kopf">
-        <h2>Postfach</h2>
+        <h2>Eingehende E-Mails</h2>
         {e?.imap_aktiv && <span className="pille pille-erfolg">holt ab</span>}
       </div>
       <div className="block-inhalt">
-        <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Beacon holt eingehende Post ab und macht Tickets daraus. Es <strong>fasst dabei nichts
+        <Erklaerung kurz="Beacon liest Ihr Postfach mit und macht aus neuen Mails Tickets — ohne etwas zu verändern." lang={<>Beacon holt eingehende Post ab und macht Tickets daraus. Es <strong>fasst dabei nichts
           an</strong>: keine Nachricht wird als gelesen markiert, nichts verschoben, nichts
           gelöscht. Ihr Posteingang sieht danach aus wie vorher — auch in Relay. Gemerkt wird
-          nur, bis wohin gelesen wurde.
-        </p>
+          nur, bis wohin gelesen wurde.</>} />
 
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "0 var(--am-raum-4)" }}>
           <div className="feld">
