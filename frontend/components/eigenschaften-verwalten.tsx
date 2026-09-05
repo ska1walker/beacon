@@ -321,16 +321,16 @@ function Optionsfelder({
               {o.wert}
             </span>
           )}
-          <button type="button" className="btn btn-still btn-klein" aria-label="Nach oben" disabled={i === 0} onClick={() => schieben(i, -1)}>
+          <button type="button" className="btn btn-still btn-klein btn-symbol" aria-label="Nach oben" disabled={i === 0} onClick={() => schieben(i, -1)}>
             <ArrowUp size={14} aria-hidden="true" />
           </button>
-          <button type="button" className="btn btn-still btn-klein" aria-label="Nach unten" disabled={i === werte.length - 1} onClick={() => schieben(i, 1)}>
+          <button type="button" className="btn btn-still btn-klein btn-symbol" aria-label="Nach unten" disabled={i === werte.length - 1} onClick={() => schieben(i, 1)}>
             <ArrowDown size={14} aria-hidden="true" />
           </button>
           {o.wert ? (
             <button
               type="button"
-              className="btn btn-still btn-klein"
+              className="btn btn-still btn-klein btn-symbol"
               aria-label={o.verborgen ? "Wieder anbieten" : "Archivieren"}
               title={
                 o.verborgen
@@ -344,7 +344,7 @@ function Optionsfelder({
           ) : null}
           <button
             type="button"
-            className="btn btn-still btn-klein"
+            className="btn btn-still btn-klein btn-symbol"
             aria-label="Zeile entfernen"
             onClick={() => beiAendern(werte.length === 1 ? [leereOption()] : werte.filter((_, j) => j !== i))}
           >

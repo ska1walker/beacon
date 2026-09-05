@@ -48,6 +48,14 @@
   /* ── Zeilenhöhe Tabellen, an Dichte gebunden: 56·48·40 ────────────── */
   --am-zeile-tabelle: 3.5rem;
 
+  /* Die Höhe der Kopfzeile — **beide Spalten teilen sie sich**. Links
+     endet darauf die Linie unter der Wortmarke, rechts die unter dem
+     Seitentitel. Vorher rechnete jede Seite ihre Höhe aus ihrem Inhalt
+     aus, und die beiden Linien lagen 27 px auseinander: ein Versatz, den
+     man nicht benennen kann und trotzdem sieht. Wer hier etwas ändert,
+     verschiebt beide Linien gemeinsam — das ist der Zweck. */
+  --am-kopfhoehe: 5rem;
+
   /* ── Radien — Vorschlag, siehe Paket-README "Was noch fehlt" ──────── */
   --am-radius-klein: 0.25rem;
   --am-radius-mittel: 0.5rem;
@@ -287,16 +295,30 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     outline-offset: 1px;
   }
 
+  /* **Eine Größe.** Vorher gab es drei: 40 px, 32 px und ein nie
+     benutztes 44 px. Die 32 px unterschritten die Zielgröße, die das
+     Designsystem selbst mit „40 px Zeiger, ohne Ausnahme" vorschreibt —
+     und zwei Höhen nebeneinander lesen sich als Versehen, nicht als
+     Ordnung. `btn-klein` behält seinen Namen (er steht an gut hundert
+     Stellen) und nur noch das engere Seitenpolster, damit dichte
+     Werkzeugleisten nicht umbrechen. */
   .btn-klein {
-    height: 2rem;
+    height: var(--am-ziel-zeiger);
     padding: 0 var(--am-raum-4);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 
-  .btn-gross {
-    height: var(--am-ziel-beruehrung);
-    padding: 0 var(--am-raum-8);
-    font-size: 1rem;
+/* `.btn-gross` entfernt: nirgends verwendet, und eine dritte Höhe
+     wäre genau das Gegenteil dessen, was hier gewollt ist. */
+
+  /* Ein Knopf, der nur ein Zeichen trägt, ist quadratisch. Dieselbe Höhe
+     wie jeder andere — aber das Seitenpolster eines Textknopfes macht aus
+     einem 14-px-Zeichen sonst 49 px Breite, und vier davon nebeneinander
+     schieben eine Tabelle aus ihrem Block. */
+  .btn-symbol {
+    width: var(--am-ziel-zeiger);
+    padding: 0;
+    flex: none;
   }
 
   .btn-primaer {
@@ -334,8 +356,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   /* Berührung: 44px ohne Ausnahme — auch die kleinen Varianten. */
   @media (pointer: coarse) {
     .btn,
-    .btn-klein,
-    .btn-gross {
+    .btn-klein {
       height: var(--am-ziel-beruehrung);
     }
     .btn-reihe { gap: var(--am-ziel-abstand-beruehrung); }
@@ -657,20 +678,32 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       background: var(--am-flaeche-1);
       border-top: none;
       border-right: 1px solid var(--am-trennlinie);
-      padding: var(--am-raum-4);
+      /* Oben kein Polster: Die Kopfecke bringt ihre Höhe selbst mit und
+         muss bei y = 0 beginnen, sonst liegt ihre Linie tiefer als die
+         des Seitenkopfs. */
+      padding: 0 var(--am-raum-4) var(--am-raum-4);
       position: sticky;
       top: 0;
       bottom: auto;
       height: 100dvh;
     }
 
+    /* Dieselbe Höhe wie der Seitenkopf — daran hängt, dass die beiden
+       Linien eine einzige durchgehende Linie ergeben. */
     .huelle-kopfecke {
       display: flex;
       align-items: center;
       gap: var(--am-raum-3);
-      padding-bottom: var(--am-raum-4);
+      height: var(--am-kopfhoehe);
+      box-sizing: border-box;
       margin-bottom: var(--am-raum-4);
       border-bottom: 1px solid var(--am-trennlinie);
+    }
+
+    .seitenkopf {
+      height: var(--am-kopfhoehe);
+      box-sizing: border-box;
+      flex-wrap: nowrap;
     }
 
     .huelle-nav-gruppe {
@@ -851,7 +884,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .marke-logo-bild {
     display: block;
     width: auto;
-    height: 22px;   /* 472×167 → 62 px breit, über der Mindestgröße von 45 px */
+    height: 28px;   /* 472×167 → 79 px breit, deutlich über der Mindestgröße von 45 px */
   }
 
   .marke-logo-bild.dunkel { display: none; }
@@ -912,13 +945,22 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     top: 0;
     z-index: 20;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--am-raum-4);
     flex-wrap: wrap;
-    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-4);
+    padding: var(--am-raum-4) var(--am-raum-8);
     background: var(--am-seite);
     border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  /* Titel und Anzahl in einer Zeile. Untereinander wuchs der Kopf mit
+     seinem Inhalt und riss die Linie von der linken Spalte weg. */
+  .seitenkopf-zeile {
+    display: flex;
+    align-items: baseline;
+    gap: var(--am-raum-3);
+    flex-wrap: wrap;
   }
 
   .seitenkopf h1 {
@@ -932,7 +974,6 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     font-family: var(--am-schrift-mono);
     font-size: 0.8125rem;
     color: var(--am-text-gedaempft);
-    margin-top: var(--am-raum-1);
   }
 
   .seitenkopf-pfad {
@@ -1159,7 +1200,17 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     margin: 0;
   }
 
-  .block-inhalt { padding: var(--am-raum-4); }
+  .block-inhalt {
+    padding: var(--am-raum-4);
+    /* Eine Tabelle, die breiter ist als ihre Karte, rollt **in** der
+       Karte — sie steht nicht darüber hinaus. Zwei taten das bisher
+       („Wer hier arbeitet" um 31 px, „Eigene Eigenschaften" um 112 px),
+       weil eine Tabelle mit `table-layout: auto` ihre Mindestbreite aus
+       dem Inhalt nimmt und sich von `width: 100%` nicht kleinrechnen
+       lässt. Karten ohne zu breiten Inhalt bekommen dadurch keine
+       Rollleiste. */
+    overflow-x: auto;
+  }
 
   /* ── Eigenschaftsliste ────────────────────────────────────────────── */
   .eigenschaft {

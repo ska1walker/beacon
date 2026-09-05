@@ -108,7 +108,7 @@ export function Filterbau({
 
             <button
               type="button"
-              className="btn btn-still btn-klein"
+              className="btn btn-still btn-klein btn-symbol"
               aria-label="Bedingung entfernen"
               onClick={() => beiAendern(bedingungen.filter((_, j) => j !== i))}
             >

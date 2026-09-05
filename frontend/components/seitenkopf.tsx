@@ -19,8 +19,13 @@ export function Seitenkopf({
             <Link href={pfad.href}>{pfad.text}</Link>
           </div>
         )}
-        <h1>{titel}</h1>
-        {zahl && <div className="seitenkopf-zahl">{zahl}</div>}
+        {/* Titel und Anzahl nebeneinander, nicht untereinander: Der Kopf
+            hat eine feste Höhe, die er mit der linken Spalte teilt. Eine
+            zweite Zeile würde diese Linie zerreißen. */}
+        <div className="seitenkopf-zeile">
+          <h1>{titel}</h1>
+          {zahl && <span className="seitenkopf-zahl">{zahl}</span>}
+        </div>
       </div>
       {children && <div className="btn-reihe">{children}</div>}
     </header>
