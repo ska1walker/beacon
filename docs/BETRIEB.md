@@ -2,6 +2,14 @@
 
 ## Seit 0.2.0: Beacon, vorher aicrm
 
+Seit dem Abend des 5. September ist die Box aus dem **Aimighty-Katalog**
+installiert (`market_source: market.aimighty`), nicht mehr per Upload —
+neue Versionen kommen über Markt → *Updates*. Der Wechsel war eine
+Deinstallation plus Installation; der Abzug in `Data/beacon/sicherungen`
+hat den Bestand zurückgebracht. „My Olares“ zeigt je Reiter nur die Apps
+der jeweiligen Quelle; der Katalog selbst steht im Reiter „AI“ und in der
+Suche.
+
 Am 5. September 2026 wurde das Produkt von **aicrm** in **Beacon**
 umbenannt — Repo (`ska1walker/beacon`, GitHub leitet die alte Adresse
 um), Abbilder (`ghcr.io/ska1walker/beacon-*`), Olares-Name, Namespace
