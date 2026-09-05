@@ -20,6 +20,7 @@ import {
 import { Darstellungsschalter } from "@/components/darstellung";
 import { Marke } from "@/components/marke";
 import { Personenanzeige } from "@/components/person";
+import { Suchfeld } from "@/components/suche";
 
 // Die Hülle hat drei Bereiche: Navigation, Inhalt, Ablage. Die Ablage
 // trägt Kontext zum gewählten Ding und ist nie eine zweite Inhaltsspalte —
@@ -57,6 +58,10 @@ export function Huelle({ children }: { children: React.ReactNode }) {
             <Marke />
             <span className="marke-produkt" aria-hidden="true">Beacon</span>
           </Link>
+        </div>
+
+        <div className="huelle-suche">
+          <Suchfeld />
         </div>
 
         <div className="huelle-nav-gruppe">

@@ -3067,3 +3067,37 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 }
 .unterpunkt:hover { color: var(--am-text-primaer); }
 .unterpunkt.aktiv { background: var(--am-gold-auszeichnung); border-color: var(--am-gold-auszeichnung); color: var(--am-blau-900); font-weight: 600; }
+
+/* ── Suchen oder fragen ──────────────────────────────────────────────── */
+.huelle-suche { padding: var(--am-raum-3) var(--am-raum-3) var(--am-raum-2); }
+.suchfeld-knopf {
+  display: flex; align-items: center; gap: var(--am-raum-2); inline-size: 100%; block-size: 40px;
+  padding: 0 var(--am-raum-3); border: var(--am-rand-ruhend) solid var(--am-rand); border-radius: var(--am-radius-mittel);
+  background: var(--am-flaeche-1); color: var(--am-text-gedaempft); font: inherit; font-size: 0.875rem; cursor: text; text-align: left;
+}
+.suchfeld-knopf:hover { border-color: var(--am-rand-betont-farbe); color: var(--am-text-sekundaer); }
+.suchfeld-knopf span { flex: 1; min-inline-size: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suchfeld-knopf kbd { flex: 0 0 auto; }
+@media (max-width: 1100px) { .suchfeld-knopf kbd { display: none; } }
+.suchfeld-knopf kbd, .suchpalette kbd {
+  font: inherit; font-size: 0.6875rem; color: var(--am-text-gedaempft);
+  border: var(--am-rand-ruhend) solid var(--am-rand); border-radius: var(--am-radius-klein); padding: 0 6px; line-height: 1.6;
+}
+.suchpalette-schicht { align-items: flex-start; padding-top: 12vh; }
+.suchpalette { inline-size: min(680px, calc(100vw - var(--am-raum-8))); padding: 0; overflow: hidden; }
+.suchpalette-feld { display: flex; align-items: center; gap: var(--am-raum-3); padding: var(--am-raum-3) var(--am-raum-4); border-bottom: var(--am-rand-ruhend) solid var(--am-trennlinie); color: var(--am-text-gedaempft); }
+.suchpalette-feld input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 1rem; color: var(--am-text-primaer); outline: none; padding: 0; block-size: 32px; }
+.suchpalette-hinweis { margin: 0; padding: var(--am-raum-3) var(--am-raum-4); font-size: 0.8125rem; color: var(--am-text-gedaempft); }
+.suchpalette-liste { list-style: none; margin: 0; padding: var(--am-raum-2) 0; max-height: 50vh; overflow-y: auto; }
+.suchpalette-zeile {
+  display: flex; align-items: baseline; gap: var(--am-raum-3); inline-size: 100%; padding: var(--am-raum-2) var(--am-raum-4);
+  border: 0; background: transparent; font: inherit; color: var(--am-text-primaer); text-decoration: none; text-align: left; cursor: pointer;
+}
+.suchpalette-zeile.aktiv { background: var(--am-flaeche-2); }
+.suchpalette-art { flex: 0 0 5.5rem; font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--am-text-gedaempft); }
+.suchpalette-titel { font-weight: 500; }
+.suchpalette-unter { flex: 1; font-size: 0.8125rem; color: var(--am-text-gedaempft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suchpalette-frage { align-items: center; border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); color: var(--am-gold-beschriftung); }
+.suchpalette-frage .suchpalette-titel { flex: 1; }
+.suchpalette-antwort { padding: var(--am-raum-3) var(--am-raum-4) var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); font-size: 0.9375rem; line-height: 1.55; max-height: 40vh; overflow-y: auto; }
+.suchpalette-fundstellen { margin: var(--am-raum-3) 0 0; padding-left: 1.2em; font-size: 0.8125rem; color: var(--am-text-sekundaer); }

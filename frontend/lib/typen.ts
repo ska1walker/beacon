@@ -694,6 +694,21 @@ export interface Feldauskunft {
   vorgabe_sortierung: { feld: string; richtung: "asc" | "desc" };
 }
 
+// ── Suche über alles ─────────────────────────────────────────────────
+
+export interface Suchtreffer {
+  art: "firma" | "kontakt" | "geschaeft" | "ticket" | "liste" | "kampagne";
+  id: string;
+  titel: string;
+  untertitel: string | null;
+  pfad: string;
+}
+
+export interface Suchergebnis {
+  q: string;
+  treffer: Suchtreffer[];
+}
+
 // ── Listen, Kampagnen, Vorlagen ──────────────────────────────────────
 
 export interface Liste {

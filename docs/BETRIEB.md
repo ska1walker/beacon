@@ -285,6 +285,17 @@ erlaubt einen eigenen Wert (eigene Domain, oder eine Box, die ihre
 Domain nicht mitteilt). Ohne Adresse geht keine Bestätigungsmail hinaus,
 und der Block sagt das.
 
+## Suchen oder fragen
+
+Seit 0.2.4 ein Feld für beides, links unter der Marke, ⌘K/Strg+K von
+überall. Beim Tippen kommen sofort Treffer über Firmen, Kontakte,
+Geschäfte, Tickets, Listen und Kampagnen (`/api/suche`, `ilike`, fünf je
+Art, nach Aktualität) — das kostet nichts. Sieht der Text wie eine Frage
+aus (Fragezeichen oder vier Wörter), steht darunter „Frage stellen ↵“;
+erst dann läuft das Modell über `/api/fragen`, und die Antwort mit
+Fundstellen erscheint in der Palette. Die Seite „Fragen“ bleibt als
+Verlauf; die Suchfelder in den Listen bleiben, sie sind Filter.
+
 ## Listen und Kampagnen
 
 Seit 0.2.1. Eine **Liste** sagt, wen man meint — statisch (von Hand
