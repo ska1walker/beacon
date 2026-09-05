@@ -1,5 +1,29 @@
 # Betrieb und Entwicklung
 
+## Seit 0.2.0: Beacon, vorher aicrm
+
+Am 5. September 2026 wurde das Produkt von **aicrm** in **Beacon**
+umbenannt — Repo (`ska1walker/beacon`, GitHub leitet die alte Adresse
+um), Abbilder (`ghcr.io/ska1walker/beacon-*`), Olares-Name, Namespace
+(`beacon-<nutzer>`), Datenbank und Katalogeintrag. Was bleibt: die
+Kopfzeilen `X-Aicrm-*` am Eingang (Alias) und die Lesbarkeit alter
+Abzüge `aicrm-*.json`.
+
+**Eine Umbenennung ist auf Olares eine Neuinstallation.** Die Kennung
+ist `md5(<appname>)[:8]`, also `41b89d10`; die App heißt jetzt
+`https://41b89d100.<nutzer>.<zone>`, der öffentliche Pfad `…101.`. So
+lief der Umzug auf Kais Box, in dieser Reihenfolge: frischer Abzug über
+`POST /api/sicherung`; Ablage `Data/beacon/sicherungen` von Hand angelegt
+(uid 1000) und die Abzüge aus `Data/aicrm/sicherungen` hineinkopiert;
+Beacon über den Markt installiert; erste Anmeldung — sie spielt den
+neuesten Abzug zurück (`auth._einrichten`); Bestand nachgemessen;
+erst dann aicrm deinstalliert.
+
+Beim Nachmessen nicht hereinfallen: `select count(*)` ohne
+Nutzerkontext liefert unter `FORCE ROW LEVEL SECURITY` immer 0. Zählen
+nur über `acquire_as(<nutzer>)` — und `deleted_at` beachten, der Abzug
+trägt auch weich Gelöschtes.
+
 ## Lokal aufsetzen
 
 Voraussetzungen: PostgreSQL 16, Python 3.11+, Node 22+.
