@@ -35,7 +35,12 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{groesse}" height="{gro
 <text x="80" y="{grundlinie:.3f}" text-anchor="middle" font-family="Geist" font-weight="600" font-size="41.664" fill="url(#schrift)">{buchstabe}</text>
 <rect x="1" y="1" width="158" height="158" rx="34.84" fill="none" stroke="#fff" stroke-opacity="0.32" stroke-width="2"/>
 </svg>'''
-png = resvg_py.svg_to_bytes(svg_string=svg, width=groesse, height=groesse, font_files=["Geist-SemiBold.ttf"], skip_system_fonts=True)
+# Die Schrift: die TTF neben dem Skript, sonst die OTF aus dem Nutzer-Fontordner
+# (`brew install --cask font-geist` legt sie dort ab). Beide sind SFNT, resvg liest beide.
+import os
+schriften = [s for s in ("Geist-SemiBold.ttf", os.path.expanduser("~/Library/Fonts/Geist-SemiBold.otf")) if os.path.exists(s)]
+assert schriften, "Geist SemiBold nicht gefunden"
+png = resvg_py.svg_to_bytes(svg_string=svg, width=groesse, height=groesse, font_files=schriften[:1], skip_system_fonts=True)
 open(ziel, "wb").write(bytes(png))
 open(ziel.replace(".png", ".svg"), "w").write(svg)
 print(ziel, len(png))
