@@ -1,7 +1,8 @@
 """Einstellungen der Organisation."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
+from app import postfach
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.llm import load_llm_config
@@ -38,6 +39,15 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         suche_api_key_set=bool(row and row["suche_api_key"]),
         anreicherung_automatisch=(row["anreicherung_automatisch"] if row else True),
         anreicherung_uebernahme=(row["anreicherung_uebernahme"] if row else "leere_felder"),
+        imap_host=(row["imap_host"] if row else None),
+        imap_port=(row["imap_port"] if row else 993),
+        imap_benutzer=(row["imap_benutzer"] if row else None),
+        imap_passwort_set=bool(row and row["imap_passwort"]),
+        imap_ordner=(row["imap_ordner"] if row else "INBOX"),
+        imap_takt_minuten=(row["imap_takt_minuten"] if row else 5),
+        imap_aktiv=bool(row and row["imap_aktiv"]),
+        imap_zuletzt=(row["imap_zuletzt"] if row else None),
+        imap_letzter_fehler=(row["imap_letzter_fehler"] if row else None),
         default_currency=(row["default_currency"] if row else "EUR"),
         locale=(row["locale"] if row else "de"),
     )
@@ -59,7 +69,9 @@ async def update_settings(
             # versehentlich: Die Oberfläche zeigt ihn nie an, also käme er
             # bei jedem Speichern leer zurück und wäre nach dem ersten
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
-            if name in ("llm_api_key", "mail_endpoint_secret", "suche_api_key") and wert == "":
+            if name in (
+                "llm_api_key", "mail_endpoint_secret", "suche_api_key", "imap_passwort"
+            ) and wert == "":
                 continue
             await conn.execute(
                 f"update public.org_settings set {name} = $1, updated_at = now(), updated_by = $2 "
@@ -69,3 +81,26 @@ async def update_settings(
                 user.org_id,
             )
     return await get_settings(user)
+
+
+@router.post("/postfach/abholen")
+async def postfach_abholen(user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Holt sofort ab, statt auf den Takt zu warten.
+
+    Der Knopf, der eine Einrichtung beweist: Zugangsdaten, die erst beim
+    nächsten Lauf in fünf Minuten stillschweigend scheitern, sind keine
+    Einrichtung, sondern eine Hoffnung. Der Fehler kommt deshalb hier
+    zurück und nicht nur ins Protokoll.
+    """
+    async with acquire_as(user.user_id) as conn:
+        try:
+            bilanz = await postfach.einlesen(conn, user.org_id, user.user_id)
+        except Exception as exc:
+            grund = f"{type(exc).__name__}: {exc}"[:500]
+            await conn.execute(
+                "update public.org_settings set imap_letzter_fehler = $1, imap_zuletzt = now() "
+                "where org_id = $2",
+                grund, user.org_id,
+            )
+            raise HTTPException(502, f"Das Postfach antwortet nicht: {exc}") from exc
+    return bilanz

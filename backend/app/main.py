@@ -115,15 +115,65 @@ async def _sicherungsschleife() -> None:
         await asyncio.sleep(abstand)
 
 
+async def _postschleife() -> None:
+    """Holt für jede Organisation mit eingerichtetem Postfach neue Post.
+
+    Der Takt steht je Organisation in den Einstellungen; die Schleife
+    selbst sieht jede Minute nach, wer dran ist. Ein Postfach, das nicht
+    antwortet, darf weder die Schleife noch die Anwendung mitnehmen — der
+    Fehler landet in der Zeile und damit vor den Augen dessen, der ihn
+    beheben kann.
+    """
+    from app import postfach
+
+    while True:
+        await asyncio.sleep(60)
+        try:
+            async with acquire() as conn:
+                faellig = await conn.fetch(
+                    """
+                    select s.org_id, r.user_id
+                    from public.org_settings s
+                    join public.user_org_roles r on r.org_id = s.org_id and r.role = 'owner'
+                    where s.imap_aktiv and s.imap_host is not null
+                      and (s.imap_zuletzt is null
+                           or s.imap_zuletzt < now() - make_interval(mins => s.imap_takt_minuten))
+                    """
+                )
+        except Exception as exc:
+            print(f"Postfach-Schleife: Zeilen nicht lesbar: {exc}", flush=True)
+            continue
+
+        for org in faellig:
+            try:
+                async with acquire_as(org["user_id"]) as conn:
+                    bilanz = await postfach.einlesen(conn, org["org_id"], org["user_id"])
+                if bilanz["tickets"]:
+                    print(f"Postfach: {bilanz['tickets']} neue Tickets", flush=True)
+            except Exception as exc:
+                try:
+                    async with acquire_as(org["user_id"]) as conn:
+                        await conn.execute(
+                            "update public.org_settings set imap_letzter_fehler = $1, "
+                            "imap_zuletzt = now() where org_id = $2",
+                            f"{type(exc).__name__}: {exc}"[:500], org["org_id"],
+                        )
+                except Exception:
+                    pass
+                print(f"Postfach-Abruf fehlgeschlagen: {exc}", flush=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
     await _stammdaten_nachziehen()
     schleife = asyncio.create_task(_sicherungsschleife())
+    post = asyncio.create_task(_postschleife())
     yield
-    schleife.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await schleife
+    for aufgabe in (schleife, post):
+        aufgabe.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await aufgabe
     # Ein Anreicherungslauf, der gerade eine Website liest, soll sein
     # Ergebnis noch ablegen dürfen — sonst bleibt eine Zeile auf „läuft".
     await anreicherung_kern.hintergrund_abwarten()

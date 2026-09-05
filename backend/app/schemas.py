@@ -333,6 +333,15 @@ class OrgSettingsIn(Absender):
     suche_api_key: str | None = None
     anreicherung_automatisch: bool | None = None
     anreicherung_uebernahme: Literal["leere_felder", "vorschlag"] | None = None
+    # Das Postfach, aus dem Tickets entstehen. Das Passwort geht nur
+    # hinein, nie zurück — wie der LLM-Schlüssel.
+    imap_host: str | None = None
+    imap_port: int | None = Field(default=None, ge=1, le=65535)
+    imap_benutzer: str | None = None
+    imap_passwort: str | None = None
+    imap_ordner: str | None = None
+    imap_takt_minuten: int | None = Field(default=None, ge=1, le=1440)
+    imap_aktiv: bool | None = None
     default_currency: str | None = None
     locale: str | None = None
 
@@ -353,6 +362,17 @@ class OrgSettings(Absender):
     suche_api_key_set: bool = False
     anreicherung_automatisch: bool = True
     anreicherung_uebernahme: str = "leere_felder"
+    # Das Postfach. Adresse und Benutzer sichtbar, das Passwort nur als
+    # „hinterlegt" — dasselbe Muster wie beim LLM-Schlüssel.
+    imap_host: str | None = None
+    imap_port: int = 993
+    imap_benutzer: str | None = None
+    imap_passwort_set: bool = False
+    imap_ordner: str = "INBOX"
+    imap_takt_minuten: int = 5
+    imap_aktiv: bool = False
+    imap_zuletzt: datetime | None = None
+    imap_letzter_fehler: str | None = None
     default_currency: str = "EUR"
     locale: str = "de"
 

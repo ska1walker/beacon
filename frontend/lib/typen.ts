@@ -218,6 +218,17 @@ export interface OrgSettings extends Absender {
   suche_api_key_set: boolean;
   anreicherung_automatisch: boolean;
   anreicherung_uebernahme: "leere_felder" | "vorschlag";
+  /** Das Postfach, aus dem Tickets entstehen. Das Passwort kommt nie
+   *  zurück — die Oberfläche erfährt nur, ob eines hinterlegt ist. */
+  imap_host: string | null;
+  imap_port: number;
+  imap_benutzer: string | null;
+  imap_passwort_set: boolean;
+  imap_ordner: string;
+  imap_takt_minuten: number;
+  imap_aktiv: boolean;
+  imap_zuletzt: string | null;
+  imap_letzter_fehler: string | null;
   default_currency: string;
   locale: string;
 }

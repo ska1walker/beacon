@@ -9,6 +9,7 @@ import { Fehler, Laedt } from "@/components/zustaende";
 import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
+import { Postfachblock } from "@/components/postfach";
 import { Mitgliederblock } from "@/components/mitglieder";
 import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
@@ -156,6 +157,8 @@ export default function EinstellungenSeite() {
         <Postausgangblock />
 
         <Absenderblock />
+
+        <Postfachblock />
 
         <Quellenblock />
 
