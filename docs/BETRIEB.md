@@ -159,6 +159,22 @@ das eine Minute wartet.
 >
 > Das erklärt zugleich, warum der Insilo-Anschluss nie ankam.
 >
+> **Nachtrag, 5. September 2026, 0.1.10 — was ein Entrance wirklich braucht.**
+> Ein zweiter, öffentlicher Entrance (`aicrmlinks`, Port 8001) steht seit
+> 0.1.10 im Manifest. Nach `helm upgrade` lief der Container, `/health`
+> antwortete von innen, Migration 0018 war durch — und von außen kam
+> weiter 421. Auch ein Patch von `spec.entrances` im Application-Objekt
+> änderte nichts: `status.entranceStatuses` führte nur `aicrm`, keine
+> ConfigMap kannte `aicrmlinks`, und **der Backend-Pod hat keinen
+> Envoy-Sidecar** — der Frontend-Pod hat einen.
+>
+> Der Sidecar ist der Entrance. Ihn injiziert der Olares-App-Service beim
+> Installieren und beim Markt-Upgrade aus dem Manifest, nicht Helm und
+> nicht ein Objekt-Patch. Ein neuer Entrance kommt deshalb **nur über den
+> Markt** auf eine Box: Chart in den Katalog, dann Upgrade in der
+> Markt-Oberfläche oder `olares-cli market upgrade`. `scripts/box-abgleich.py`
+> zeigt, ob Objekt und Manifest auseinanderliegen — bevor man sucht.
+
 > **Ohne die Box zu öffnen bleiben zwei Wege**, und beide sind
 > tragfähiger, als sie klingen: der Service-Provider-Weg für Apps auf
 > derselben Box (Olares' eigener Mechanismus, Constraint 4), und —
