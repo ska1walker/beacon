@@ -1045,8 +1045,10 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   /* ── Datentabelle ─────────────────────────────────────────────────
      Dicht, ohne Zebrastreifen: Die Trennlinie reicht, und Streifen
      kämpfen bei jeder Auswahlfarbe gegen die Auszeichnung. */
+  /* Oben dieselbe Luft wie beim Datensatz — sonst klebt die erste Karte
+     an der Trennlinie des Kopfes (Eingang, 5.9.2026). */
   .liste {
-    padding: 0 var(--am-raum-8) var(--am-raum-16);
+    padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-16);
   }
 
   .tabelle {
