@@ -165,6 +165,15 @@ das eine Minute wartet.
 > Insilo-Anschluss scheiterte an genau dieser Umleitung, nicht an einer
 > fehlenden Tür.
 >
+> **Der zweite Entrance verschiebt die Adresse der App.** Mit nur einem
+> Entrance hieß aicrm `4d3bf559.kaivostudio.olares.de` (ohne Index — so
+> stand es auch in den eingefrorenen Helm-Werten der Erstinstallation).
+> Seit dem zweiten Entrance heißt der erste `4d3bf5590.…`, und die alte
+> Adresse antwortet 421 (gemessen 5.9.2026). Ein Lesezeichen auf die
+> alte Adresse ist damit tot; der Weg über den Olares-Desktop stimmt.
+> Wer noch einen Entrance hinzufügt, verschiebt nichts mehr — der Index
+> bleibt.
+>
 > **Was ein neuer Entrance bei einem Upgrade braucht.** `helm upgrade`
 > tauscht die Workloads, liest aber das Manifest nicht neu ein: Nach dem
 > Ausrollen von 0.1.10 per Helm fehlte `aicrmlinks` in `spec.entrances`,
