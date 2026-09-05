@@ -5,11 +5,19 @@ import { Copy } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { datumZeit } from "@/lib/format";
-import type { Quelle, QuelleNeu } from "@/lib/typen";
+import type { Quelle, Quellenart, QuelleNeu } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
 
+/** Wie eine Quelle heißt, die kein Mensch ist. */
+const ART_TEXT: Record<string, string> = {
+  insilo: "Insilo — Besprechungen",
+  api: "Schnittstelle — Tickets",
+  bot: "Bot — Tickets",
+  formular: "Formular — Tickets",
+};
+
 /**
- * Quellen, die Ereignisse an dieses CRM schicken dürfen — zuerst Insilo.
+ * Quellen, die Ereignisse an dieses CRM schicken dürfen.
  *
  * Das Geheimnis wird genau einmal gezeigt. Es später noch einmal
  * auszuliefern hieße, es dauerhaft ausliefern zu können.
@@ -17,6 +25,8 @@ import { Fehler, Laedt } from "@/components/zustaende";
 export function Quellenblock() {
   const client = useQueryClient();
   const [name, setName] = useState("Insilo auf dieser Box");
+  const [art, setArt] = useState<Quellenart>("insilo");
+  const [direkt, setDirekt] = useState(true);
   const [neu, setNeu] = useState<QuelleNeu | null>(null);
 
   const quellen = useQuery({
@@ -25,7 +35,8 @@ export function Quellenblock() {
   });
 
   const anlegen = useMutation({
-    mutationFn: () => api.post<QuelleNeu>("/api/quellen", { name, kind: "insilo" }),
+    mutationFn: () =>
+      api.post<QuelleNeu>("/api/quellen", { name, kind: art, tickets_direkt: direkt }),
     onSuccess: (q) => {
       setNeu(q);
       client.invalidateQueries({ queryKey: ["quellen"] });
@@ -48,10 +59,10 @@ export function Quellenblock() {
       </div>
       <div className="block-inhalt">
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          Insilo schickt nach einer Besprechung ein signiertes Ereignis mit dem fertigen
-          Protokoll. Legen Sie hier eine Quelle an und tragen Sie Adresse und Geheimnis in
-          Insilo unter <em>Einstellungen → Webhooks</em> ein. Das Protokoll landet danach am
-          passenden Geschäft; was mehrdeutig ist, wartet im Eingang.
+          Wer hier eingetragen ist, darf Ereignisse schicken: Insilo ein fertiges
+          Besprechungsprotokoll, eine Schnittstelle oder ein Bot ein Ticket. Jede Quelle
+          bekommt eine eigene Adresse und ein eigenes Geheimnis; ohne gültige Signatur kommt
+          nichts durch.
         </p>
 
         {neu && (
@@ -104,6 +115,7 @@ export function Quellenblock() {
               <tr>
                 <th>Name</th>
                 <th>Art</th>
+                <th>Tickets</th>
                 <th>Zuletzt gehört</th>
                 <th />
               </tr>
@@ -114,7 +126,10 @@ export function Quellenblock() {
                 .map((q) => (
                   <tr key={q.id} style={{ cursor: "default" }}>
                     <td className="haupt">{q.name}</td>
-                    <td>{q.kind}</td>
+                    <td>{ART_TEXT[q.kind] ?? q.kind}</td>
+                    <td style={{ fontSize: "0.8125rem" }}>
+                      {q.tickets_direkt ? "legt Tickets an" : "wartet im Eingang"}
+                    </td>
                     <td>{q.last_seen_at ? datumZeit(q.last_seen_at) : "noch nie"}</td>
                     <td style={{ textAlign: "right" }}>
                       <button
@@ -138,14 +153,52 @@ export function Quellenblock() {
             anlegen.mutate();
           }}
         >
-          <div className="feld" style={{ flex: 1, marginBottom: 0 }}>
+          <div className="feld" style={{ flex: "2 1 14rem", marginBottom: 0 }}>
             <label htmlFor="quellenname">Name der Quelle</label>
             <input id="quellenname" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="feld" style={{ flex: "0 0 12rem", marginBottom: 0 }}>
+            <label htmlFor="quellenart">Art</label>
+            <select
+              id="quellenart"
+              value={art}
+              onChange={(e) => {
+                const a = e.target.value as Quellenart;
+                setArt(a);
+                // Ein Formular kann kein Geheimnis halten. Was von dort
+                // kommt, wartet in der Vorgabe im Eingang.
+                setDirekt(a !== "formular");
+              }}
+            >
+              {(Object.keys(ART_TEXT) as Quellenart[]).map((a) => (
+                <option key={a} value={a}>
+                  {ART_TEXT[a]}
+                </option>
+              ))}
+            </select>
           </div>
           <button type="submit" className="btn btn-primaer" disabled={anlegen.isPending}>
             {anlegen.isPending ? "Legt an …" : "Quelle anlegen"}
           </button>
         </form>
+
+        {art !== "insilo" && (
+          <label className="quelle-freigabe">
+            <input
+              type="checkbox"
+              checked={direkt}
+              onChange={(e) => setDirekt(e.target.checked)}
+            />
+            <span>
+              Legt Tickets unmittelbar an.
+              {" "}
+              <span style={{ color: "var(--am-text-gedaempft)" }}>
+                Abgeschaltet wartet jede Meldung im Eingang, bis jemand sie ansieht — das ist
+                die richtige Einstellung für alles, was aus dem offenen Netz kommt.
+              </span>
+            </span>
+          </label>
+        )}
         {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
       </div>
     </section>

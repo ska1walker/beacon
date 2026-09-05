@@ -180,6 +180,22 @@ export default function TicketSeite({ params }: { params: Promise<{ id: string }
                     )}
                   </dd>
                 </div>
+                {/* Kam die Meldung über eine Schnittstelle, steht die
+                    Absenderadresse auch dann hier, wenn sie keinen Kontakt
+                    trifft. Ohne sie gäbe es keinen Rückweg. */}
+                {t.absender_email && !t.contact_id && (
+                  <div className="eigenschaft">
+                    <dt>
+                      Absender <span className="optional">nicht im Bestand</span>
+                    </dt>
+                    <dd>
+                      <a href={`mailto:${t.absender_email}`} className="zellen-link">
+                        {t.absender_name ? `${t.absender_name} · ` : ""}
+                        {t.absender_email}
+                      </a>
+                    </dd>
+                  </div>
+                )}
                 <div className="eigenschaft">
                   <dt>Lead</dt>
                   <dd>

@@ -29,7 +29,8 @@ from app.patching import build_update
 router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 Prioritaet = Literal["niedrig", "mittel", "hoch", "dringend"]
-Quelle = Literal["manuell", "email", "telefon", "insilo", "formular"]
+# „api" und „bot" kommen über den signierten Eingang herein (0016).
+Quelle = Literal["manuell", "email", "telefon", "insilo", "formular", "api", "bot"]
 Stufenart = Literal["neu", "offen", "wartet_auf_kontakt", "abgeschlossen"]
 
 # Fällt der Wert in den Einstellungen aus, gilt das hier. Vier Stunden für
@@ -120,6 +121,10 @@ class Ticket(BaseModel):
     prioritaet: Prioritaet
     kategorie: str | None = None
     quelle: Quelle
+    # Wer geschrieben hat. Bleibt stehen, auch wenn die Adresse keinen
+    # Kontakt trifft — sonst gibt es keinen Rückweg.
+    absender_email: str | None = None
+    absender_name: str | None = None
     owner_id: UUID | None = None
     besitzer_name: str | None = None
     contact_id: UUID | None = None

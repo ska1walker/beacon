@@ -490,10 +490,15 @@ export interface Frageantwort {
   hinweis: string | null;
 }
 
+/** Was eine eingehende Quelle ist — und ob sie durchregieren darf. */
+export type Quellenart = "insilo" | "api" | "bot" | "formular";
+
 export interface Quelle {
   id: string;
   name: string;
   kind: string;
+  /** Ob diese Quelle Tickets unmittelbar anlegt oder im Eingang wartet. */
+  tickets_direkt: boolean;
   is_active: boolean;
   created_at: string;
   last_seen_at: string | null;
@@ -652,7 +657,14 @@ export interface Feldauskunft {
 
 export type Ticketprioritaet = "niedrig" | "mittel" | "hoch" | "dringend";
 export type Ticketstufenart = "neu" | "offen" | "wartet_auf_kontakt" | "abgeschlossen";
-export type Ticketquelle = "manuell" | "email" | "telefon" | "insilo" | "formular";
+export type Ticketquelle =
+  | "manuell"
+  | "email"
+  | "telefon"
+  | "insilo"
+  | "formular"
+  | "api"
+  | "bot";
 
 export interface Ticketstufe {
   id: string;
@@ -688,6 +700,9 @@ export interface Ticket {
   prioritaet: Ticketprioritaet;
   kategorie: string | null;
   quelle: Ticketquelle;
+  /** Wer geschrieben hat — bleibt stehen, auch ohne passenden Kontakt. */
+  absender_email: string | null;
+  absender_name: string | null;
   owner_id: string | null;
   besitzer_name: string | null;
   contact_id: string | null;

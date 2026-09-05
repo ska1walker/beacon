@@ -3019,3 +3019,21 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-gedaempft);
   }
 }
+
+@layer components {
+  /* Die Freigabe einer eingehenden Quelle. Bewusst ein Satz und kein
+     Schalter allein: „legt Tickets an" ist eine Entscheidung mit Folgen,
+     und die gehören danebengeschrieben. */
+  .quelle-freigabe {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--am-raum-2);
+    margin-top: var(--am-raum-3);
+    max-width: 46rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    cursor: pointer;
+  }
+
+  .quelle-freigabe input { margin-top: 2px; flex: none; }
+}

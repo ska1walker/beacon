@@ -182,6 +182,8 @@ export const QUELLE_TEXT: Record<string, string> = {
   telefon: "Telefon",
   insilo: "Insilo",
   formular: "Formular",
+  api: "Schnittstelle",
+  bot: "Bot",
 };
 
 /**

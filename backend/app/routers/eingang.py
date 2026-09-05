@@ -19,6 +19,7 @@ import orjson
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app import ticketeingang
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire, acquire_als_quelle, acquire_as
 
@@ -28,12 +29,17 @@ router = APIRouter(prefix="/api/eingang", tags=["eingang"])
 class QuelleIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     kind: str = "insilo"
+    # Ob diese Quelle Tickets unmittelbar anlegen darf. Wer signieren
+    # kann, darf es; ein öffentliches Formular kann kein Geheimnis
+    # halten, und was von dort kommt, wartet im Eingang.
+    tickets_direkt: bool = True
 
 
 class Quelle(BaseModel):
     id: UUID
     name: str
     kind: str
+    tickets_direkt: bool = True
     is_active: bool
     created_at: datetime
     last_seen_at: datetime | None = None
@@ -154,17 +160,30 @@ async def _zuordnen(conn, org_id: UUID, texte: list[str]) -> tuple[UUID | None, 
 async def empfangen(
     source_id: UUID,
     request: Request,
+    x_aicrm_event: str | None = Header(None, alias="X-Aicrm-Event"),
+    x_aicrm_delivery_id: str | None = Header(None, alias="X-Aicrm-Delivery-Id"),
+    x_aicrm_signature: str | None = Header(None, alias="X-Aicrm-Signature"),
     x_insilo_event: str | None = Header(None, alias="X-Insilo-Event"),
     x_insilo_delivery_id: str | None = Header(None, alias="X-Insilo-Delivery-ID"),
     x_insilo_signature: str | None = Header(None, alias="X-Insilo-Signature"),
 ) -> dict:
-    """Nimmt ein Ereignis von Insilo entgegen.
+    """Nimmt ein Ereignis einer eingetragenen Quelle entgegen.
+
+    Die Kopfzeilen heißen `X-Aicrm-*`; die `X-Insilo-*` bleiben als Alias
+    gültig, weil Insilo seinen Vertrag nicht unsertwegen ändert. Wer neu
+    anschließt, nimmt die neutralen — eine Schnittstelle, die von jedem
+    Absender verlangt, sich für Insilo auszugeben, ist eine schlechte
+    Schnittstelle.
 
     Antwortet auf eine unbekannte Quelle oder eine falsche Signatur mit
     401. Das ist kein Geiz: Insilo wiederholt bei 4xx nicht, und eine
     Auslieferung, die nie ankommen kann, soll nicht dreimal versucht
     werden.
     """
+    ereignis_kopf = x_aicrm_event or x_insilo_event
+    lieferung_kopf = x_aicrm_delivery_id or x_insilo_delivery_id
+    signatur_kopf = x_aicrm_signature or x_insilo_signature
+
     roh = await request.body()
 
     # Ohne Nutzerkontext: Der Absender ist eine Maschine und hat keine
@@ -173,13 +192,14 @@ async def empfangen(
     # Signatur stimmt, läuft alles Weitere im Kontext ihrer Organisation.
     async with acquire_als_quelle(source_id) as conn:
         quelle = await conn.fetchrow(
-            "select id, org_id, secret, is_active from public.webhook_sources where id = $1",
+            "select id, org_id, secret, is_active, kind, tickets_direkt "
+            "from public.webhook_sources where id = $1",
             source_id,
         )
 
     if quelle is None or not quelle["is_active"]:
         raise HTTPException(401, "Unbekannte oder abgeschaltete Quelle")
-    if not signatur_stimmt(quelle["secret"], roh, x_insilo_signature):
+    if not signatur_stimmt(quelle["secret"], roh, signatur_kopf):
         raise HTTPException(401, "Signatur stimmt nicht")
 
     try:
@@ -187,8 +207,8 @@ async def empfangen(
     except orjson.JSONDecodeError as exc:
         raise HTTPException(400, f"Kein lesbares JSON: {exc}") from exc
 
-    ereignis = x_insilo_event or daten.get("event") or "unbekannt"
-    lieferung = x_insilo_delivery_id or daten.get("id")
+    ereignis = ereignis_kopf or daten.get("event") or "unbekannt"
+    lieferung = lieferung_kopf or daten.get("id")
     if not lieferung:
         raise HTTPException(400, "Ohne Idempotenzschlüssel wird nichts angenommen.")
 
@@ -244,6 +264,45 @@ async def empfangen(
         await conn.execute(
             "update public.webhook_sources set last_seen_at = now() where id = $1", source_id
         )
+
+        # ── Ein Ticket? ──────────────────────────────────────────────
+        # Nur eine Quelle mit Geheimnis darf durchregieren. Was von einem
+        # öffentlichen Formular kommt, wartet im Eingang, bis ein Mensch
+        # es ansieht — deshalb hängt die Entscheidung an der Quelle und
+        # nicht an einer Verzweigung im Code.
+        ticket_id = None
+        if ereignis in ticketeingang.EREIGNISSE:
+            if not quelle["tickets_direkt"]:
+                return {
+                    "status": "angenommen",
+                    "eingang_id": str(posten),
+                    "hinweis": "Diese Quelle legt keine Tickets an — der Posten wartet im Eingang.",
+                }
+            try:
+                ticket_id, ticketgrund = await ticketeingang.anlegen(
+                    conn, org_id, eigner, quelle["kind"], daten,
+                    _zeitpunkt(daten.get("occurred_at") or daten.get("eingegangen_am")),
+                )
+            except ticketeingang.Unbrauchbar as exc:
+                # Der Posten steht schon; das Ereignis war nur zu dünn.
+                # 400 ist richtig: Ein Wiederholen ändert daran nichts.
+                await conn.execute(
+                    "update public.eingang set zuordnung_grund = $1 where id = $2",
+                    str(exc), posten,
+                )
+                raise HTTPException(400, str(exc)) from exc
+
+            await conn.execute(
+                "update public.eingang set ticket_id = $1, status = 'zugeordnet', "
+                "zuordnung_grund = coalesce($2, zuordnung_grund) where id = $3",
+                ticket_id, ticketgrund, posten,
+            )
+            return {
+                "status": "angenommen",
+                "eingang_id": str(posten),
+                "ticket_id": str(ticket_id),
+                "grund": ticketgrund,
+            }
 
         # Nur ein fertiges Protokoll wird von allein zur Aktivität. Ein
         # „angelegt" oder „fehlgeschlagen" hat am Deal nichts verloren.
@@ -399,7 +458,7 @@ quellen_router = APIRouter(prefix="/api/quellen", tags=["eingang"])
 async def quellen(user: CurrentUser = Depends(get_current_user)) -> list[Quelle]:
     async with acquire_as(user.user_id) as conn:
         zeilen = await conn.fetch(
-            "select id, name, kind, is_active, created_at, last_seen_at "
+            "select id, name, kind, tickets_direkt, is_active, created_at, last_seen_at "
             "from public.webhook_sources order by created_at"
         )
     return [Quelle(**dict(z), pfad=f"/api/eingang/{z['id']}") for z in zeilen]
@@ -416,12 +475,14 @@ async def quelle_anlegen(
     geheim = secrets.token_urlsafe(32)
     async with acquire_as(user.user_id) as conn:
         zeile = await conn.fetchrow(
-            "insert into public.webhook_sources (org_id, name, kind, secret) "
-            "values ($1,$2,$3,$4) returning id, name, kind, is_active, created_at, last_seen_at",
+            "insert into public.webhook_sources (org_id, name, kind, secret, tickets_direkt) "
+            "values ($1,$2,$3,$4,$5) returning id, name, kind, tickets_direkt, is_active, "
+            "created_at, last_seen_at",
             user.org_id,
             payload.name,
             payload.kind,
             geheim,
+            payload.tickets_direkt,
         )
     return QuelleNeu(**dict(zeile), pfad=f"/api/eingang/{zeile['id']}", secret=geheim)
 

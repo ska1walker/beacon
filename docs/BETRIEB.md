@@ -137,14 +137,34 @@ steht und genau ein offenes Geschäft dazu existiert. Alles andere wartet
 im Eingang — ein Protokoll am falschen Kunden ist schlimmer als eines,
 das eine Minute wartet.
 
-> **Offen: der Weg auf der Box.** Der Empfangspfad ist geprüft, die
-> Zustellung nicht. Insilo müsste aicrm über dessen öffentliche Adresse
-> erreichen, und davor sitzt der Envoy-Sidecar mit Authelia — derselbe
-> Wall, an dem Insilo beim Sprachmodell gescheitert ist. Der
-> wahrscheinliche Weg ist eine `options.policies`-Regel im
-> OlaresManifest, die `^/api/eingang/` öffentlich stellt; die Signatur
-> trägt die Authentifizierung an dieser Stelle ohnehin. Geprüft ist das
-> nicht, und es lässt sich nur auf einer Box prüfen.
+> **Geprüft am 5. September 2026 — und die Vermutung war falsch.** Der
+> Empfangspfad trägt, die Zustellung von außen ist unmöglich, und eine
+> `policies`-Regel ändert daran nichts.
+>
+> Gemessen auf Kais Box, ein POST von außen auf `/api/eingang/…`:
+>
+> | App | authLevel | Antwort |
+> |---|---|---|
+> | files, vault, market | `private` | **302** — veröffentlicht, Umleitung zur Anmeldung |
+> | insilo, aicrm | `internal` | **421** — gar nicht veröffentlicht |
+>
+> Zur Gegenprobe wurde `^/api/eingang/` versuchsweise per `policies` auf
+> `public` gestellt: weiterhin 421. Auch kein Ingress, kein Eintrag im
+> Reverse-Proxy, keine URL im `status` der Anwendung.
+>
+> **`authLevel: internal` heißt: es gibt keine öffentliche Adresse.** Eine
+> Richtlinie kann bestimmen, wer durch eine Tür darf — sie kann keine Tür
+> bauen. Wer einen echten Webhook will, muss den Entrance auf `private`
+> oder `public` heben; *dann* grenzt die Regel den offenen Pfad ein.
+>
+> Das erklärt zugleich, warum der Insilo-Anschluss nie ankam.
+>
+> **Ohne die Box zu öffnen bleiben zwei Wege**, und beide sind
+> tragfähiger, als sie klingen: der Service-Provider-Weg für Apps auf
+> derselben Box (Olares' eigener Mechanismus, Constraint 4), und —
+> naheliegender — **aicrm holt selbst**. Ausgehend sind 443 und 80 offen;
+> ein Postfach per IMAP abzufragen oder eine Formular-API zu pollen
+> braucht keine einzige offene Tür nach innen.
 
 
 ## Post anschließen — Relay oder ein anderer Dienst
