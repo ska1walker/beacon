@@ -137,43 +137,54 @@ steht und genau ein offenes Geschäft dazu existiert. Alles andere wartet
 im Eingang — ein Protokoll am falschen Kunden ist schlimmer als eines,
 das eine Minute wartet.
 
-> **Geprüft am 5. September 2026 — und die Vermutung war falsch.** Der
-> Empfangspfad trägt, die Zustellung von außen ist unmöglich, und eine
-> `policies`-Regel ändert daran nichts.
+> **Geprüft am 5. September 2026, zweimal — die erste Messung war
+> falsch, und zwar am Hostnamen.** Olares adressiert einen Entrance nicht
+> unter seinem Namen, sondern als `<appid><index>.<nutzer>.<zone>`:
+> `appid` ist `md5(<appname>)[:8]` (für aicrm `4d3bf559`, auf jeder Box
+> gleich), `index` die Position im Manifest, null-basiert. Systemapps wie
+> `files.` oder `market.` tragen Namen — Nutzerapps nicht. Alles, was
+> vorher unter `aicrm.kaivostudio.olares.de` gemessen wurde, traf einen
+> Hostnamen, den es nie gab; das 421 war die Antwort des Gateways auf
+> einen unbekannten Host, keine Aussage über `authLevel`.
 >
-> Gemessen auf Kais Box, ein POST von außen auf `/api/eingang/…`:
+> Gemessen von außen, ohne Anmeldung, `GET /health`:
 >
-> | App | authLevel | Antwort |
-> |---|---|---|
-> | files, vault, market | `private` | **302** — veröffentlicht, Umleitung zur Anmeldung |
-> | insilo, aicrm | `internal` | **421** — gar nicht veröffentlicht |
+> | Entrance | authLevel | Adresse | Antwort |
+> |---|---|---|---|
+> | `aicrm` (Index 0) | `internal` | `4d3bf5590.kaivostudio.olares.de` | **302** zur Anmeldung |
+> | `aicrmlinks` (Index 1) | `public` | `4d3bf5591.kaivostudio.olares.de` | **200** `{"status":"ok","teil":"oeffentlich"}` |
+> | litellm `litellmapi` | `public` | `6aead52a1.…` und `llm.…` (eigener Name) | 401 von LiteLLM — durchgereicht |
 >
-> Zur Gegenprobe wurde `^/api/eingang/` versuchsweise per `policies` auf
-> `public` gestellt: weiterhin 421. Auch kein Ingress, kein Eintrag im
-> Reverse-Proxy, keine URL im `status` der Anwendung.
+> Über den öffentlichen Entrance: unbekanntes Token → 404, `/api/contacts`
+> → 404. Der Container auf 8001 kennt die interne API nicht.
 >
-> **`authLevel: internal` heißt: es gibt keine öffentliche Adresse.** Eine
-> Richtlinie kann bestimmen, wer durch eine Tür darf — sie kann keine Tür
-> bauen. Wer einen echten Webhook will, muss den Entrance auf `private`
-> oder `public` heben; *dann* grenzt die Regel den offenen Pfad ein.
+> Ein `internal`-Entrance hat also eine öffentliche Adresse; wer ohne
+> Sitzung kommt, wird zur Anmeldung geschickt. Ob eine `policies`-Regel
+> einen Pfad darunter für anonyme POSTs öffnet, ist damit **nicht
+> gemessen** — die frühere Gegenprobe lief auf dem falschen Host. Der
+> Insilo-Anschluss scheiterte an genau dieser Umleitung, nicht an einer
+> fehlenden Tür.
 >
-> Das erklärt zugleich, warum der Insilo-Anschluss nie ankam.
+> **Was ein neuer Entrance bei einem Upgrade braucht.** `helm upgrade`
+> tauscht die Workloads, liest aber das Manifest nicht neu ein: Nach dem
+> Ausrollen von 0.1.10 per Helm fehlte `aicrmlinks` in `spec.entrances`,
+> und der Backend-Pod hatte keinen Envoy-Sidecar. Erst das Upgrade über
+> den Markt (Upload-Quelle) trug den Entrance ins Application-Objekt, in
+> `spec.settings.policy` und injizierte den Sidecar in den nächsten Pod.
+> Ein neuer Entrance kommt deshalb **nur über den Markt** auf eine Box;
+> `scripts/box-abgleich.py` zeigt Manifest und Objekt nebeneinander und
+> nennt die echten Adressen.
 >
-> **Nachtrag, 5. September 2026, 0.1.10 — was ein Entrance wirklich braucht.**
-> Ein zweiter, öffentlicher Entrance (`aicrmlinks`, Port 8001) steht seit
-> 0.1.10 im Manifest. Nach `helm upgrade` lief der Container, `/health`
-> antwortete von innen, Migration 0018 war durch — und von außen kam
-> weiter 421. Auch ein Patch von `spec.entrances` im Application-Objekt
-> änderte nichts: `status.entranceStatuses` führte nur `aicrm`, keine
-> ConfigMap kannte `aicrmlinks`, und **der Backend-Pod hat keinen
-> Envoy-Sidecar** — der Frontend-Pod hat einen.
->
-> Der Sidecar ist der Entrance. Ihn injiziert der Olares-App-Service beim
-> Installieren und beim Markt-Upgrade aus dem Manifest, nicht Helm und
-> nicht ein Objekt-Patch. Ein neuer Entrance kommt deshalb **nur über den
-> Markt** auf eine Box: Chart in den Katalog, dann Upgrade in der
-> Markt-Oberfläche oder `olares-cli market upgrade`. `scripts/box-abgleich.py`
-> zeigt, ob Objekt und Manifest auseinanderliegen — bevor man sucht.
+> Ein Rest bleibt, und der liegt bei Olares: `status.entranceStatuses`
+> wird nur beim ersten Anlegen aus dem Manifest gefüllt
+> (`application_controller.go`, `createApplication`); `updateApplication`
+> überschreibt `spec.entrances`, fasst den Status aber nicht an, und der
+> `EntranceStatusManagerController` aktualisiert nur Einträge, die schon
+> da sind. Nach einem Upgrade fehlt der neue Entrance im Status — für
+> die Erreichbarkeit ist das **ohne Belang** (gemessen: Eintrag entfernt,
+> 200; Eintrag gesetzt, 200), er fehlt nur in der Statusanzeige des
+> Markts. Auf Kais Box wurde der Eintrag von Hand nachgetragen, so wie
+> eine Neuinstallation ihn schreiben würde.
 
 > **Ohne die Box zu öffnen bleiben zwei Wege**, und beide sind
 > tragfähiger, als sie klingen: der Service-Provider-Weg für Apps auf

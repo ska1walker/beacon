@@ -9,6 +9,12 @@ gestolpert: eine Zwei-Faktor-Regel, die im Objekt weiterlebte, nachdem
 sie aus dem Manifest verschwunden war, und ein neuer Entrance, der im
 Manifest stand und im Objekt nicht ankam.
 
+Dazu die Adresse, unter der ein Entrance von außen erreichbar ist: nicht
+`<name>.<nutzer>.<zone>` (das gibt es nur für Systemapps — für alles
+andere antwortet das Gateway mit 421, egal welches authLevel), sondern
+`<appid><index>.<nutzer>.<zone>` mit `appid = md5(<appname>)[:8]` und dem
+null-basierten Index im Manifest. Stundenlang am falschen Host gemessen.
+
 Dieses Skript zeigt beide Seiten nebeneinander und nennt jede Abweichung.
 Es ändert nichts. Aufruf vom Mac aus:
 
@@ -56,6 +62,15 @@ def objekt() -> dict:
     raise SystemExit("Kein aicrm-Application-Objekt auf der Box.")
 
 
+def zone(owner: str) -> str:
+    """`bytetrade.io/zone` am User-Objekt, z. B. `kaivostudio.olares.de`."""
+    return subprocess.run(
+        ["ssh", "-o", "ConnectTimeout=15", BOX,
+         f"{KUBE} kubectl get user {owner} -o jsonpath='{{.metadata.annotations.bytetrade\\.io/zone}}'"],
+        capture_output=True, text=True,
+    ).stdout.strip() or f"{owner}.olares.de"
+
+
 def main() -> int:
     soll = {e["name"]: e for e in manifest_entrances()}
     ist_obj = objekt()
@@ -74,6 +89,15 @@ def main() -> int:
         if not gleich:
             abweichungen += 1
         print(f"{marke} {name:<11} {links:<28} {rechts}")
+
+    print()
+    appid = ist_obj["spec"].get("appid", "?")
+    z = zone(ist_obj["spec"].get("owner", "?"))
+    status = {e["name"]: e.get("state") for e in (ist_obj.get("status", {}).get("entranceStatuses") or [])}
+    print("Adressen von außen (Index = Reihenfolge im Objekt):")
+    for idx, e in enumerate(ist_obj["spec"].get("entrances") or []):
+        st = status.get(e["name"], "fehlt im Status — Olares füllt ihn nur beim Anlegen; für die Erreichbarkeit ohne Belang")
+        print(f"   https://{appid}{idx}.{z}   {e['name']} ({e['authLevel']}) · Status: {st}")
 
     print()
     pol_roh = ist_obj["spec"].get("settings", {}).get("policy")
