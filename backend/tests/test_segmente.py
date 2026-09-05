@@ -366,3 +366,31 @@ def test_listenoperator_nur_an_eigener_eigenschaft():
         segmente.bedingung_zu_sql(
             "companies", Bedingung("name", "hat_eines_von", ["Werft"]), []
         )
+
+
+async def test_quellenliste_deckt_die_aufzaehlung(datenbank):
+    """Die Filterauswahl und die Datenbank-Aufzählung müssen dasselbe sagen.
+
+    Sie stehen an zwei Stellen, und genau daran ist es einmal
+    auseinandergelaufen: `api` und `bot` gab es in der Datenbank, aber
+    nicht im Filter — Tickets aus der Schnittstelle waren damit über ihre
+    Herkunft nicht auffindbar. Niemand vermisst einen Filter, den es nie
+    gab; deshalb prüft das ein Test und kein Mensch.
+    """
+    from app.db import acquire
+
+    async with klient_fuer("segment-quellen") as k:
+        felder = (await k.get("/api/ansichten/felder?entity=tickets")).json()["felder"]
+    angeboten = {
+        o["wert"] for o in next(f for f in felder if f["schluessel"] == "quelle")["optionen"]
+    }
+
+    async with acquire() as conn:
+        in_der_datenbank = set(
+            await conn.fetchval("select enum_range(null::public.ticket_quelle)::text[]")
+        )
+
+    assert angeboten == in_der_datenbank, (
+        f"nur im Filter: {angeboten - in_der_datenbank} · "
+        f"nur in der Datenbank: {in_der_datenbank - angeboten}"
+    )

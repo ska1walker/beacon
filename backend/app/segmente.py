@@ -144,12 +144,20 @@ TICKET_FELDER: list[Feld] = [
     Feld("kategorie", "Kategorie", "text", "t.kategorie"),
     Feld(
         "quelle", "Quelle", "auswahl", "t.quelle::text",
+        # Muss zur Aufzählung `ticket_quelle` in der Datenbank passen.
+        # Eine zweite, handgeführte Liste ist eine Falle: Kommt ein Wert
+        # dazu und bleibt hier stehen, lassen sich genau die neuen Tickets
+        # nicht mehr nach ihrer Herkunft finden — und niemand vermisst
+        # einen Filter, den es nie gab. `test_segmente` hält beide
+        # Listen deshalb gegeneinander.
         optionen=[
             {"wert": "manuell", "text": "Von Hand"},
             {"wert": "email", "text": "E-Mail"},
             {"wert": "telefon", "text": "Telefon"},
             {"wert": "insilo", "text": "Insilo"},
             {"wert": "formular", "text": "Formular"},
+            {"wert": "api", "text": "Schnittstelle"},
+            {"wert": "bot", "text": "Bot"},
         ],
     ),
     Feld("owner_id", "Zuständig", "person", "t.owner_id::text"),
