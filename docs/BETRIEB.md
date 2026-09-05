@@ -304,6 +304,23 @@ Symbol (`components/erklaerung.tsx`).
 
 ## Post anschließen — Relay oder ein anderer Dienst
 
+> **Seit 0.2.2 ist die Art einer Quelle Teil des Vertrags.** Eine Quelle
+> der Art `relay` öffnet nur `/api/post/eingang/<id>`; `insilo`, `api`,
+> `bot`, `formular` öffnen nur `/api/eingang/<id>`; `email` ist das eigene
+> Postfach und öffnet nichts. Passt die Art nicht, antwortet der Pfad 401
+> — dieselbe Antwort wie bei falscher Signatur. Bestehende Quellen tragen
+> die Vorgabe `insilo` und laufen weiter; die Prüfung steht als
+> `CHECK … NOT VALID`, weil die Migration unter FORCE RLS alte Zeilen
+> weder lesen noch berichtigen kann.
+>
+> **Ausgehende Post trägt `X-Post-Delivery-ID`** (aus `delivery_id` im
+> Auftrag, sonst vom Server vergeben) und wird bei Ausfall oder 5xx bis
+> zu dreimal mit Pausen von 1 s und 3 s wiederholt — stets mit derselben
+> Kennung. Ein zweiter Auftrag mit derselben Kennung schickt nichts mehr,
+> sondern liefert den vorhandenen Verlaufseintrag (`wiederholung: true`).
+> Die `message_id` aus der Antwort des Dienstes steht am Verlaufseintrag
+> (`payload.message_id`) — die Grundlage für jedes spätere `in_reply_to`.
+
 E-Mails gehen nicht aus Beacon selbst hinaus und kommen nicht direkt
 herein. Beides läuft über einen Dienst auf der Box — Marcs Relay, die
 Outlook-Alternative. Weil dessen Schnittstelle beim Bau nicht vorlag,

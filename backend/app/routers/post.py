@@ -25,7 +25,7 @@ ein Mensch schickt.
 import hashlib
 import hmac
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 import orjson
@@ -46,6 +46,49 @@ class SendenIn(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
     deal_id: UUID | None = None
     in_reply_to: str | None = None
+    # Stabil über Wiederholungen: Wer denselben Auftrag noch einmal
+    # schickt (Netz weg, Knopf zweimal), gibt dieselbe Kennung mit — und
+    # der Empfänger bekommt genau eine Mail. Ohne Angabe vergibt der
+    # Server eine.
+    delivery_id: str | None = Field(default=None, max_length=120)
+
+
+# Wie oft der Postdienst versucht wird, und mit welchen Pausen dazwischen.
+# Drei Anläufe decken einen Neustart des Dienstes ab; ein 4xx wird nicht
+# wiederholt — das ist eine Antwort, kein Ausfall.
+WIEDERHOLUNGEN = (0.0, 1.0, 3.0)
+
+
+async def _relay_senden(url: str, roh: bytes, kopf: dict[str, str]) -> dict:
+    """Ein signierter POST an den Postdienst, mit Wiederholung und Backoff.
+
+    Gibt die Antwort des Dienstes als Dict zurück (leer, wenn er keins
+    schickt). Wirft HTTPException 502, wenn nach allen Anläufen nichts
+    durchkam."""
+    import asyncio
+
+    letzter: str = ""
+    for pause in WIEDERHOLUNGEN:
+        if pause:
+            await asyncio.sleep(pause)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                antwort = await client.post(url, content=roh, headers=kopf)
+        except httpx.RequestError as exc:
+            letzter = f"{url} ist nicht erreichbar: {exc}"
+            continue
+        status = getattr(antwort, "status_code", 200)
+        if 500 <= status < 600:
+            letzter = f"Der Postausgang hat mit {status} geantwortet."
+            continue
+        if status >= 400:
+            raise HTTPException(502, f"Der Postausgang hat mit {status} geantwortet.")
+        try:
+            daten = antwort.json()
+        except Exception:
+            return {}
+        return daten if isinstance(daten, dict) else {}
+    raise HTTPException(502, f"Der Postausgang antwortet nicht: {letzter}")
 
 
 class PostStatus(BaseModel):
@@ -91,6 +134,20 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
     if not url:
         raise HTTPException(409, "Kein Versand eingerichtet. SMTP-Konto oder Postausgang stehen unter Einstellungen.")
 
+    delivery_id = (payload.delivery_id or "").strip() or uuid4().hex
+    # Schon zugestellt? Dann ist dieser Auftrag eine Wiederholung, und der
+    # Empfänger bekommt keine zweite Mail.
+    async with acquire_as(user.user_id) as conn:
+        schon = await conn.fetchrow(
+            "select id, payload from public.activities where org_id = $1 and kind = 'email' "
+            "and payload ->> 'delivery_id' = $2 limit 1",
+            user.org_id, delivery_id,
+        )
+    if schon:
+        alt = orjson.loads(schon["payload"]) if isinstance(schon["payload"], str) else (schon["payload"] or {})
+        return {"gesendet": True, "activity_id": str(schon["id"]), "delivery_id": delivery_id,
+                "message_id": alt.get("message_id"), "wiederholung": True}
+
     nachricht = {
         "to": kontakt["email"],
         "from": einst["mail_absender"],
@@ -98,21 +155,19 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
         "text": payload.text,
         "in_reply_to": payload.in_reply_to,
         "sent_at": datetime.now(UTC).isoformat(),
+        "delivery_id": delivery_id,
     }
     roh = orjson.dumps(nachricht)
     kopf = {
         "Content-Type": "application/json",
         "X-Post-Event": "mail.send",
+        "X-Post-Delivery-ID": delivery_id,
         "X-Post-Signature": "sha256=" + hmac.new((einst["mail_endpoint_secret"] or "").encode(), roh, hashlib.sha256).hexdigest(),
     }
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            antwort = await client.post(url, content=roh, headers=kopf)
-            antwort.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(502, f"Der Postausgang hat mit {exc.response.status_code} geantwortet.") from exc
-    except httpx.RequestError as exc:
-        raise HTTPException(502, f"Der Postausgang {url} ist nicht erreichbar: {exc}") from exc
+    antwort = await _relay_senden(url, roh, kopf)
+    # Was der Dienst zurückgibt, ist die Grundlage für jede spätere Antwort
+    # (`in_reply_to`). Ohne gespeicherte Message-ID gäbe es keinen Faden.
+    message_id = antwort.get("message_id") or antwort.get("id") or antwort.get("messageId")
 
     async with acquire_as(user.user_id) as conn:
         aktivitaet = await conn.fetchval(
@@ -122,10 +177,12 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
             """,
             user.org_id, f"An {kontakt['email']}: {payload.subject}", payload.text,
             kontakt["company_id"], payload.contact_id, payload.deal_id,
-            orjson.dumps({"richtung": "ausgehend", "an": kontakt["email"]}).decode(), user.user_id,
+            orjson.dumps({"richtung": "ausgehend", "an": kontakt["email"], "delivery_id": delivery_id,
+                          "message_id": message_id, "in_reply_to": payload.in_reply_to}).decode(),
+            user.user_id,
         )
         await audit.log_fuer(conn, user, action="create", entity="activities", entity_id=aktivitaet, diff={"email": "gesendet"})
-    return {"gesendet": True, "activity_id": str(aktivitaet)}
+    return {"gesendet": True, "activity_id": str(aktivitaet), "delivery_id": delivery_id, "message_id": message_id}
 
 
 async def _per_smtp(payload: SendenIn, kontakt, user: CurrentUser) -> dict:
@@ -169,10 +226,13 @@ async def eingang(
     roh = await request.body()
     async with acquire_als_quelle(source_id) as conn:
         quelle = await conn.fetchrow(
-            "select id, org_id, secret, is_active from public.webhook_sources where id = $1", source_id
+            "select id, org_id, secret, is_active, kind from public.webhook_sources where id = $1", source_id
         )
     if quelle is None or not quelle["is_active"]:
         raise HTTPException(401, "Unbekannte oder abgeschaltete Quelle")
+    if quelle["kind"] != "relay":
+        # Ein Insilo- oder Ticket-Geheimnis öffnet diese Tür nicht.
+        raise HTTPException(401, "Diese Quelle ist nicht für den Postdienst gedacht.")
     if not signatur_stimmt(quelle["secret"], roh, x_post_signature):
         raise HTTPException(401, "Signatur stimmt nicht")
     try:

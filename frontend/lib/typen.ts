@@ -532,7 +532,7 @@ export interface Frageantwort {
 }
 
 /** Was eine eingehende Quelle ist — und ob sie durchregieren darf. */
-export type Quellenart = "insilo" | "api" | "bot" | "formular";
+export type Quellenart = "insilo" | "api" | "bot" | "formular" | "relay";
 
 export interface Quelle {
   id: string;

@@ -15,6 +15,7 @@ const ART_TEXT: Record<string, string> = {
   api: "Schnittstelle — Tickets",
   bot: "Bot — Tickets",
   formular: "Formular — Tickets",
+  relay: "Relay — E-Mail (Post)",
 };
 
 /**

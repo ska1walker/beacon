@@ -13,6 +13,7 @@ nicht hat, kommt nicht durch.
 import hashlib
 import hmac
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 import orjson
@@ -26,9 +27,23 @@ from app.db import acquire, acquire_als_quelle, acquire_as
 router = APIRouter(prefix="/api/eingang", tags=["eingang"])
 
 
+# Die Art sagt, welcher Pfad die Quelle bedienen darf: `relay` nur den
+# Postdienst (routers/post.py), alles andere nur diesen Eingang. Ein
+# Geheimnis gilt damit für genau einen Vertrag.
+# `relay` ist der Postdienst, `email` das eigene Postfach (app/postfach.py) —
+# beide dürfen hier nicht anklopfen.
+Quellenart = Literal["insilo", "api", "bot", "formular", "relay"]
+EREIGNIS_ARTEN = ("insilo", "api", "bot", "formular")
+
+
+def _pfad(kind: str, quelle_id) -> str:
+    """Der Weg, den der Absender eintragen muss — je nach Art ein anderer."""
+    return f"/api/post/eingang/{quelle_id}" if kind == "relay" else f"/api/eingang/{quelle_id}"
+
+
 class QuelleIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    kind: str = "insilo"
+    kind: Quellenart = "insilo"
     # Ob diese Quelle Tickets unmittelbar anlegen darf. Wer signieren
     # kann, darf es; ein öffentliches Formular kann kein Geheimnis
     # halten, und was von dort kommt, wartet im Eingang.
@@ -205,6 +220,10 @@ async def empfangen(
 
     if quelle is None or not quelle["is_active"]:
         raise HTTPException(401, "Unbekannte oder abgeschaltete Quelle")
+    if quelle["kind"] not in EREIGNIS_ARTEN:
+        # Dieselbe Antwort wie bei falscher Signatur: Wer hier mit einem
+        # Post-Geheimnis anklopft, erfährt nicht mehr als „nein“.
+        raise HTTPException(401, "Diese Quelle ist nicht für Ereignisse gedacht.")
     if not signatur_stimmt(quelle["secret"], roh, signatur_kopf):
         raise HTTPException(401, "Signatur stimmt nicht")
 
@@ -467,7 +486,7 @@ async def quellen(user: CurrentUser = Depends(get_current_user)) -> list[Quelle]
             "select id, name, kind, tickets_direkt, is_active, created_at, last_seen_at "
             "from public.webhook_sources order by created_at"
         )
-    return [Quelle(**dict(z), pfad=f"/api/eingang/{z['id']}") for z in zeilen]
+    return [Quelle(**dict(z), pfad=_pfad(z["kind"], z["id"])) for z in zeilen]
 
 
 @quellen_router.post("", response_model=QuelleNeu, status_code=201)
@@ -490,7 +509,7 @@ async def quelle_anlegen(
             geheim,
             payload.tickets_direkt,
         )
-    return QuelleNeu(**dict(zeile), pfad=f"/api/eingang/{zeile['id']}", secret=geheim)
+    return QuelleNeu(**dict(zeile), pfad=_pfad(zeile["kind"], zeile["id"]), secret=geheim)
 
 
 @quellen_router.delete("/{quelle_id}", status_code=204)

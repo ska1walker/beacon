@@ -274,7 +274,7 @@ async def fragen(payload: Frage, user: CurrentUser = Depends(get_current_user)) 
 
 
 @router.get("/probe", response_model=dict[str, Any])
-async def probe(frage: str) -> dict[str, Any]:
+async def probe(frage: str, _user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
     """Zeigt, wonach eine Frage tatsächlich sucht.
 
     Nützlich, wenn eine Frage nichts findet: Meist liegt es daran, dass
