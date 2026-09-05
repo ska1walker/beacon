@@ -26,7 +26,7 @@ metadata:
   title: aicrm
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
-  version: 0.1.5
+  version: 0.1.6
   categories:
     - AI
 
@@ -76,7 +76,7 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.1.5'
+  versionName: '0.1.6'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
   promoteImage:
@@ -154,9 +154,18 @@ options:
   appScope:
     clusterScoped: false
 
-  policies:
-    - uriRegex: '/'
-      level: two_factor
-      oneTime: false
-      validDuration: 3600s
-      entranceName: aicrm
+  # Bewusst **keine** `policies`. Hier stand bis 0.1.6 eine Unterregel auf
+  # '/' mit `level: two_factor` und `validDuration: 3600s`. Das klang nach
+  # Sorgfalt und war ein Bedienfehler: Es fordert *zusätzlich* zur
+  # Box-Anmeldung stündlich einen zweiten Faktor, nur für diese eine App.
+  #
+  # Keine andere App auf einer Olares-Box tut das — Insilo nicht, der
+  # Passwort-Tresor nicht, die Systemeinstellungen nicht. Alle laufen auf
+  # `default_policy: system` und damit auf der Sitzung, die beim Anmelden
+  # an der Box entsteht. Wer davon abweicht, schützt nichts zusätzlich:
+  # Wer die Box-Sitzung hat, hat ohnehin Zugriff auf Dateien, Tresor und
+  # Einstellungen. Er erzieht nur dazu, den zweiten Faktor im Halbschlaf
+  # wegzuklicken — und das ist eine Verschlechterung, keine Härtung.
+  #
+  # Der Schutz von aicrm hängt an `authLevel: internal` am Entrance
+  # (oben): ohne angemeldete Box-Sitzung kommt niemand herein.
