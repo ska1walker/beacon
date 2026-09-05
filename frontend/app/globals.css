@@ -1791,6 +1791,14 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      Zahlenfelder in einer engen Spalte zeigen sonst nichts an: Der
      Drehregler des Browsers frisst die Breite, und übrig bleibt ein
      leeres Kästchen. Also weg mit ihm und eine Mindestbreite setzen. */
+  /* Ein Textfeld in einer Zelle füllt die Zelle. Mit `min-width: 0` allein
+     schrumpfte die Namensspalte auf drei Buchstaben, sobald die Zahlen-
+     spalten feste Breiten hatten — „Ers“, „Qua“, „Vor“ statt Stufennamen. */
+  .tabelle td > input.input:not([type="number"]) {
+    width: 100%;
+    min-width: 10rem;
+  }
+
   .tabelle input.input,
   .tabelle select.input {
     min-width: 0;
