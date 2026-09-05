@@ -1,7 +1,7 @@
 name: release
 
 # Baut die beiden Abbilder bei jedem Tag wie v0.1.0 und legt sie öffentlich
-# unter ghcr.io/<owner>/aicrm-<dienst>:<version> ab, damit die Olares-Box
+# unter ghcr.io/<owner>/beacon-<dienst>:<version> ab, damit die Olares-Box
 # sie ohne Zugangsdaten zieht. Dazu das gepackte Chart als Artefakt —
 # das ist die Datei, die in den Markt geht.
 
@@ -135,7 +135,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ steps.owner.outputs.owner }}/aicrm-${{ matrix.service }}:${{ steps.ver.outputs.version }}
-            ghcr.io/${{ steps.owner.outputs.owner }}/aicrm-${{ matrix.service }}:latest
+            ghcr.io/${{ steps.owner.outputs.owner }}/beacon-${{ matrix.service }}:${{ steps.ver.outputs.version }}
+            ghcr.io/${{ steps.owner.outputs.owner }}/beacon-${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}

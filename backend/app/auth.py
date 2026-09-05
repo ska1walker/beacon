@@ -372,7 +372,7 @@ async def _sitzplatz_einnehmen(angemeldet: CurrentUser, sitzplatz_id: UUID) -> C
 
 async def get_current_user(
     x_bfl_user: str | None = Header(None, alias="X-Bfl-User"),
-    x_aicrm_sitzplatz: str | None = Header(None, alias="X-Aicrm-Sitzplatz"),
+    x_beacon_sitzplatz: str | None = Header(None, alias="X-Beacon-Sitzplatz"),
 ) -> CurrentUser:
     name = (x_bfl_user or "").strip() or settings.dev_user.strip()
     if not name:
@@ -384,7 +384,7 @@ async def get_current_user(
     angemeldet = await _ensure_user_and_org(name)
     angemeldet = angemeldet.model_copy(update={"login_username": name})
 
-    gewaehlt = (x_aicrm_sitzplatz or "").strip()
+    gewaehlt = (x_beacon_sitzplatz or "").strip()
     if not gewaehlt:
         return angemeldet
 

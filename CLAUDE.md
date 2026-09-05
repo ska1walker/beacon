@@ -1,6 +1,6 @@
-# aicrm — Projekt-Briefing für Claude Code
+# Beacon — Projekt-Briefing für Claude Code
 
-> **Produkt:** aicrm — schlankes, KI-gestütztes CRM für den AImighty-Vertrieb
+> **Produkt:** Beacon — schlankes, KI-gestütztes CRM für den AImighty-Vertrieb
 > **Maintainer:** Kai Böhm (kaivo.studio)
 > **Plattform:** Olares OS (Kubernetes-basiert), wie Insilo
 > **Status:** Der Vertriebsprozess ist durchgängig abgebildet
@@ -53,7 +53,7 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Sicherung | alle sechs Stunden, Wiederanlauf nach Deinstallation |
 | Tests | 184 Backend, 11 Frontend |
 | Olares-Chart | lintet (`helm` und `olares-cli chart lint`), rendert, **läuft seit 3.9.2026 auf Kais Box** (0.1.4, Upload-Quelle) |
-| Veröffentlichung | Repo `github.com/ska1walker/aicrm` (öffentlich), Abbilder `ghcr.io/ska1walker/aicrm-{frontend,backend}` per Tag, Katalogeintrag **live** in `bayerhazard/aimighty-market` (0.1.4); Icon nach Marcs Idee 6 (`docs/icon/`) |
+| Veröffentlichung | Repo `github.com/ska1walker/beacon` (öffentlich), Abbilder `ghcr.io/ska1walker/beacon-{frontend,backend}` per Tag, Katalogeintrag **live** in `bayerhazard/aimighty-market` (0.1.4); Icon nach Marcs Idee 6 (`docs/icon/`) |
 
 **Nicht gebaut, bewusst:** Mehrsprachigkeit (internes Werkzeug),
 E-Mail-Versand aus der Anwendung, Kampagnen und Sequenzen, Kalender-
@@ -86,7 +86,7 @@ Dieselben Constraints wie bei Insilo. Die wichtigsten für dieses Repo:
    die Datenbank nicht. Siehe unten.
 
 6. **Namensregel:** Ordnername, `Chart.yaml.name`, `metadata.name` und
-   `metadata.appid` müssen alle exakt `aicrm` sein.
+   `metadata.appid` müssen alle exakt `beacon` sein.
 
 7. **Keine Helm-Hooks, kein `.Files.Get`.** Ersteres läuft vor dem
    `ns-owner`-Label und kommt nie durch, Zweiteres lehnt der Markt-Linter
@@ -102,7 +102,7 @@ Dieselben Constraints wie bei Insilo. Die wichtigsten für dieses Repo:
 Olares legt die Datenbank bei einer Neuinstallation frisch an. Für Insilo
 war das verschmerzbar, weil die Tonaufnahmen unter `/app/data` liegen und
 `backend/app/konfiguration.py` einen Abzug der Einrichtung danebenlegt.
-aicrm hat nichts dergleichen: Firmen, Kontakte, Geschäfte und der ganze
+Beacon hat nichts dergleichen: Firmen, Kontakte, Geschäfte und der ganze
 Verlauf leben ausschließlich in der Datenbank.
 
 Der Ausfuhrpfad ist deshalb der **erste Punkt der nächsten Ausbaustufe**.
@@ -179,7 +179,7 @@ der Lieferung und liest die Token über `var(--am-*)`.
    **Zwei Menschen, ein Zugang.** Olares installiert eine App pro Nutzer;
    ein zweites Olares-Konto kommt nicht an den Entrance. Kai und Marc
    teilen deshalb einen Zugang, und der *Sitzplatz* (Cookie, Kopf
-   `X-Aicrm-Sitzplatz`) sagt, wem die Arbeit zugeschrieben wird. Das ist
+   `X-Beacon-Sitzplatz`) sagt, wem die Arbeit zugeschrieben wird. Das ist
    Zuschreibung, keine Anmeldung — ein Sitzplatz greift nur innerhalb
    derselben Organisation, sonst 403.
 
@@ -229,7 +229,7 @@ der Lieferung und liest die Token über `var(--am-*)`.
 9. **Beim Veröffentlichen:** `docs/BETRIEB.md`, Abschnitt
    „Veröffentlichen". Version an drei Stellen, Tag `vX.Y.Z` baut die
    Abbilder (`release.yml`), das Chart wird immer als Paket geprüft
-   (`olares-cli chart lint dist/aicrm-X.Y.Z.tgz`), und **erst nach einer
+   (`olares-cli chart lint dist/beacon-X.Y.Z.tgz`), und **erst nach einer
    laufenden Installation auf einer Box** geht der Eintrag per PR in
    `bayerhazard/aimighty-market`. Die Regeln dahinter stehen im Skill
    `insilo/.claude/skills/olares-release/SKILL.md`.

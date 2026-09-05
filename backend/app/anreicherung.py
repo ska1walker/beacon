@@ -52,7 +52,7 @@ log = logging.getLogger(__name__)
 ZEITLIMIT_S = 12.0
 SEITE_MAX_BYTES = 600_000
 TEXT_MAX_ZEICHEN = 6_000
-KENNUNG = "aicrm/0.1 (+https://aimighty.de)"
+KENNUNG = "beacon/0.1 (+https://aimighty.de)"
 
 # Welche Felder ein Lauf je Datensatz füllen darf. Was nicht hier steht,
 # erreicht die Datenbank nicht — egal, was das Modell zurückgibt.

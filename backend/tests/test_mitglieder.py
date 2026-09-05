@@ -16,7 +16,7 @@ def mit_sitzplatz(login: str, sitzplatz: str) -> AsyncClient:
     return AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers={"X-Bfl-User": login, "X-Aicrm-Sitzplatz": sitzplatz},
+        headers={"X-Bfl-User": login, "X-Beacon-Sitzplatz": sitzplatz},
     )
 
 

@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir --no-deps .
 
 # Olares erlaubt kein root im Container. Die UID 1000 passt zu den
 # Rechten, die der init-Container auf /app/data und /app/cache setzt.
-RUN useradd --uid 1000 --create-home aicrm && chown -R 1000:1000 /app
+RUN useradd --uid 1000 --create-home beacon && chown -R 1000:1000 /app
 USER 1000
 
 EXPOSE 8000

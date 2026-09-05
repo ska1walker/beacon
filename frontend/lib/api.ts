@@ -21,7 +21,7 @@ async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
 
   const koepfe: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(sitzplatz ? { "X-Aicrm-Sitzplatz": sitzplatz } : {}),
+    ...(sitzplatz ? { "X-Beacon-Sitzplatz": sitzplatz } : {}),
     ...((init?.headers as Record<string, string>) ?? {}),
   };
   // Ein leerer Wert heißt „diesen Kopf nicht setzen" — siehe `postForm`.

@@ -1,7 +1,7 @@
 """Der öffentliche Pfad — eine eigene Anwendung, die drei Dinge kann.
 
 Sie läuft auf einem eigenen Port hinter einem eigenen, öffentlichen
-Entrance. Alles andere in aicrm bleibt dahinter, wo es ist. Was hier
+Entrance. Alles andere in Beacon bleibt dahinter, wo es ist. Was hier
 steht, muss deshalb ohne Anmeldung sicher sein — und das heißt: Es gibt
 nichts zu holen. Kein Endpunkt liest Daten heraus; jeder nimmt ein Token
 entgegen, tut genau eine Sache und zeigt eine Seite, die für jeden gleich
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(title="aicrm — öffentliche Links", docs_url=None, redoc_url=None, lifespan=lifespan)
+app = FastAPI(title="beacon — öffentliche Links", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 
 @app.get("/health")

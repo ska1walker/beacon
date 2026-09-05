@@ -138,7 +138,7 @@ async def versand_testen(user: CurrentUser = Depends(get_current_user)) -> dict:
             raise HTTPException(409, "Kein SMTP-Konto hinterlegt. Server und Absenderadresse fehlen.")
         mail_id = await versand.einreihen(
             conn, user.org_id, art="transaktional", an=konto.absender,
-            betreff="aicrm: Testmail", text="Wenn diese Mail ankommt, ist der Versand eingerichtet.\n",
+            betreff="beacon: Testmail", text="Wenn diese Mail ankommt, ist der Versand eingerichtet.\n",
             created_by=user.user_id, payload={"zweck": "test"},
         )
         try:

@@ -49,9 +49,9 @@ export function Huelle({ children }: { children: React.ReactNode }) {
     <div className="huelle">
       <nav className="huelle-nav" aria-label="Hauptnavigation">
         <div className="huelle-kopfecke">
-          <Link href="/" className="marke" aria-label="AImighty CRM — zur Startseite">
+          <Link href="/" className="marke" aria-label="AImighty Beacon — zur Startseite">
             <Marke />
-            <span className="marke-produkt" aria-hidden="true">CRM</span>
+            <span className="marke-produkt" aria-hidden="true">Beacon</span>
           </Link>
         </div>
 

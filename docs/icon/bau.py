@@ -1,8 +1,8 @@
-"""aicrm-App-Icon nach Idee 6 (Marc): Sandgrund, dunkelblaues Wappen, Buchstabe.
+"""beacon-App-Icon nach Idee 6 (Marc): Sandgrund, dunkelblaues Wappen, Buchstabe.
 Alle Maße im 160er-Raster aus Figma (Knoten 301:164), gerendert mit 3,2-fach."""
 import sys, resvg_py
 buchstabe = sys.argv[1] if len(sys.argv) > 1 else "C"
-ziel = sys.argv[2] if len(sys.argv) > 2 else f"aicrm-{buchstabe}.png"
+ziel = sys.argv[2] if len(sys.argv) > 2 else f"beacon-{buchstabe}.png"
 groesse = int(sys.argv[3]) if len(sys.argv) > 3 else 512
 grundlinie = 50.51 + 41.664 * (0.025 + 1.005)   # Zeilenhöhe 1,35, Geist-Metrik
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{groesse}" height="{groesse}" viewBox="0 0 160 160">

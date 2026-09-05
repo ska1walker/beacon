@@ -1,4 +1,8 @@
-# aicrm
+# Beacon
+
+> Bis 0.1.12 hieß dieses Produkt **aicrm**. Repo, Abbilder, Olares-Kennung und
+> Katalogeintrag tragen seit 0.2.0 den Namen Beacon; die Kopfzeilen `X-Aicrm-*`
+> bleiben als Alias gültig.
 
 Schlankes CRM für den Vertrieb von [AImighty](https://aimighty.de) —
 läuft vollständig auf der eigenen Olares-Box.
@@ -45,7 +49,7 @@ Datenbank, Suche und Oberfläche laufen auf der Box. Schriften liegen im
 Repo, nicht auf einem CDN — auch nicht zur Bauzeit. Keine Telemetrie.
 
 Das Sprachmodell ist die eine Ausnahme, und sie ist sichtbar gemacht:
-aicrm bringt kein Modell mit, sondern spricht einen OpenAI-kompatiblen
+Beacon bringt kein Modell mit, sondern spricht einen OpenAI-kompatiblen
 Endpunkt an, den der Betreiber unter `/einstellungen` einträgt. **Es gibt
 bewusst keinen Vorgabewert.** Solange nichts eingetragen ist, geht nichts
 hinaus, und die Oberfläche sagt das offen, statt in einen
@@ -64,7 +68,7 @@ Branche, und es lässt sich vor einem Kunden erklären.
 ## Aufbau
 
 ```
-aicrm/
+beacon/
 ├── CLAUDE.md                # Projekt-Briefing, Constraints, Stand
 ├── backend/                 # FastAPI + asyncpg
 ├── frontend/                # Next.js 15, AImighty-Designsystem
@@ -83,7 +87,7 @@ Siehe [docs/BETRIEB.md](docs/BETRIEB.md).
 Der Vertriebsprozess ist durchgängig abgebildet und lokal geprüft: 184
 Backend-Tests, 11 Frontend-Tests, jede Ansicht im Browser gesehen.
 
-Seit dem 3. September 2026 läuft aicrm auf einer echten Olares-Box und
+Seit dem 3. September 2026 läuft Beacon auf einer echten Olares-Box und
 steht im AImighty-Markt. Offen ist nur noch der Weg, auf dem Insilo und
 Relay die Empfangspfade hinter dem Envoy-Sidecar erreichen (siehe
 [docs/BETRIEB.md](docs/BETRIEB.md)).

@@ -8,7 +8,7 @@
 -- teilt also einen Olares-Zugang, und `X-Bfl-User` trägt für beide
 -- denselben Namen.
 --
--- Deshalb unterscheidet aicrm die Personen selbst. Ein Sitzplatz sagt,
+-- Deshalb unterscheidet Beacon die Personen selbst. Ein Sitzplatz sagt,
 -- wer gerade arbeitet: Besitz, Zuordnung und Protokoll hängen daran.
 --
 -- **Das ist Zuschreibung, keine Anmeldung.** Wer den geteilten Zugang
@@ -38,4 +38,4 @@ alter table public.audit_log
 
 comment on column public.users.zugang is
   'olares = meldet sich selbst an; sitzplatz = Person ohne eigenen Zugang, '
-  'gewählt über X-Aicrm-Sitzplatz. Ein Sitzplatz ist Zuschreibung, keine Anmeldung.';
+  'gewählt über X-Beacon-Sitzplatz. Ein Sitzplatz ist Zuschreibung, keine Anmeldung.';

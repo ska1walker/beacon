@@ -160,16 +160,22 @@ async def _zuordnen(conn, org_id: UUID, texte: list[str]) -> tuple[UUID | None, 
 async def empfangen(
     source_id: UUID,
     request: Request,
-    x_aicrm_event: str | None = Header(None, alias="X-Aicrm-Event"),
-    x_aicrm_delivery_id: str | None = Header(None, alias="X-Aicrm-Delivery-Id"),
-    x_aicrm_signature: str | None = Header(None, alias="X-Aicrm-Signature"),
+    x_beacon_event: str | None = Header(None, alias="X-Beacon-Event"),
+    x_beacon_delivery_id: str | None = Header(None, alias="X-Beacon-Delivery-Id"),
+    x_beacon_signature: str | None = Header(None, alias="X-Beacon-Signature"),
     x_insilo_event: str | None = Header(None, alias="X-Insilo-Event"),
     x_insilo_delivery_id: str | None = Header(None, alias="X-Insilo-Delivery-ID"),
     x_insilo_signature: str | None = Header(None, alias="X-Insilo-Signature"),
+    # Bis 0.1.12 hieß das Produkt aicrm; wer damals angeschlossen hat,
+    # schickt weiter diese Kopfzeilen — und soll nicht merken, dass sich
+    # ein Name geändert hat.
+    x_aicrm_event: str | None = Header(None, alias="X-Aicrm-Event"),
+    x_aicrm_delivery_id: str | None = Header(None, alias="X-Aicrm-Delivery-Id"),
+    x_aicrm_signature: str | None = Header(None, alias="X-Aicrm-Signature"),
 ) -> dict:
     """Nimmt ein Ereignis einer eingetragenen Quelle entgegen.
 
-    Die Kopfzeilen heißen `X-Aicrm-*`; die `X-Insilo-*` bleiben als Alias
+    Die Kopfzeilen heißen `X-Beacon-*`; die `X-Insilo-*` bleiben als Alias
     gültig, weil Insilo seinen Vertrag nicht unsertwegen ändert. Wer neu
     anschließt, nimmt die neutralen — eine Schnittstelle, die von jedem
     Absender verlangt, sich für Insilo auszugeben, ist eine schlechte
@@ -180,9 +186,9 @@ async def empfangen(
     Auslieferung, die nie ankommen kann, soll nicht dreimal versucht
     werden.
     """
-    ereignis_kopf = x_aicrm_event or x_insilo_event
-    lieferung_kopf = x_aicrm_delivery_id or x_insilo_delivery_id
-    signatur_kopf = x_aicrm_signature or x_insilo_signature
+    ereignis_kopf = x_beacon_event or x_insilo_event or x_aicrm_event
+    lieferung_kopf = x_beacon_delivery_id or x_insilo_delivery_id or x_aicrm_delivery_id
+    signatur_kopf = x_beacon_signature or x_insilo_signature or x_aicrm_signature
 
     roh = await request.body()
 

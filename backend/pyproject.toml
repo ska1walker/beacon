@@ -1,7 +1,7 @@
 [project]
-name = "aicrm-backend"
+name = "beacon-backend"
 version = "0.1.0"
-description = "aicrm Backend — KI-gestütztes CRM für den AImighty-Vertrieb, auf Olares OS"
+description = "beacon Backend — KI-gestütztes CRM für den AImighty-Vertrieb, auf Olares OS"
 authors = [{ name = "Kai Böhm", email = "kai@kaivo.studio" }]
 license = { text = "Proprietary" }
 requires-python = ">=3.11"

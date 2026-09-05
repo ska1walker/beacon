@@ -4,7 +4,7 @@
 --
 -- Drei Dinge muss ein Empfänger von außen auslösen können, aus seinem
 -- Mailprogramm, ohne Konto: eine Einwilligung bestätigen, sich abmelden,
--- einen Link anklicken. aicrm ist `internal` und hat keine öffentliche
+-- einen Link anklicken. Beacon ist `internal` und hat keine öffentliche
 -- Adresse (gemessen, docs/BETRIEB.md). Deshalb bekommt es einen zweiten,
 -- öffentlichen Entrance, hinter dem **nur** diese drei Wege liegen —
 -- eine eigene Anwendung auf einem eigenen Port, die nichts anderes kann.

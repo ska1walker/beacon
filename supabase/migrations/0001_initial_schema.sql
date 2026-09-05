@@ -1,6 +1,6 @@
 -- ========================================================================
 -- 0001_initial_schema.sql
--- Grundschema für aicrm auf Olares.
+-- Grundschema für Beacon auf Olares.
 --
 -- Wie bei Insilo: keine eigene auth-Tabelle. Die Identität kommt aus dem
 -- Olares-Header X-Bfl-User; wir mappen den Olares-Namen auf eine interne

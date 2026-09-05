@@ -1,6 +1,6 @@
 -- ========================================================================
 -- 0017_postfach.sql
--- aicrm holt Post ab — und fasst dabei nichts an.
+-- Beacon holt Post ab — und fasst dabei nichts an.
 --
 -- ## Warum holen statt geschickt bekommen
 --
@@ -14,7 +14,7 @@
 -- ## Warum eine UID und kein „ungelesen"
 --
 -- Auf demselben Postfach sitzt Relay, und dort liest ein Mensch. Würde
--- aicrm nach UNSEEN suchen und das Gelesene markieren, verschwände in
+-- Beacon nach UNSEEN suchen und das Gelesene markieren, verschwände in
 -- Relay der Fettdruck von Post, die niemand geöffnet hat. Ein zweiter
 -- Klient hat sich still zu verhalten: Er merkt sich, bis wohin er
 -- gekommen ist, und fasst keine Markierung an.

@@ -12,7 +12,7 @@ Hinein (`POST /api/post/eingang/{quelle}`), Kopfzeilen:
 Body:
   {"message_id", "from", "to": [...], "subject", "text", "received_at"}
 
-Hinaus (`POST /api/post/senden`): aicrm schickt an die eingetragene
+Hinaus (`POST /api/post/senden`): Beacon schickt an die eingetragene
 Adresse denselben Vertrag zurück — signiert mit dem Geheimnis aus den
 Einstellungen: {"to", "subject", "text", "in_reply_to"}.
 

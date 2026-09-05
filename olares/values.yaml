@@ -1,5 +1,5 @@
 # ============================================================================
-# values.yaml — Vorgabewerte für aicrm
+# values.yaml — Vorgabewerte für Beacon
 #
 # Olares injiziert zur Laufzeit zusätzlich:
 #   .Values.bfl.username, .Values.user.zone
@@ -12,11 +12,11 @@
 # (Installation, Anhalten, Fortsetzen). Die Templates lesen ausschließlich
 # von hier, nie eine feste Zahl — sonst läuft der Lebenslauf ins Leere.
 workloads:
-  "aicrm":
+  "beacon":
     replicaCount: 1
-  "aicrm-backend":
+  "beacon-backend":
     replicaCount: 1
-  "aicrm-links":
+  "beacon-links":
     replicaCount: 1
 
 # ---- Abbilder --------------------------------------------------------------
@@ -34,11 +34,11 @@ workloads:
 # ändert sich das Chart allein, und der alte Tag muss festgehalten werden.
 images:
   frontend:
-    repository: ghcr.io/ska1walker/aicrm-frontend
+    repository: ghcr.io/ska1walker/beacon-frontend
     tag: ""
     pullPolicy: IfNotPresent
   backend:
-    repository: ghcr.io/ska1walker/aicrm-backend
+    repository: ghcr.io/ska1walker/beacon-backend
     tag: ""
     pullPolicy: IfNotPresent
 

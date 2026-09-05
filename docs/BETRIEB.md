@@ -7,9 +7,9 @@ Voraussetzungen: PostgreSQL 16, Python 3.11+, Node 22+.
 ```bash
 # 1. Datenbank
 brew services start postgresql@16
-psql -d postgres -c "create role aicrm login password 'aicrm_dev_only';"
-psql -d postgres -c "alter role aicrm createdb;"   # nur für die Tests
-createdb -O aicrm aicrm
+psql -d postgres -c "create role beacon login password 'beacon_dev_only';"
+psql -d postgres -c "alter role beacon createdb;"   # nur für die Tests
+createdb -O beacon beacon
 ```
 
 **Die Rolle darf kein Superuser sein, und die Migrationen laufen mit
@@ -26,9 +26,9 @@ genau dieser Rolle.** Beides ist keine Förmlichkeit:
 
 ```bash
 # 2. Schema
-PGPASSWORD=aicrm_dev_only psql -h localhost -U aicrm -d aicrm \
+PGPASSWORD=beacon_dev_only psql -h localhost -U beacon -d beacon \
   -f supabase/migrations/0001_initial_schema.sql
-PGPASSWORD=aicrm_dev_only psql -h localhost -U aicrm -d aicrm \
+PGPASSWORD=beacon_dev_only psql -h localhost -U beacon -d beacon \
   -f supabase/migrations/0002_rls_policies.sql
 
 # 3. Backend
@@ -55,7 +55,7 @@ Anlass, jemanden zu erfinden.
 cd backend && .venv/bin/python -m pytest
 ```
 
-Die Tests legen eine eigene Datenbank `aicrm_test` an, spielen die
+Die Tests legen eine eigene Datenbank `beacon_test` an, spielen die
 Migrationen ein und werfen sie danach weg. Sie laufen gegen echtes
 Postgres, nicht gegen Attrappen — die Zeilensicherheit ist der Kern
 dessen, was geprüft wird, und die gibt es nur in einer echten Datenbank.
@@ -121,13 +121,13 @@ verlässt die Box.
 Von Hand geht weiterhin:
 
 ```bash
-pg_dump -h <box> -U aicrm aicrm > aicrm-$(date +%F).sql
+pg_dump -h <box> -U beacon beacon > beacon-$(date +%F).sql
 ```
 
 ## Insilo anschließen
 
 Nach einer Besprechung schickt Insilo ein signiertes Ereignis mit dem
-fertigen Protokoll. In aicrm unter *Einstellungen → Eingehende Quellen*
+fertigen Protokoll. In Beacon unter *Einstellungen → Eingehende Quellen*
 eine Quelle anlegen, Adresse und Geheimnis kopieren und in Insilo unter
 *Einstellungen → Webhooks* eintragen. Der Vertrag steht in
 `insilo/docs/WEBHOOKS.md` und wird eingehalten, nicht neu erfunden.
@@ -140,10 +140,10 @@ das eine Minute wartet.
 > **Geprüft am 5. September 2026, zweimal — die erste Messung war
 > falsch, und zwar am Hostnamen.** Olares adressiert einen Entrance nicht
 > unter seinem Namen, sondern als `<appid><index>.<nutzer>.<zone>`:
-> `appid` ist `md5(<appname>)[:8]` (für aicrm `4d3bf559`, auf jeder Box
+> `appid` ist `md5(<appname>)[:8]` (für Beacon `4d3bf559`, auf jeder Box
 > gleich), `index` die Position im Manifest, null-basiert. Systemapps wie
 > `files.` oder `market.` tragen Namen — Nutzerapps nicht. Alles, was
-> vorher unter `aicrm.kaivostudio.olares.de` gemessen wurde, traf einen
+> vorher unter `beacon.kaivostudio.olares.de` gemessen wurde, traf einen
 > Hostnamen, den es nie gab; das 421 war die Antwort des Gateways auf
 > einen unbekannten Host, keine Aussage über `authLevel`.
 >
@@ -151,8 +151,8 @@ das eine Minute wartet.
 >
 > | Entrance | authLevel | Adresse | Antwort |
 > |---|---|---|---|
-> | `aicrm` (Index 0) | `internal` | `4d3bf5590.kaivostudio.olares.de` | **302** zur Anmeldung |
-> | `aicrmlinks` (Index 1) | `public` | `4d3bf5591.kaivostudio.olares.de` | **200** `{"status":"ok","teil":"oeffentlich"}` |
+> | `beacon` (Index 0) | `internal` | `4d3bf5590.kaivostudio.olares.de` | **302** zur Anmeldung |
+> | `beaconlinks` (Index 1) | `public` | `4d3bf5591.kaivostudio.olares.de` | **200** `{"status":"ok","teil":"oeffentlich"}` |
 > | litellm `litellmapi` | `public` | `6aead52a1.…` und `llm.…` (eigener Name) | 401 von LiteLLM — durchgereicht |
 >
 > Über den öffentlichen Entrance: unbekanntes Token → 404, `/api/contacts`
@@ -166,7 +166,7 @@ das eine Minute wartet.
 > fehlenden Tür.
 >
 > **Der zweite Entrance verschiebt die Adresse der App.** Mit nur einem
-> Entrance hieß aicrm `4d3bf559.kaivostudio.olares.de` (ohne Index — so
+> Entrance hieß Beacon `4d3bf559.kaivostudio.olares.de` (ohne Index — so
 > stand es auch in den eingefrorenen Helm-Werten der Erstinstallation).
 > Seit dem zweiten Entrance heißt der erste `4d3bf5590.…`, und die alte
 > Adresse antwortet 421 (gemessen 5.9.2026). Ein Lesezeichen auf die
@@ -176,17 +176,17 @@ das eine Minute wartet.
 >
 > **Ein Entrance am Backend-Pod legt die App lahm.** Der Sidecar, den
 > ein Entrance mitbringt, prüft *jeden* eingehenden Aufruf gegen Authelia
-> — auch die des Frontends an `aicrm-backend:8000/api`. Mit 0.1.10 hing
-> `aicrmlinks` am Backend-Pod; nach dem Markt-Upgrade antwortete jede
+> — auch die des Frontends an `beacon-backend:8000/api`. Mit 0.1.10 hing
+> `beaconlinks` am Backend-Pod; nach dem Markt-Upgrade antwortete jede
 > API-Anfrage 401 (`ext_authz_denied` im Sidecar-Log), die Oberfläche
 > zeigte „Anfrage fehlgeschlagen (401)“. Seit 0.1.12 hat der öffentliche
-> Pfad sein eigenes Deployment `aicrm-links`; das Backend bleibt ohne
+> Pfad sein eigenes Deployment `beacon-links`; das Backend bleibt ohne
 > Entrance und ohne Sidecar. Regel: **Ein Entrance zeigt nur auf Pods, die
 > sonst niemand aus dem Cluster aufruft.**
 >
 > **Was ein neuer Entrance bei einem Upgrade braucht.** `helm upgrade`
 > tauscht die Workloads, liest aber das Manifest nicht neu ein: Nach dem
-> Ausrollen von 0.1.10 per Helm fehlte `aicrmlinks` in `spec.entrances`,
+> Ausrollen von 0.1.10 per Helm fehlte `beaconlinks` in `spec.entrances`,
 > und der Backend-Pod hatte keinen Envoy-Sidecar. Erst das Upgrade über
 > den Markt (Upload-Quelle) trug den Entrance ins Application-Objekt, in
 > `spec.settings.policy` und injizierte den Sidecar in den nächsten Pod.
@@ -208,14 +208,14 @@ das eine Minute wartet.
 > **Ohne die Box zu öffnen bleiben zwei Wege**, und beide sind
 > tragfähiger, als sie klingen: der Service-Provider-Weg für Apps auf
 > derselben Box (Olares' eigener Mechanismus, Constraint 4), und —
-> naheliegender — **aicrm holt selbst**. Ausgehend sind 443 und 80 offen;
+> naheliegender — **Beacon holt selbst**. Ausgehend sind 443 und 80 offen;
 > ein Postfach per IMAP abzufragen oder eine Formular-API zu pollen
 > braucht keine einzige offene Tür nach innen.
 
 
 ## Versand — SMTP, Einwilligung, öffentliche Links
 
-Seit 0.1.11 schickt aicrm selbst: über ein gewöhnliches SMTP-Konto
+Seit 0.1.11 schickt Beacon selbst: über ein gewöhnliches SMTP-Konto
 (*Einstellungen → Versand*). Daraus kommen Ticket-Antworten, die
 Bestätigungsmail (Double-Opt-In) und die Ansprache aus dem Kontakt.
 Marketing-Post ist davon getrennt (*Marketing-Versand*: dasselbe Konto
@@ -247,7 +247,7 @@ in `List-Unsubscribe` und im Text; der Link funktioniert immer.
 
 **Die Adresse der öffentlichen Links** (Bestätigen, Abmelden, Klick) ist
 `https://<appid>1.<nutzer>.<zone>` — der zweite Entrance. Das Chart reicht
-`.Values.domain.aicrm` als `APP_DOMAIN` ins Backend, das Backend leitet
+`.Values.domain.beacon` als `APP_DOMAIN` ins Backend, das Backend leitet
 daraus ab; *Einstellungen → Marketing-Versand* zeigt, was gilt, und
 erlaubt einen eigenen Wert (eigene Domain, oder eine Box, die ihre
 Domain nicht mitteilt). Ohne Adresse geht keine Bestätigungsmail hinaus,
@@ -255,7 +255,7 @@ und der Block sagt das.
 
 ## Post anschließen — Relay oder ein anderer Dienst
 
-E-Mails gehen nicht aus aicrm selbst hinaus und kommen nicht direkt
+E-Mails gehen nicht aus Beacon selbst hinaus und kommen nicht direkt
 herein. Beides läuft über einen Dienst auf der Box — Marcs Relay, die
 Outlook-Alternative. Weil dessen Schnittstelle beim Bau nicht vorlag,
 gilt ein **eigener, kleiner Vertrag**, denselben Bauplan wie beim
@@ -271,10 +271,10 @@ Quelle wird unter *Einstellungen → Eingehende Quellen* angelegt (Art
 Absenderadresse, liegt die Mail als Verlaufseintrag am Kontakt; sonst
 wartet sie im Eingang.
 
-**Hinaus** — aicrm schickt an die unter *Einstellungen → Postausgang*
+**Hinaus** — Beacon schickt an die unter *Einstellungen → Postausgang*
 eingetragene Adresse einen signierten POST mit
 `{"to","from","subject","text","in_reply_to","sent_at"}` und der
-Kopfzeile `X-Post-Signature`. Der Dienst verschickt; aicrm hält die
+Kopfzeile `X-Post-Signature`. Der Dienst verschickt; Beacon hält die
 Nachricht im Verlauf fest. Nichts geht von allein hinaus — das Modell
 entwirft, ein Mensch drückt auf Senden.
 
@@ -297,7 +297,7 @@ Für alles darüber hinaus braucht sie einen **Suchdienst** unter
 
 | Dienst | Adresse | Schlüssel |
 |---|---|---|
-| SearXNG (empfohlen, läuft auf der Box) | `https://<searxng-route>.<user>.olares.com` — aicrm hängt `/search?format=json` an | meist keiner; sonst als `Authorization: Bearer` |
+| SearXNG (empfohlen, läuft auf der Box) | `https://<searxng-route>.<user>.olares.com` — Beacon hängt `/search?format=json` an | meist keiner; sonst als `Authorization: Bearer` |
 | Brave Search | `https://api.search.brave.com/res/v1/web/search` | Pflicht, geht als `X-Subscription-Token` |
 
 Mit Suchdienst findet die Anreicherung die Website, wenn nur der Name
@@ -345,7 +345,7 @@ bricht sonst ab:
 Das Proxy-Ziel des Frontends (`BACKEND_URL`) wird **beim Bau**
 eingebrannt — `next.config.mjs` liest es in `rewrites()`, und das
 Standalone-Abbild kennt zur Laufzeit keine Rewrites mehr. Das
-Dockerfile setzt es auf `http://aicrm-backend:8000`; 0.1.1 lief ohne
+Dockerfile setzt es auf `http://beacon-backend:8000`; 0.1.1 lief ohne
 diese Zeile gegen `localhost` und jede API-Anfrage endete mit 500.
 
 Zwei Manifest-Angaben, die auf der Box den Unterschied machen:
@@ -367,20 +367,20 @@ kommen frisch an (Insilo v0.1.80, ausführlich in
 bash scripts/check-chart.sh
 git commit -am "release: v0.1.1"
 
-# 2. Tag pushen — release.yml baut ghcr.io/ska1walker/aicrm-{frontend,backend}:0.1.1
-#    (öffentlich, amd64) und legt dist/aicrm-0.1.1.tgz als Artefakt ab
+# 2. Tag pushen — release.yml baut ghcr.io/ska1walker/beacon-{frontend,backend}:0.1.1
+#    (öffentlich, amd64) und legt dist/beacon-0.1.1.tgz als Artefakt ab
 git tag v0.1.1 && git push origin main v0.1.1
 gh run watch
 
 # 3. Chart packen und mit dem Olares-Prüfer ansehen — immer das Paket,
 #    nie den Ordner (der Prüfer verlangt Ordnername == Chart-Name)
 helm package olares -d dist
-olares-cli chart lint dist/aicrm-0.1.1.tgz --with-rbac --with-security-context
+olares-cli chart lint dist/beacon-0.1.1.tgz --with-rbac --with-security-context
 
 # 4. Auf der eigenen Box installieren, bevor irgendetwas in einen Markt geht
 olares-cli profile login --olares-id <id>       # macht Kai selbst (Browser, TOTP)
-olares-cli market upload dist/aicrm-0.1.1.tgz
-olares-cli market install aicrm
+olares-cli market upload dist/beacon-0.1.1.tgz
+olares-cli market install beacon
 ```
 
 **Erst ausrollen, dann hochladen.** Eine App, die nie `running`
@@ -389,11 +389,11 @@ erreicht hat, gehört in keinen Katalog.
 **Der Markt** ist die eigene Quelle von aimighty
 (`bayerhazard/aimighty-market`, Cloudflare Pages). Ein Eintrag besteht
 aus dem Block in `functions/_apps.ts` und dem base64-gepackten Chart
-unter dem Schlüssel `aicrm-<version>.tgz` in `functions/_lib.ts`. Kai
+unter dem Schlüssel `beacon-<version>.tgz` in `functions/_lib.ts`. Kai
 hat dort nur Leserechte — der Weg ist Fork, Branch, Pull Request an
 Marc. Vor dem PR alle vier Endpunkte lokal beweisen
 (`npx wrangler pages dev functions --port 8788`): `/api/v1/appstore/info`
-listet die App, `/api/v1/applications/aicrm/chart` liefert die Bytes
+listet die App, `/api/v1/applications/beacon/chart` liefert die Bytes
 sha256-gleich, `/api/v1/appstore/hash` hat sich bewegt. Insilos
 Einreichung (PR #1 dort) ist die Vorlage; die Regeln stehen im Skill
 `insilo/.claude/skills/olares-release/SKILL.md`.

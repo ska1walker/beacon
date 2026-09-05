@@ -3,16 +3,16 @@
 postgres:
   host: postgres-cluster.os-platform
   port: "5432"
-  username: aicrm
+  username: beacon
   password: nur-zum-pruefen
   databases:
-    aicrm: aicrm-db
+    beacon: beacon-db
 bfl:
   username: pruefer
 user:
   zone: pruefer.olares.com
 userspace:
-  appData: /olares/userdata/Cache/pruefer/aicrm
-  appCache: /olares/userdata/Cache/pruefer/aicrm-cache
+  appData: /olares/userdata/Cache/pruefer/beacon
+  appCache: /olares/userdata/Cache/pruefer/beacon-cache
 cluster:
   arch: amd64

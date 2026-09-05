@@ -16,11 +16,11 @@
  * Backend: ein Sitzplatz muss Mitglied derselben Organisation sein.
  */
 
-export const SITZPLATZ_COOKIE = "aicrm-sitzplatz";
+export const SITZPLATZ_COOKIE = "beacon-sitzplatz";
 
 export function liesSitzplatz(): string | null {
   if (typeof document === "undefined") return null;
-  const treffer = document.cookie.match(/(?:^|;\s*)aicrm-sitzplatz=([^;]*)/);
+  const treffer = document.cookie.match(/(?:^|;\s*)beacon-sitzplatz=([^;]*)/);
   return treffer?.[1] || null;
 }
 

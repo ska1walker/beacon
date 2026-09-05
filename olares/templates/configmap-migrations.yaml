@@ -11,15 +11,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aicrm-migrations
+  name: beacon-migrations
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
 data:
   0001_initial_schema.sql: |
     -- ========================================================================
     -- 0001_initial_schema.sql
-    -- Grundschema für aicrm auf Olares.
+    -- Grundschema für Beacon auf Olares.
     --
     -- Wie bei Insilo: keine eigene auth-Tabelle. Die Identität kommt aus dem
     -- Olares-Header X-Bfl-User; wir mappen den Olares-Namen auf eine interne
@@ -905,7 +905,7 @@ data:
     -- teilt also einen Olares-Zugang, und `X-Bfl-User` trägt für beide
     -- denselben Namen.
     --
-    -- Deshalb unterscheidet aicrm die Personen selbst. Ein Sitzplatz sagt,
+    -- Deshalb unterscheidet Beacon die Personen selbst. Ein Sitzplatz sagt,
     -- wer gerade arbeitet: Besitz, Zuordnung und Protokoll hängen daran.
     --
     -- **Das ist Zuschreibung, keine Anmeldung.** Wer den geteilten Zugang
@@ -935,7 +935,7 @@ data:
 
     comment on column public.users.zugang is
       'olares = meldet sich selbst an; sitzplatz = Person ohne eigenen Zugang, '
-      'gewählt über X-Aicrm-Sitzplatz. Ein Sitzplatz ist Zuschreibung, keine Anmeldung.';
+      'gewählt über X-Beacon-Sitzplatz. Ein Sitzplatz ist Zuschreibung, keine Anmeldung.';
   0008_eigenschaften.sql: |
     -- ========================================================================
     -- 0008_eigenschaften.sql
@@ -1471,7 +1471,7 @@ data:
   0017_postfach.sql: |
     -- ========================================================================
     -- 0017_postfach.sql
-    -- aicrm holt Post ab — und fasst dabei nichts an.
+    -- Beacon holt Post ab — und fasst dabei nichts an.
     --
     -- ## Warum holen statt geschickt bekommen
     --
@@ -1485,7 +1485,7 @@ data:
     -- ## Warum eine UID und kein „ungelesen"
     --
     -- Auf demselben Postfach sitzt Relay, und dort liest ein Mensch. Würde
-    -- aicrm nach UNSEEN suchen und das Gelesene markieren, verschwände in
+    -- Beacon nach UNSEEN suchen und das Gelesene markieren, verschwände in
     -- Relay der Fettdruck von Post, die niemand geöffnet hat. Ein zweiter
     -- Klient hat sich still zu verhalten: Er merkt sich, bis wohin er
     -- gekommen ist, und fasst keine Markierung an.
@@ -1522,7 +1522,7 @@ data:
     --
     -- Drei Dinge muss ein Empfänger von außen auslösen können, aus seinem
     -- Mailprogramm, ohne Konto: eine Einwilligung bestätigen, sich abmelden,
-    -- einen Link anklicken. aicrm ist `internal` und hat keine öffentliche
+    -- einen Link anklicken. Beacon ist `internal` und hat keine öffentliche
     -- Adresse (gemessen, docs/BETRIEB.md). Deshalb bekommt es einen zweiten,
     -- öffentlichen Entrance, hinter dem **nur** diese drei Wege liegen —
     -- eine eigene Anwendung auf einem eigenen Port, die nichts anderes kann.

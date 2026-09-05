@@ -1,9 +1,9 @@
 # ============================================================================
-# OlaresManifest.yaml — aicrm
+# OlaresManifest.yaml — Beacon
 #
 # Linter-Regeln, die hier zwingend gelten:
 # - metadata.name, metadata.appid, Chart.yaml.name und der Ordnername
-#   müssen alle exakt "aicrm" sein (^[a-z0-9]{1,30}$, keine Bindestriche)
+#   müssen alle exakt "beacon" sein (^[a-z0-9]{1,30}$, keine Bindestriche)
 # - metadata.version muss Chart.yaml.version entsprechen
 # - spec.versionName muss Chart.yaml.appVersion entsprechen
 # - spec.requiredDisk muss gesetzt sein
@@ -17,17 +17,17 @@ apiVersion: 'v3'
 # app-service steuert darüber den Lebenslauf: Die Installation rendert
 # zuerst mit 0 und skaliert dann hoch, Anhalten setzt alles auf 0.
 workloadReplicas:
-  aicrm: 1
-  aicrm-backend: 1
-  aicrm-links: 1
+  beacon: 1
+  beacon-backend: 1
+  beacon-links: 1
 
 metadata:
-  name: aicrm
-  appid: aicrm
-  title: aicrm
+  name: beacon
+  appid: beacon
+  title: Beacon
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
-  icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
-  version: 0.1.12
+  icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
+  version: 0.2.0
   categories:
     - AI
 
@@ -38,14 +38,14 @@ metadata:
 # Envoy-Sidecar vor dem Pod und prüft jeden eingehenden TCP-Verkehr gegen
 # Authelia. Die serverseitige Weiterleitung von Next.js trägt aber keine
 # Authelia-Kekse und bekam prompt 401. Ohne Entrance läuft das Backend
-# ohne Sidecar, Next.js ruft http://aicrm-backend:8000 direkt, und die
+# ohne Sidecar, Next.js ruft http://beacon-backend:8000 direkt, und die
 # Identität reicht der Kopf X-Bfl-User weiter.
 entrances:
-  - name: aicrm
-    host: aicrm
+  - name: beacon
+    host: beacon
     port: 3000
-    title: aicrm
-    icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+    title: Beacon
+    icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
     authLevel: internal
     invisible: false
     openMethod: window
@@ -56,7 +56,7 @@ entrances:
   # Anwendung (app/oeffentlich.py), die genau diese drei Dinge kann und
   # nichts liest. `invisible`, weil es keine Seite zum Öffnen ist.
   #
-  # Der Entrance zeigt auf ein **eigenes Deployment** (aicrm-links), nicht
+  # Der Entrance zeigt auf ein **eigenes Deployment** (beacon-links), nicht
   # auf das Backend — und das ist keine Ordnungsliebe: Ein Entrance
   # bringt dem Pod einen Envoy-Sidecar, und der prüft *jeden* eingehenden
   # Aufruf gegen Authelia. Hing der Entrance am Backend-Pod, wies der
@@ -64,11 +64,11 @@ entrances:
   # ext_authz_denied) — so war die App nach 0.1.10 auf der Box tot
   # (docs/BETRIEB.md, 5.9.2026). Das Backend bleibt ohne Entrance und
   # damit ohne Sidecar.
-  - name: aicrmlinks
-    host: aicrm-links
+  - name: beaconlinks
+    host: beacon-links
     port: 8001
-    title: aicrm Links
-    icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+    title: Beacon Links
+    icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
     authLevel: public
     invisible: true
     openMethod: window
@@ -79,9 +79,9 @@ entrances:
 # jobs, und was nicht gebraucht wird, wird nicht angefordert.
 middleware:
   postgres:
-    username: aicrm
+    username: beacon
     databases:
-      - name: aicrm
+      - name: beacon
         extensions:
           - pg_trgm      # Trigram-Suche über Firmen- und Personennamen
           - pgcrypto
@@ -100,14 +100,14 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.1.12'
+  versionName: '0.2.0'
 
-  featuredImage: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+  featuredImage: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
   promoteImage:
-    - https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
+    - https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
 
   fullDescription: |
-    **aicrm** is a lean sales CRM for teams that cannot send their pipeline
+    **Beacon** is a lean sales CRM for teams that cannot send their pipeline
     to a US cloud.
 
     Companies, contacts, deals on a drag-and-drop pipeline board, an
@@ -126,7 +126,7 @@ spec:
 
   developer: 'kaivo.studio'
   website: 'https://aimighty.de'
-  sourceCode: 'https://github.com/ska1walker/aicrm'
+  sourceCode: 'https://github.com/ska1walker/beacon'
   license:
     - text: Proprietary
       url: 'https://aimighty.de'
@@ -191,5 +191,5 @@ options:
   # Einstellungen. Er erzieht nur dazu, den zweiten Faktor im Halbschlaf
   # wegzuklicken — und das ist eine Verschlechterung, keine Härtung.
   #
-  # Der Schutz von aicrm hängt an `authLevel: internal` am Entrance
+  # Der Schutz von Beacon hängt an `authLevel: internal` am Entrance
   # (oben): ohne angemeldete Box-Sitzung kommt niemand herein.

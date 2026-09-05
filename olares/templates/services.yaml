@@ -6,15 +6,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: aicrm
+  name: beacon
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
     component: frontend
 spec:
   type: ClusterIP
   selector:
-    app: aicrm
+    app: beacon
     component: frontend
   ports:
     - name: http
@@ -25,15 +25,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: aicrm-backend
+  name: beacon-backend
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
     component: backend
 spec:
   type: ClusterIP
   selector:
-    app: aicrm
+    app: beacon
     component: backend
   ports:
     - name: http
@@ -44,15 +44,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: aicrm-links
+  name: beacon-links
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
     component: links
 spec:
   type: ClusterIP
   selector:
-    app: aicrm
+    app: beacon
     component: links
   ports:
     - name: http

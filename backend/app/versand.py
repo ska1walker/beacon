@@ -40,7 +40,7 @@ from app.config import settings
 # Olares adressiert einen Entrance als <appid><index>.<nutzer>.<zone>, mit
 # appid = md5(<appname>)[:8]. Der öffentliche Entrance ist der zweite im
 # Manifest (Index 1). Gemessen am 5.9.2026, docs/BETRIEB.md.
-APP_NAME = "aicrm"
+APP_NAME = "beacon"
 OEFFENTLICHER_INDEX = 1
 
 SICHERHEIT = ("starttls", "ssl", "keine")
@@ -112,7 +112,7 @@ def basis_url(einst: dict[str, Any] | None) -> str | None:
     """Wo Bestätigen, Abmelden und Klick erreichbar sind.
 
     Ein eigener Wert in den Einstellungen gewinnt. Sonst aus der Domain,
-    die Olares dem Chart mitgibt (`.Values.domain.aicrm`, hier als
+    die Olares dem Chart mitgibt (`.Values.domain.beacon`, hier als
     APP_DOMAIN): erste Stufe abschneiden, den öffentlichen Entrance davor.
     """
     eigen = ((einst or {}).get("links_basis_url") or "").strip()
@@ -186,7 +186,7 @@ Sender = Callable[[Smtp, EmailMessage], Awaitable[None]]
 
 
 def neue_message_id(absender: str) -> str:
-    domain = absender.rsplit("@", 1)[-1] if "@" in absender else "aicrm.local"
+    domain = absender.rsplit("@", 1)[-1] if "@" in absender else "beacon.local"
     return make_msgid(domain=domain)
 
 
@@ -207,7 +207,7 @@ def nachricht_bauen(
     m["Subject"] = betreff
     m["Message-ID"] = message_id
     m["Date"] = datetime.now().astimezone()
-    m["X-Mailer"] = "aicrm"
+    m["X-Mailer"] = "beacon"
     if in_reply_to:
         m["In-Reply-To"] = in_reply_to
         m["References"] = referenzen or in_reply_to

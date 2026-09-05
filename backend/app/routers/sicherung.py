@@ -66,7 +66,7 @@ async def ausfuhr(user: CurrentUser = Depends(get_current_user)) -> JSONResponse
     daten["einstellungen"].pop("llm_api_key", None)
     daten["hinweis_schluessel"] = "Der Zugangsschlüssel ist in dieser Ausfuhr nicht enthalten."
 
-    name = f"aicrm-ausfuhr-{daten['organisation'].get('slug') or 'org'}.json"
+    name = f"beacon-ausfuhr-{daten['organisation'].get('slug') or 'org'}.json"
     return JSONResponse(
         content=daten,
         headers={"Content-Disposition": f'attachment; filename="{name}"'},

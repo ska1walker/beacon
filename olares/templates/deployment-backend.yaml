@@ -11,13 +11,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aicrm-backend
+  name: beacon-backend
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
     component: backend
 spec:
-  replicas: {{ (index .Values.workloads "aicrm-backend").replicaCount }}
+  replicas: {{ (index .Values.workloads "beacon-backend").replicaCount }}
   # Recreate statt RollingUpdate: Dieses Deployment hängt /app/data per
   # hostPath ein. Bei RollingUpdate liefen kurzzeitig zwei Pods auf
   # demselben Verzeichnis und könnten sich beim Sichern in die Quere
@@ -27,12 +27,12 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: aicrm
+      app: beacon
       component: backend
   template:
     metadata:
       labels:
-        app: aicrm
+        app: beacon
         component: backend
     spec:
       initContainers:
@@ -71,12 +71,12 @@ spec:
             - name: DB_PASSWORD
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
-              value: "{{ .Values.postgres.databases.aicrm }}"
+              value: "{{ .Values.postgres.databases.beacon }}"
             # Die Domain des ersten Entrance (z. B. 4d3bf559.<nutzer>.olares.de).
             # Daraus leitet app/versand.py die Adresse des öffentlichen
             # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
             - name: APP_DOMAIN
-              value: "{{ (.Values.domain).aicrm | default "" }}"
+              value: "{{ (.Values.domain).beacon | default "" }}"
           command:
             - python3
             - -c
@@ -162,12 +162,12 @@ spec:
             - name: DB_PASSWORD
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
-              value: "{{ .Values.postgres.databases.aicrm }}"
+              value: "{{ .Values.postgres.databases.beacon }}"
             # Die Domain des ersten Entrance (z. B. 4d3bf559.<nutzer>.olares.de).
             # Daraus leitet app/versand.py die Adresse des öffentlichen
             # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
             - name: APP_DOMAIN
-              value: "{{ (.Values.domain).aicrm | default "" }}"
+              value: "{{ (.Values.domain).beacon | default "" }}"
 
             # Kein Punktzugriff auf .Values.llm.baseUrl, und das ist keine
             # Stilfrage: Ein Upgrade spielt die bei der Installation
@@ -221,4 +221,4 @@ spec:
             type: DirectoryOrCreate
         - name: sql
           configMap:
-            name: aicrm-migrations
+            name: beacon-migrations

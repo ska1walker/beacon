@@ -74,9 +74,9 @@ def test_anrede_ohne_namen_bleibt_hoeflich():
 def test_basis_url_aus_der_box_domain(monkeypatch):
     """Olares nennt dem Chart die Domain des ersten Entrance; der
     öffentliche ist Index 1 derselben Kennung (gemessen, docs/BETRIEB.md)."""
-    monkeypatch.setattr(settings, "app_domain", "4d3bf559.kaivostudio.olares.de")
-    assert versand.basis_url({}) == "https://4d3bf5591.kaivostudio.olares.de"
-    assert versand.appid() == "4d3bf559"
+    monkeypatch.setattr(settings, "app_domain", "41b89d100.kaivostudio.olares.de")
+    assert versand.basis_url({}) == "https://41b89d101.kaivostudio.olares.de"
+    assert versand.appid() == "41b89d10"
     # Ein eigener Wert gewinnt, ohne Schrägstrich am Ende.
     assert versand.basis_url({"links_basis_url": "https://links.firma.de/"}) == "https://links.firma.de"
 

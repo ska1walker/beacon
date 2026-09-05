@@ -1,4 +1,4 @@
-"""aicrm — FastAPI-Anwendung.
+"""beacon — FastAPI-Anwendung.
 
 Keine eigene Anmeldung, kein CORS-Rundumschlag, keine Telemetrie: Auf
 Olares steht der Envoy-Sidecar davor und hat den Token bereits geprüft.
@@ -218,7 +218,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="aicrm",
+    title="beacon",
     description="KI-gestütztes CRM für den AImighty-Vertrieb",
     version="0.1.0",
     lifespan=lifespan,

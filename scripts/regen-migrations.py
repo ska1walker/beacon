@@ -29,10 +29,10 @@ KOPF = """# ====================================================================
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: aicrm-migrations
+  name: beacon-migrations
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
 data:
 """
 

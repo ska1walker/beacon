@@ -34,7 +34,7 @@ async def _absender():
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
-async def _schicke(quelle_id: str, secret: str, koerper: bytes, *, alt: str = "aicrm"):
+async def _schicke(quelle_id: str, secret: str, koerper: bytes, *, alt: str = "beacon"):
     kopf = {
         f"X-{alt.title()}-Event": "ticket.erstellt",
         f"X-{alt.title()}-Delivery-Id": uuid4().hex,
@@ -120,9 +120,9 @@ async def test_wiederholung_legt_kein_zweites_ticket_an(datenbank):
         koerper = anfrage("Nur einmal")
         lieferung = uuid4().hex
         kopf = {
-            "X-Aicrm-Event": "ticket.erstellt",
-            "X-Aicrm-Delivery-Id": lieferung,
-            "X-Aicrm-Signature": signiere(q["secret"], koerper),
+            "X-Beacon-Event": "ticket.erstellt",
+            "X-Beacon-Delivery-Id": lieferung,
+            "X-Beacon-Signature": signiere(q["secret"], koerper),
             "Content-Type": "application/json",
         }
         async with await _absender() as a:

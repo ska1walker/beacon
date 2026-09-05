@@ -64,7 +64,7 @@ export function Mitgliederblock() {
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
           Olares installiert Apps pro Nutzer und lässt an einem Zugang keinen zweiten
           Menschen zusätzlich herein. Wer zu zweit dasselbe CRM benutzt, teilt deshalb einen
-          Olares-Zugang — und aicrm unterscheidet die Personen selbst.
+          Olares-Zugang — und Beacon unterscheidet die Personen selbst.
         </p>
         <div className="hinweis" data-art="achtung" style={{ marginBottom: "var(--am-raum-4)" }}>
           <span>

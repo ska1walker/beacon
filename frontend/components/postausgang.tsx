@@ -24,8 +24,8 @@ export function Postausgangblock() {
       </div>
       <div className="block-inhalt">
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          E-Mails gehen nicht aus aicrm selbst hinaus, sondern an einen Dienst auf der Box — Relay, die Outlook-Alternative.
-          aicrm schickt je Nachricht einen signierten POST mit <code>to</code>, <code>subject</code>, <code>text</code>; eingehende Mails
+          E-Mails gehen nicht aus Beacon selbst hinaus, sondern an einen Dienst auf der Box — Relay, die Outlook-Alternative.
+          Beacon schickt je Nachricht einen signierten POST mit <code>to</code>, <code>subject</code>, <code>text</code>; eingehende Mails
           nimmt es unter <code>/api/post/eingang/&lt;Quelle&gt;</code> entgegen (Quelle unter „Eingehende Quellen" anlegen).
           Der Vertrag steht in <code>backend/app/routers/post.py</code>.
         </p>

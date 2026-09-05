@@ -234,7 +234,7 @@ export function Marketingversandblock() {
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
           Marketing-Post geht nur an Kontakte mit belegter Einwilligung — Double-Opt-In oder
           Bestandskunde — und trägt immer einen Abmeldelink. Bestätigen und Abmelden laufen
-          über den öffentlichen Entrance von aicrm; alles andere bleibt hinter der Anmeldung.
+          über den öffentlichen Entrance von Beacon; alles andere bleibt hinter der Anmeldung.
         </p>
 
         <div className="feld">

@@ -17,7 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Umgebungsvariable zur Laufzeit dafür bedeutungslos. Auf der Box lief
 # 0.1.1 deshalb gegen localhost:8000 und jede API-Anfrage endete mit
 # 500. Der Dienstname ist im Chart fest, also darf er hier stehen.
-ARG BACKEND_URL=http://aicrm-backend:8000
+ARG BACKEND_URL=http://beacon-backend:8000
 ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
 

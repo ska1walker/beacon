@@ -1,7 +1,7 @@
 # ============================================================================
 # Der öffentliche Pfad (app/oeffentlich.py): Bestätigen, Abmelden, Klick.
 #
-# Ein eigenes Deployment, weil der Entrance `aicrmlinks` darauf zeigt und
+# Ein eigenes Deployment, weil der Entrance `beaconlinks` darauf zeigt und
 # ein Entrance dem Pod einen Envoy-Sidecar bringt. Der Sidecar prüft jeden
 # eingehenden Aufruf gegen Authelia — säße er am Backend-Pod, käme das
 # Frontend nicht mehr an /api (gemessen 5.9.2026: 401, ext_authz_denied).
@@ -13,10 +13,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aicrm-links
+  name: beacon-links
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aicrm
+    app: beacon
     component: links
 spec:
   # `index`, weil der Name einen Bindestrich trägt. Kein `default`
@@ -25,15 +25,15 @@ spec:
   # `workloadReplicas` im Manifest (auf der Box gemessen: user-supplied,
   # genau die Schlüssel des jeweiligen Manifests), nicht aus den
   # eingefrorenen Installationswerten.
-  replicas: {{ (index .Values.workloads "aicrm-links").replicaCount }}
+  replicas: {{ (index .Values.workloads "beacon-links").replicaCount }}
   selector:
     matchLabels:
-      app: aicrm
+      app: beacon
       component: links
   template:
     metadata:
       labels:
-        app: aicrm
+        app: beacon
         component: links
     spec:
       containers:
@@ -57,7 +57,7 @@ spec:
             - name: DB_PASSWORD
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
-              value: "{{ .Values.postgres.databases.aicrm }}"
+              value: "{{ .Values.postgres.databases.beacon }}"
             - name: APP_DATA_DIR
               value: "/app/data"
             - name: DEV_USER

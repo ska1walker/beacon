@@ -74,7 +74,7 @@ export default function EinstellungenSeite() {
           </div>
           <div className="block-inhalt">
             <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-6)" }}>
-              aicrm bringt kein eigenes Modell mit. Es spricht einen OpenAI-kompatiblen Endpunkt
+              Beacon bringt kein eigenes Modell mit. Es spricht einen OpenAI-kompatiblen Endpunkt
               an — üblicherweise die LiteLLM-App auf dieser Box. Es gibt bewusst keine Vorgabe:
               Jede geratene Adresse wäre auf einer anderen Box falsch. Solange hier nichts steht,
               bleiben die KI-Funktionen gesperrt und sagen das — statt in einen Verbindungsfehler
@@ -96,7 +96,7 @@ export default function EinstellungenSeite() {
                   placeholder="https://litellm-beispiel.olares.com/v1"
                 />
                 <p className="feld-hinweis">
-                  Mit <code>/v1</code> am Ende. aicrm hängt <code>/chat/completions</code> an.
+                  Mit <code>/v1</code> am Ende. Beacon hängt <code>/chat/completions</code> an.
                 </p>
               </div>
 

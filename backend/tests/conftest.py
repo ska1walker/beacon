@@ -12,9 +12,9 @@ import tempfile
 
 # Vor jedem Import aus app: die Einstellungen werden beim Laden des Moduls
 # gelesen, ein späteres Setzen käme zu spät.
-os.environ["DB_NAME"] = "aicrm_test"
-os.environ["DB_USER"] = os.environ.get("TEST_DB_USER", "aicrm")
-os.environ["DB_PASSWORD"] = os.environ.get("TEST_DB_PASSWORD", "aicrm_dev_only")
+os.environ["DB_NAME"] = "beacon_test"
+os.environ["DB_USER"] = os.environ.get("TEST_DB_USER", "beacon")
+os.environ["DB_PASSWORD"] = os.environ.get("TEST_DB_PASSWORD", "beacon_dev_only")
 os.environ["DB_HOST"] = os.environ.get("TEST_DB_HOST", "localhost")
 os.environ["DEV_USER"] = ""
 
@@ -23,7 +23,7 @@ os.environ["DEV_USER"] = ""
 # einer frischen Testdatenbank stellte sich daraus wieder her. Der
 # Wiederanlauf funktionierte also zu gut: Er machte jeden Test unsauber,
 # der von einer leeren Datenbank ausging.
-os.environ["APP_DATA_DIR"] = tempfile.mkdtemp(prefix="aicrm-test-daten-")
+os.environ["APP_DATA_DIR"] = tempfile.mkdtemp(prefix="beacon-test-daten-")
 os.environ["LLM_BASE_URL"] = ""
 os.environ["LLM_API_KEY"] = ""
 os.environ["LLM_MODEL"] = ""
@@ -52,8 +52,8 @@ async def _verwaltungsverbindung() -> asyncpg.Connection:
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def datenbank():
     verwaltung = await _verwaltungsverbindung()
-    await verwaltung.execute("drop database if exists aicrm_test")
-    await verwaltung.execute("create database aicrm_test")
+    await verwaltung.execute("drop database if exists beacon_test")
+    await verwaltung.execute("create database beacon_test")
     await verwaltung.close()
 
     # Die Migrationen laufen mit derselben Rolle wie die Anwendung. Das ist
@@ -64,7 +64,7 @@ async def datenbank():
         port=settings.db_port,
         user=settings.db_user,
         password=settings.db_password,
-        database="aicrm_test",
+        database="beacon_test",
     )
     for datei in sorted(MIGRATIONEN.glob("*.sql")):
         await conn.execute(datei.read_text())
@@ -75,7 +75,7 @@ async def datenbank():
     await close_pool()
 
     verwaltung = await _verwaltungsverbindung()
-    await verwaltung.execute("drop database if exists aicrm_test")
+    await verwaltung.execute("drop database if exists beacon_test")
     await verwaltung.close()
 
 

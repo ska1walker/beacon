@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     # --- Datenbank ---
     db_host: str = "localhost"
     db_port: int = 5432
-    db_name: str = "aicrm"
-    db_user: str = "aicrm"
-    db_password: str = "aicrm_dev_only"
+    db_name: str = "beacon"
+    db_user: str = "beacon"
+    db_password: str = "beacon_dev_only"
 
     # --- Anwendung ---
     app_lang: str = "de"
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     # --- Öffentliche Links ---
     # Die Domain, unter der Olares den ersten Entrance führt
-    # (`.Values.domain.aicrm`, z. B. 4d3bf559.kaivostudio.olares.de). Daraus
+    # (`.Values.domain.beacon`, z. B. 4d3bf559.kaivostudio.olares.de). Daraus
     # leitet app/versand.py die Adresse des öffentlichen Entrance ab. Leer
     # heißt: nicht bekannt — dann muss sie in den Einstellungen stehen.
     app_domain: str = ""

@@ -17,7 +17,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export const DARSTELLUNG_COOKIE = "aicrm-darstellung";
+export const DARSTELLUNG_COOKIE = "beacon-darstellung";
 
 export type Darstellung = "hell" | "dunkel" | "system";
 
@@ -29,7 +29,7 @@ export type Darstellung = "hell" | "dunkel" | "system";
 export const DARSTELLUNG_SCRIPT = `
 (function () {
   try {
-    var m = document.cookie.match(/(?:^|;\\s*)aicrm-darstellung=([^;]*)/);
+    var m = document.cookie.match(/(?:^|;\\s*)beacon-darstellung=([^;]*)/);
     var wahl = m ? m[1] : "system";
     var dunkel =
       wahl === "dunkel" ||
@@ -48,7 +48,7 @@ function setzeCookie(wert: Darstellung) {
 
 function liesCookie(): Darstellung {
   if (typeof document === "undefined") return "system";
-  const m = document.cookie.match(/(?:^|;\s*)aicrm-darstellung=([^;]*)/);
+  const m = document.cookie.match(/(?:^|;\s*)beacon-darstellung=([^;]*)/);
   const wert = m?.[1];
   return wert === "hell" || wert === "dunkel" ? wert : "system";
 }

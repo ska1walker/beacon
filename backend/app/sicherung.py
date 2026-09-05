@@ -53,6 +53,9 @@ TABELLEN: list[str] = [
     "activities",
     "tasks",
     "eingang",
+    "ansichten",
+    "oeffentliche_links",
+    "mails",
 ]
 
 # Spalten, die auf public.users zeigen. Beim Zurückspielen nach einer
@@ -67,6 +70,8 @@ NUTZERSPALTEN: dict[str, list[str]] = {
     "tickets": ["owner_id", "created_by"],
     "activities": ["created_by"],
     "tasks": ["assigned_to", "created_by"],
+    "ansichten": ["owner_id"],
+    "mails": ["created_by"],
 }
 
 FORMAT_VERSION = 1
@@ -167,7 +172,7 @@ def abzug_schreiben(daten: dict[str, Any], slug: str | None = None) -> pathlib.P
     eine ganze.
     """
     marke = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    name = f"aicrm-{slug or 'org'}-{marke}.json"
+    name = f"beacon-{slug or 'org'}-{marke}.json"
     ziel = ablage() / name
     vorlaeufig = ziel.with_suffix(".json.teil")
 
@@ -181,15 +186,21 @@ def abzug_schreiben(daten: dict[str, Any], slug: str | None = None) -> pathlib.P
     return ziel
 
 
+def _abzuege() -> list[pathlib.Path]:
+    """Alle Abzüge — auch die, die noch `aicrm-` heißen: Eine Umbenennung
+    des Produkts darf keinen Bestand verlieren."""
+    return [*ablage().glob("beacon-*.json"), *ablage().glob("aicrm-*.json")]
+
+
 def aufraeumen() -> None:
-    staende = sorted(ablage().glob("aicrm-*.json"), reverse=True)
+    staende = sorted(_abzuege(), reverse=True)
     for alt in staende[settings.sicherung_behalten :]:
         alt.unlink(missing_ok=True)
 
 
 def staende() -> list[dict[str, Any]]:
     ergebnis = []
-    for datei in sorted(ablage().glob("aicrm-*.json"), reverse=True):
+    for datei in sorted(_abzuege(), reverse=True):
         stat = datei.stat()
         ergebnis.append(
             {

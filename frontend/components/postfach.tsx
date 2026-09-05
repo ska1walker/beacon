@@ -12,7 +12,7 @@ type Bilanz = { gelesen: number; tickets: number; uebergangen: number; doppelt: 
 /**
  * Das Postfach, aus dem Tickets entstehen.
  *
- * aicrm sitzt hier als **zweiter** Klient auf einem Postfach, vor dem
+ * Beacon sitzt hier als **zweiter** Klient auf einem Postfach, vor dem
  * schon ein Mensch sitzt — in diesem Haus Relay. Deshalb steht der Satz
  * über das Nichtanfassen so deutlich da: Wer eine Einrichtung vornimmt,
  * muss wissen, dass sein Posteingang danach genauso aussieht wie vorher.
@@ -84,7 +84,7 @@ export function Postfachblock() {
       </div>
       <div className="block-inhalt">
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", marginBottom: "var(--am-raum-4)" }}>
-          aicrm holt eingehende Post ab und macht Tickets daraus. Es <strong>fasst dabei nichts
+          Beacon holt eingehende Post ab und macht Tickets daraus. Es <strong>fasst dabei nichts
           an</strong>: keine Nachricht wird als gelesen markiert, nichts verschoben, nichts
           gelöscht. Ihr Posteingang sieht danach aus wie vorher — auch in Relay. Gemerkt wird
           nur, bis wohin gelesen wurde.
