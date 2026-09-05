@@ -16,6 +16,8 @@ workloads:
     replicaCount: 1
   "aicrm-backend":
     replicaCount: 1
+  "aicrm-links":
+    replicaCount: 1
 
 # ---- Abbilder --------------------------------------------------------------
 #

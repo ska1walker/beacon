@@ -1,0 +1,80 @@
+# ============================================================================
+# Der öffentliche Pfad (app/oeffentlich.py): Bestätigen, Abmelden, Klick.
+#
+# Ein eigenes Deployment, weil der Entrance `aicrmlinks` darauf zeigt und
+# ein Entrance dem Pod einen Envoy-Sidecar bringt. Der Sidecar prüft jeden
+# eingehenden Aufruf gegen Authelia — säße er am Backend-Pod, käme das
+# Frontend nicht mehr an /api (gemessen 5.9.2026: 401, ext_authz_denied).
+# Hier stört er nicht: Der Entrance ist `public`, der Sidecar lässt durch.
+#
+# Kein /app/data, keine Migrationen: Dieser Prozess liest genau eine
+# Link-Zeile je Aufruf und schreibt über den Organisationseigentümer.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aicrm-links
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: aicrm
+    component: links
+spec:
+  # `index` statt Punktzugriff, und `default` dahinter: Ein Upgrade spielt
+  # die bei der Installation gespeicherten Werte zurück (Constraint 9) —
+  # auf einer Box, die vor diesem Deployment installiert wurde, fehlt der
+  # Schlüssel schlicht.
+  replicas: {{ ((index .Values.workloads "aicrm-links") | default (dict "replicaCount" 1)).replicaCount }}
+  selector:
+    matchLabels:
+      app: aicrm
+      component: links
+  template:
+    metadata:
+      labels:
+        app: aicrm
+        component: links
+    spec:
+      containers:
+        - name: oeffentlich
+          image: "{{ .Values.images.backend.repository }}:{{ .Values.images.backend.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          command: ["uvicorn", "app.oeffentlich:app", "--host", "0.0.0.0", "--port", "8001"]
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8001
+              name: http
+          env:
+            - name: DB_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.postgres.port }}"
+            - name: DB_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: DB_PASSWORD
+              value: "{{ .Values.postgres.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.postgres.databases.aicrm }}"
+            - name: APP_DATA_DIR
+              value: "/app/data"
+            - name: DEV_USER
+              value: ""
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20
+            periodSeconds: 30

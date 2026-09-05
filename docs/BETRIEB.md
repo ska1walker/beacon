@@ -174,6 +174,16 @@ das eine Minute wartet.
 > Wer noch einen Entrance hinzufügt, verschiebt nichts mehr — der Index
 > bleibt.
 >
+> **Ein Entrance am Backend-Pod legt die App lahm.** Der Sidecar, den
+> ein Entrance mitbringt, prüft *jeden* eingehenden Aufruf gegen Authelia
+> — auch die des Frontends an `aicrm-backend:8000/api`. Mit 0.1.10 hing
+> `aicrmlinks` am Backend-Pod; nach dem Markt-Upgrade antwortete jede
+> API-Anfrage 401 (`ext_authz_denied` im Sidecar-Log), die Oberfläche
+> zeigte „Anfrage fehlgeschlagen (401)“. Seit 0.1.12 hat der öffentliche
+> Pfad sein eigenes Deployment `aicrm-links`; das Backend bleibt ohne
+> Entrance und ohne Sidecar. Regel: **Ein Entrance zeigt nur auf Pods, die
+> sonst niemand aus dem Cluster aufruft.**
+>
 > **Was ein neuer Entrance bei einem Upgrade braucht.** `helm upgrade`
 > tauscht die Workloads, liest aber das Manifest nicht neu ein: Nach dem
 > Ausrollen von 0.1.10 per Helm fehlte `aicrmlinks` in `spec.entrances`,

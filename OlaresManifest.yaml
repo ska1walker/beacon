@@ -19,6 +19,7 @@ apiVersion: 'v3'
 workloadReplicas:
   aicrm: 1
   aicrm-backend: 1
+  aicrm-links: 1
 
 metadata:
   name: aicrm
@@ -26,7 +27,7 @@ metadata:
   title: aicrm
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
-  version: 0.1.11
+  version: 0.1.12
   categories:
     - AI
 
@@ -54,11 +55,17 @@ entrances:
   # Empfänger klickt aus seinem Mailprogramm. Dahinter liegt eine eigene
   # Anwendung (app/oeffentlich.py), die genau diese drei Dinge kann und
   # nichts liest. `invisible`, weil es keine Seite zum Öffnen ist.
-  # Gemessen: `internal` hat keine öffentliche Adresse, eine `policies`-
-  # Regel allein öffnet nichts (docs/BETRIEB.md). Deshalb ein eigener
-  # Entrance und nicht eine Regel am bestehenden.
+  #
+  # Der Entrance zeigt auf ein **eigenes Deployment** (aicrm-links), nicht
+  # auf das Backend — und das ist keine Ordnungsliebe: Ein Entrance
+  # bringt dem Pod einen Envoy-Sidecar, und der prüft *jeden* eingehenden
+  # Aufruf gegen Authelia. Hing der Entrance am Backend-Pod, wies der
+  # Sidecar die internen API-Aufrufe des Frontends ab (401,
+  # ext_authz_denied) — so war die App nach 0.1.10 auf der Box tot
+  # (docs/BETRIEB.md, 5.9.2026). Das Backend bleibt ohne Entrance und
+  # damit ohne Sidecar.
   - name: aicrmlinks
-    host: aicrm-backend
+    host: aicrm-links
     port: 8001
     title: aicrm Links
     icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
@@ -93,7 +100,7 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.1.11'
+  versionName: '0.1.12'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
   promoteImage:
