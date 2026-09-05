@@ -194,6 +194,46 @@ das eine Minute wartet.
 > braucht keine einzige offene Tür nach innen.
 
 
+## Versand — SMTP, Einwilligung, öffentliche Links
+
+Seit 0.1.11 schickt aicrm selbst: über ein gewöhnliches SMTP-Konto
+(*Einstellungen → Versand*). Daraus kommen Ticket-Antworten, die
+Bestätigungsmail (Double-Opt-In) und die Ansprache aus dem Kontakt.
+Marketing-Post ist davon getrennt (*Marketing-Versand*: dasselbe Konto
+oder Brevo) — HubSpot trennt beides aus demselben Grund: Ein gesperrtes
+Marketing-Konto darf keine Antwort an einen Kunden aufhalten.
+
+**Der Knopf „Testmail an mich“ ist der Beweis.** Zugangsdaten, die erst
+bei der ersten Antwort scheitern, sind keine Einrichtung. Was scheitert,
+steht als *Letzter Versuch* im Block und in `mails.fehler`.
+
+**Jede Mail ist zuerst eine Zeile in `mails`, dann ein Versand.** Ein
+abgelehnter Versand bleibt mit Grund stehen und wird dreimal mit
+wachsendem Abstand wiederholt (`app/versand.py`, Schleife in `main.py`,
+alle 30 s). Erst dann `fehlgeschlagen`. Ticket-Uhr und Verlauf werden
+erst geschrieben, wenn die Mail wirklich draußen ist — eine Antwort, die
+nicht ankam, ist keine.
+
+**Der Faden.** Kam ein Ticket per Mail (Postfach oder Eingang), trägt die
+Antwort `In-Reply-To`/`References` mit der Message-ID der Anfrage, und
+die Kennung `[T-2026-0042]` steht im Betreff. Danach: erste Antwort
+festgehalten, Ticket in „wartet auf Kontakt“.
+
+**Einwilligung.** Marketing-Post geht nur an `bestaetigt` oder
+`bestandskunde`. `bestaetigt` entsteht ausschließlich über den Link in
+der Bestätigungsmail (sieben Tage gültig, einmalig); es gibt bewusst
+keinen Knopf dafür. `bestandskunde` (§7 Abs. 3 UWG) setzt ein Mensch am
+Kontakt, mit Namen im Beleg. Jede Marketing-Mail trägt den Abmeldelink
+in `List-Unsubscribe` und im Text; der Link funktioniert immer.
+
+**Die Adresse der öffentlichen Links** (Bestätigen, Abmelden, Klick) ist
+`https://<appid>1.<nutzer>.<zone>` — der zweite Entrance. Das Chart reicht
+`.Values.domain.aicrm` als `APP_DOMAIN` ins Backend, das Backend leitet
+daraus ab; *Einstellungen → Marketing-Versand* zeigt, was gilt, und
+erlaubt einen eigenen Wert (eigene Domain, oder eine Box, die ihre
+Domain nicht mitteilt). Ohne Adresse geht keine Bestätigungsmail hinaus,
+und der Block sagt das.
+
 ## Post anschließen — Relay oder ein anderer Dienst
 
 E-Mails gehen nicht aus aicrm selbst hinaus und kommen nicht direkt

@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     # gemessen an AIM Qwen3.6 mit langem Kontext knapp, aber tragbar.
     llm_timeout_s: float = 120.0
 
+    # --- Öffentliche Links ---
+    # Die Domain, unter der Olares den ersten Entrance führt
+    # (`.Values.domain.aicrm`, z. B. 4d3bf559.kaivostudio.olares.de). Daraus
+    # leitet app/versand.py die Adresse des öffentlichen Entrance ab. Leer
+    # heißt: nicht bekannt — dann muss sie in den Einstellungen stehen.
+    app_domain: str = ""
+
     # --- Entwicklung ---
     # Auf der Box steht der Envoy-Sidecar davor und setzt X-Bfl-User. Lokal
     # gibt es ihn nicht; dann tut dieser Name so, als wäre jemand angemeldet.

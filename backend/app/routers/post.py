@@ -32,7 +32,7 @@ import orjson
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import audit
+from app import audit, versand
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire, acquire_als_quelle, acquire_as
 from app.routers.eingang import _zeitpunkt, signatur_stimmt
@@ -57,25 +57,24 @@ class PostStatus(BaseModel):
 @router.get("/status", response_model=PostStatus)
 async def status(user: CurrentUser = Depends(get_current_user)) -> PostStatus:
     async with acquire_as(user.user_id) as conn:
-        z = await conn.fetchrow(
-            "select mail_endpoint_url, mail_absender from public.org_settings where org_id = $1", user.org_id
-        )
+        z = await conn.fetchrow("select * from public.org_settings where org_id = $1", user.org_id)
+    konto = versand.smtp_aus(dict(z) if z else None)
+    if konto is not None:
+        return PostStatus(eingerichtet=True, absender=konto.absender)
     ok = bool(z and (z["mail_endpoint_url"] or "").strip())
     return PostStatus(
         eingerichtet=ok,
         absender=z["mail_absender"] if z else None,
-        hinweis=None if ok else "Kein Postausgang hinterlegt. Adresse und Geheimnis stehen unter Einstellungen.",
+        hinweis=None if ok else "Kein Versand eingerichtet. SMTP-Konto oder Postausgang stehen unter Einstellungen.",
     )
 
 
 @router.post("/senden")
 async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user)) -> dict:
-    """Übergibt eine Nachricht an den Postausgang und hält sie im Verlauf fest."""
+    """Schickt eine Nachricht — über das SMTP-Konto, wenn eines da ist,
+    sonst an den Postausgang — und hält sie im Verlauf fest."""
     async with acquire_as(user.user_id) as conn:
-        einst = await conn.fetchrow(
-            "select mail_endpoint_url, mail_endpoint_secret, mail_absender from public.org_settings where org_id = $1",
-            user.org_id,
-        )
+        einst = await conn.fetchrow("select * from public.org_settings where org_id = $1", user.org_id)
         kontakt = await conn.fetchrow(
             "select email, company_id, first_name, last_name from public.contacts where id = $1 and deleted_at is null",
             payload.contact_id,
@@ -84,9 +83,13 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
         raise HTTPException(404, "Kontakt nicht gefunden")
     if not kontakt["email"]:
         raise HTTPException(400, "Dieser Kontakt hat keine E-Mail-Adresse.")
+
+    if versand.smtp_aus(dict(einst) if einst else None) is not None:
+        return await _per_smtp(payload, kontakt, user)
+
     url = ((einst and einst["mail_endpoint_url"]) or "").strip()
     if not url:
-        raise HTTPException(409, "Kein Postausgang hinterlegt. Adresse und Geheimnis stehen unter Einstellungen.")
+        raise HTTPException(409, "Kein Versand eingerichtet. SMTP-Konto oder Postausgang stehen unter Einstellungen.")
 
     nachricht = {
         "to": kontakt["email"],
@@ -123,6 +126,35 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
         )
         await audit.log_fuer(conn, user, action="create", entity="activities", entity_id=aktivitaet, diff={"email": "gesendet"})
     return {"gesendet": True, "activity_id": str(aktivitaet)}
+
+
+async def _per_smtp(payload: SendenIn, kontakt, user: CurrentUser) -> dict:
+    async with acquire_as(user.user_id) as conn:
+        try:
+            mail_id = await versand.einreihen(
+                conn, user.org_id, art="transaktional", an=kontakt["email"], betreff=payload.subject,
+                text=payload.text, contact_id=payload.contact_id, in_reply_to=payload.in_reply_to,
+                created_by=user.user_id, payload={"zweck": "ansprache", "deal_id": str(payload.deal_id or "")},
+            )
+            zeile = await versand.versenden(conn, user.org_id, mail_id)
+        except versand.Unmoeglich as exc:
+            raise HTTPException(409, str(exc)) from exc
+    if zeile["status"] != "gesendet":
+        raise HTTPException(502, f"Die Mail ging noch nicht hinaus, sie wird wiederholt: {zeile['fehler']}")
+    async with acquire_as(user.user_id) as conn:
+        aktivitaet = await conn.fetchval(
+            """
+            insert into public.activities (org_id, kind, subject, body, company_id, contact_id, deal_id, payload, created_by)
+            values ($1, 'email', $2, $3, $4, $5, $6, $7::jsonb, $8) returning id
+            """,
+            user.org_id, f"An {kontakt['email']}: {payload.subject}", payload.text,
+            kontakt["company_id"], payload.contact_id, payload.deal_id,
+            orjson.dumps({"richtung": "ausgehend", "an": kontakt["email"], "message_id": zeile["message_id"],
+                          "mail_id": str(mail_id)}).decode(),
+            user.user_id,
+        )
+        await audit.log_fuer(conn, user, action="create", entity="activities", entity_id=aktivitaet, diff={"email": "gesendet"})
+    return {"gesendet": True, "activity_id": str(aktivitaet), "message_id": zeile["message_id"]}
 
 
 @router.post("/eingang/{source_id}")

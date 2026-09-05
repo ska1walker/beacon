@@ -163,14 +163,51 @@ async def _postschleife() -> None:
                 print(f"Postfach-Abruf fehlgeschlagen: {exc}", flush=True)
 
 
+async def _versandschleife() -> None:
+    """Schickt, was im Buch wartet — alle 30 Sekunden ein Blick.
+
+    Was hier liegt, hat ein Mensch oder eine Kampagne eingereiht; ein
+    Versand, der direkt scheiterte, wartet mit wachsendem Abstand auf den
+    nächsten Versuch (app/versand.py). Ohne SMTP-Konto bleibt die Zeile
+    liegen, bis eines da ist — nichts geht verloren, nichts geht doppelt.
+    """
+    from app import versand
+
+    while True:
+        await asyncio.sleep(30)
+        try:
+            async with acquire() as conn:
+                offen = await conn.fetch(
+                    """
+                    select distinct m.org_id, r.user_id
+                      from public.mails m
+                      join public.user_org_roles r on r.org_id = m.org_id and r.role = 'owner'
+                     where m.status = 'wartend'
+                       and (m.naechster_versuch is null or m.naechster_versuch <= now())
+                    """
+                )
+        except Exception as exc:
+            print(f"Versand-Schleife: Zeilen nicht lesbar: {exc}", flush=True)
+            continue
+        for org in offen:
+            try:
+                async with acquire_as(org["user_id"]) as conn:
+                    bilanz = await versand.verarbeiten(conn, org["org_id"])
+                if bilanz["gesendet"] or bilanz["gescheitert"]:
+                    print(f"Versand: {bilanz['gesendet']} gesendet, {bilanz['gescheitert']} gescheitert", flush=True)
+            except Exception as exc:
+                print(f"Versand fehlgeschlagen: {exc}", flush=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
     await _stammdaten_nachziehen()
     schleife = asyncio.create_task(_sicherungsschleife())
     post = asyncio.create_task(_postschleife())
+    ausgang = asyncio.create_task(_versandschleife())
     yield
-    for aufgabe in (schleife, post):
+    for aufgabe in (schleife, post, ausgang):
         aufgabe.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await aufgabe

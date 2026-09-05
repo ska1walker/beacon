@@ -9,6 +9,7 @@ import type { Mitglied, Ticket, Ticketkategorie, Ticketpipeline } from "@/lib/ty
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { Notizkasten } from "@/components/notizkasten";
+import { Ticketantwort } from "@/components/ticket-antwort";
 import { Stammdaten } from "@/components/stammdaten";
 import { Prioritaetspille } from "@/components/prioritaet";
 import { Fehler, Laedt } from "@/components/zustaende";
@@ -248,6 +249,7 @@ export default function TicketSeite({ params }: { params: Promise<{ id: string }
         </div>
 
         <div>
+          <Ticketantwort ticket={t} />
           <Notizkasten bezug={{ ticket_id: id }} />
           <Zeitleiste bezug={{ ticket_id: id }} />
         </div>

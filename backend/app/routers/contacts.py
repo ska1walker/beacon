@@ -1,13 +1,14 @@
 """Kontakte."""
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from app import anreicherung, audit, segmente
+from app import anreicherung, audit, segmente, versand
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -429,3 +430,72 @@ async def hauptfirma_setzen(
             )
         await conn.execute("update public.contacts set company_id = $1 where id = $2", company_id, contact_id)
     return await firmen(contact_id, user)
+
+
+# ── Einwilligung ────────────────────────────────────────────────────────
+
+class EinwilligungIn(BaseModel):
+    """Drei Handgriffe, die ein Mensch am Kontakt tun darf.
+
+    `anfragen` schickt die Bestätigungsmail (Double-Opt-In); `bestaetigt`
+    entsteht nur über ihren Link. `bestandskunde` ist die Ausnahme aus §7
+    Abs. 3 UWG und wird bewusst gesetzt — mit dem Namen dessen, der es
+    getan hat. `keine` nimmt alles zurück.
+    """
+
+    aktion: Literal["anfragen", "bestandskunde", "keine"]
+
+
+@router.post("/{contact_id}/einwilligung", response_model=Contact)
+async def einwilligung(
+    contact_id: UUID,
+    payload: EinwilligungIn,
+    user: CurrentUser = Depends(get_current_user),
+) -> Contact:
+    fehler = None
+    async with acquire_as(user.user_id) as conn:
+        vorher = await conn.fetchval(
+            "select marketing_einwilligung::text from public.contacts where id = $1 and deleted_at is null",
+            contact_id,
+        )
+        if vorher is None:
+            raise HTTPException(404, "Kontakt nicht gefunden")
+
+        if payload.aktion == "anfragen":
+            try:
+                zeile = await versand.einwilligung_anfragen(conn, user.org_id, contact_id, actor=user.user_id)
+            except versand.Unmoeglich as exc:
+                raise HTTPException(409, str(exc)) from exc
+            # Ein abgelehnter Versand bleibt im Buch und wird wiederholt;
+            # der Fehler geht erst nach der Transaktion hinaus — sonst
+            # nähme er die Zeile mit.
+            if zeile["status"] != "gesendet":
+                fehler = zeile["fehler"]
+        else:
+            neu = "bestandskunde" if payload.aktion == "bestandskunde" else "keine"
+            nachweis = {
+                "zeitpunkt": datetime.now().astimezone().isoformat(),
+                "durch": str(user.user_id),
+                "grund": "Bestandskunde nach §7 Abs. 3 UWG" if neu == "bestandskunde" else "zurückgesetzt",
+            }
+            await conn.execute(
+                """
+                update public.contacts
+                   set marketing_einwilligung = $2::public.einwilligung,
+                       einwilligung_am = case when $2 = 'bestandskunde' then now() else null end,
+                       einwilligung_quelle = case when $2 = 'bestandskunde' then 'bestandskunde' else null end,
+                       einwilligung_nachweis = $3::jsonb,
+                       abgemeldet_am = null,
+                       updated_at = now()
+                 where id = $1
+                """,
+                contact_id, neu, orjson.dumps(nachweis).decode(),
+            )
+        await audit.log_fuer(
+            conn, user, action="update", entity="contacts", entity_id=contact_id,
+            diff={"marketing_einwilligung": payload.aktion, "vorher": vorher},
+        )
+        row = await conn.fetchrow(LIST_SQL + " and k.id = $1", contact_id)
+    if fehler:
+        raise HTTPException(502, f"Die Bestätigungsmail ging noch nicht hinaus, sie wird wiederholt: {fehler}")
+    return Contact(**dict(row))

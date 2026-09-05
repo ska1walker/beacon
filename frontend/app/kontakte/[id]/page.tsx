@@ -15,6 +15,7 @@ import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
 import { Anreicherungsblock } from "@/components/anreicherung";
 import { KontaktFirmen } from "@/components/kontakt-firmen";
+import { Einwilligungsblock } from "@/components/einwilligung";
 import { STUFEN_TEXT } from "@/lib/format";
 
 /** Entwurf für eine Ansprache. Er wird hingelegt, nie versendet. */
@@ -175,6 +176,7 @@ export default function KontaktSeite({ params }: { params: Promise<{ id: string 
         <Zeitleiste bezug={{ contact_id: id }} />
 
         <div>
+          <Einwilligungsblock kontakt={k} />
           <Entwurfsblock kontaktId={id} />
         </div>
       </div>

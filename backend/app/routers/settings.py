@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import postfach
+from app import postfach, versand
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.llm import load_llm_config
@@ -48,6 +48,24 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         imap_aktiv=bool(row and row["imap_aktiv"]),
         imap_zuletzt=(row["imap_zuletzt"] if row else None),
         imap_letzter_fehler=(row["imap_letzter_fehler"] if row else None),
+        smtp_host=(row["smtp_host"] if row else None),
+        smtp_port=(row["smtp_port"] if row else 587),
+        smtp_benutzer=(row["smtp_benutzer"] if row else None),
+        smtp_passwort_set=bool(row and row["smtp_passwort"]),
+        smtp_sicherheit=(row["smtp_sicherheit"] if row else "starttls"),
+        smtp_absender=(row["smtp_absender"] if row else None),
+        smtp_absender_name=(row["smtp_absender_name"] if row else None),
+        smtp_zuletzt=(row["smtp_zuletzt"] if row else None),
+        smtp_letzter_fehler=(row["smtp_letzter_fehler"] if row else None),
+        smtp_ready=versand.smtp_aus(dict(row) if row else None) is not None,
+        marketing_versand=(row["marketing_versand"] if row else "smtp"),
+        brevo_api_key_set=bool(row and row["brevo_api_key"]),
+        marketing_absender=(row["marketing_absender"] if row else None),
+        marketing_absender_name=(row["marketing_absender_name"] if row else None),
+        links_basis_url=(row["links_basis_url"] if row else None),
+        links_basis_wirksam=versand.basis_url(dict(row) if row else None),
+        doi_betreff=(row["doi_betreff"] if row else None),
+        doi_text=(row["doi_text"] if row else None),
         default_currency=(row["default_currency"] if row else "EUR"),
         locale=(row["locale"] if row else "de"),
     )
@@ -70,7 +88,8 @@ async def update_settings(
             # bei jedem Speichern leer zurück und wäre nach dem ersten
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
             if name in (
-                "llm_api_key", "mail_endpoint_secret", "suche_api_key", "imap_passwort"
+                "llm_api_key", "mail_endpoint_secret", "suche_api_key", "imap_passwort",
+                "smtp_passwort", "brevo_api_key",
             ) and wert == "":
                 continue
             await conn.execute(
@@ -104,3 +123,28 @@ async def postfach_abholen(user: CurrentUser = Depends(get_current_user)) -> dic
             )
             raise HTTPException(502, f"Das Postfach antwortet nicht: {exc}") from exc
     return bilanz
+
+
+@router.post("/versand/testen")
+async def versand_testen(user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Schickt eine Mail an die eigene Absenderadresse — der Knopf, der
+    ein Konto beweist. Dasselbe Muster wie „Jetzt abholen“ beim Postfach:
+    Der Fehler kommt hierher zurück, nicht erst in fünf Minuten ins
+    Protokoll."""
+    async with acquire_as(user.user_id) as conn:
+        einst = await conn.fetchrow("select * from public.org_settings where org_id = $1", user.org_id)
+        konto = versand.smtp_aus(dict(einst) if einst else None)
+        if konto is None:
+            raise HTTPException(409, "Kein SMTP-Konto hinterlegt. Server und Absenderadresse fehlen.")
+        mail_id = await versand.einreihen(
+            conn, user.org_id, art="transaktional", an=konto.absender,
+            betreff="aicrm: Testmail", text="Wenn diese Mail ankommt, ist der Versand eingerichtet.\n",
+            created_by=user.user_id, payload={"zweck": "test"},
+        )
+        try:
+            zeile = await versand.versenden(conn, user.org_id, mail_id)
+        except versand.Unmoeglich as exc:
+            raise HTTPException(409, str(exc)) from exc
+    if zeile["status"] != "gesendet":
+        raise HTTPException(502, f"Der Mailserver hat abgelehnt: {zeile['fehler']}")
+    return {"gesendet": True, "an": zeile["an"], "message_id": zeile["message_id"]}

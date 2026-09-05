@@ -4,11 +4,12 @@
 --
 -- ## Warum holen statt geschickt bekommen
 --
--- Gemessen am 5. September 2026: Eine Olares-App mit `authLevel: internal`
--- hat **keine öffentliche Adresse** (siehe docs/BETRIEB.md). Ein Webhook
--- von außen kann sie nicht erreichen, und keine Richtlinie ändert daran
--- etwas. Ausgehend ist der Weg dagegen offen — auch auf 993. Also holt
--- die Anwendung selbst, und niemand muss dafür eine Tür öffnen.
+-- Eine Olares-App mit `authLevel: internal` schickt jeden, der ohne
+-- Sitzung kommt, zur Anmeldung (gemessen 5. September 2026, docs/BETRIEB.md
+-- — die erste Fassung dieser Notiz sprach von „keiner öffentlichen
+-- Adresse“; das war ein falscher Hostname). Ein Webhook von außen kommt
+-- so nicht an. Ausgehend ist der Weg dagegen offen — auch auf 993. Also
+-- holt die Anwendung selbst, und niemand muss dafür eine Tür öffnen.
 --
 -- ## Warum eine UID und kein „ungelesen"
 --

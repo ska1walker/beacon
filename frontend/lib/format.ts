@@ -169,6 +169,14 @@ export const OPERATOR_TEXT: Record<string, string> = {
 export const OHNE_WERT = new Set(["leer", "nicht_leer", "ist_wahr", "ist_falsch"]);
 
 /** Wie die Dringlichkeit eines Tickets heißt — und in welcher Reihenfolge. */
+export const EINWILLIGUNG_TEXT: Record<string, string> = {
+  keine: "keine",
+  angefragt: "angefragt",
+  bestaetigt: "bestätigt",
+  bestandskunde: "Bestandskunde",
+  abgemeldet: "abgemeldet",
+};
+
 export const PRIORITAET_TEXT: Record<string, string> = {
   dringend: "Dringend",
   hoch: "Hoch",

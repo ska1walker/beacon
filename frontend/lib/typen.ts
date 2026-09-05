@@ -239,6 +239,26 @@ export interface OrgSettings extends Absender {
   imap_aktiv: boolean;
   imap_zuletzt: string | null;
   imap_letzter_fehler: string | null;
+  /** Versand (0019). Passwort und Schlüssel kommen nie zurück. */
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_benutzer: string | null;
+  smtp_passwort_set: boolean;
+  smtp_sicherheit: "starttls" | "ssl" | "keine";
+  smtp_absender: string | null;
+  smtp_absender_name: string | null;
+  smtp_zuletzt: string | null;
+  smtp_letzter_fehler: string | null;
+  smtp_ready: boolean;
+  marketing_versand: "smtp" | "brevo";
+  brevo_api_key_set: boolean;
+  marketing_absender: string | null;
+  marketing_absender_name: string | null;
+  links_basis_url: string | null;
+  /** Was tatsächlich gilt: der eigene Wert oder die von der Box abgeleitete Adresse. */
+  links_basis_wirksam: string | null;
+  doi_betreff: string | null;
+  doi_text: string | null;
   default_currency: string;
   locale: string;
 }

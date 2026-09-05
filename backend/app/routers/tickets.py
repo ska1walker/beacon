@@ -21,7 +21,7 @@ import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app import audit, segmente
+from app import audit, segmente, versand
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.patching import build_update
@@ -583,6 +583,99 @@ async def verschieben(
                 conn, user, action="update", entity="tickets", entity_id=ticket_id,
                 diff={"stufe": ziel["name"]},
             )
+        z = await conn.fetchrow(TICKET_SQL + " and t.id = $1", ticket_id)
+    return _aus_zeile(dict(z))
+
+
+class AntwortIn(BaseModel):
+    text: str = Field(min_length=1, max_length=20000)
+    betreff: str | None = Field(default=None, max_length=200)
+
+
+@router.post("/{ticket_id}/antworten", response_model=Ticket)
+async def antworten(
+    ticket_id: UUID,
+    payload: AntwortIn,
+    user: CurrentUser = Depends(get_current_user),
+) -> Ticket:
+    """Eine Antwort an den, der geschrieben hat — per Mail, am Faden.
+
+    Der Empfänger ist der Kontakt, sonst die Absenderadresse aus dem
+    Eingang. Kam das Ticket per Mail, hängt die Antwort mit `In-Reply-To`
+    an der Anfrage; die Kennung im Betreff hält den Faden auch dann, wenn
+    ein Mailprogramm die Kopfzeile verliert. Danach: erste Antwort
+    festgehalten, Ticket in „wartet auf Kontakt“, Eintrag im Verlauf.
+    """
+    fehler = None
+    async with acquire_as(user.user_id) as conn:
+        t = await conn.fetchrow(TICKET_SQL + " and t.id = $1", ticket_id)
+        if t is None:
+            raise HTTPException(404, "Ticket nicht gefunden")
+        an = (t["kontakt_email"] or t["absender_email"] or "").strip()
+        if not an:
+            raise HTTPException(409, "Dieses Ticket hat keine Adresse, an die eine Antwort gehen könnte.")
+
+        # Die Message-ID der Anfrage — wenn sie über den Eingang kam.
+        anfrage = await conn.fetchval(
+            "select external_id from public.eingang where ticket_id = $1 and external_id like '<%>' "
+            "order by created_at limit 1",
+            ticket_id,
+        )
+        kennung = kennung_aus(t["nummer"], t["created_at"])
+        betreff = (payload.betreff or "").strip() or f"AW: {t['betreff']}"
+        if kennung not in betreff:
+            betreff = f"{betreff} [{kennung}]"
+
+        try:
+            mail_id = await versand.einreihen(
+                conn, user.org_id, art="transaktional", an=an, betreff=betreff, text=payload.text,
+                contact_id=t["contact_id"], ticket_id=ticket_id, in_reply_to=anfrage,
+                created_by=user.user_id, payload={"zweck": "ticket-antwort"},
+            )
+            zeile = await versand.versenden(conn, user.org_id, mail_id)
+        except versand.Unmoeglich as exc:
+            raise HTTPException(409, str(exc)) from exc
+        if zeile["status"] != "gesendet":
+            # Bleibt im Buch, wird wiederholt. Verlauf und Uhr warten auf
+            # den Versand — eine Antwort, die nicht ankam, ist keine. Der
+            # Fehler geht erst nach der Transaktion hinaus, sonst nähme er
+            # die Zeile mit.
+            fehler = zeile["fehler"]
+    if fehler:
+        raise HTTPException(502, f"Die Antwort ging noch nicht hinaus, sie wird wiederholt: {fehler}")
+    async with acquire_as(user.user_id) as conn:
+        await conn.execute(
+            """
+            insert into public.activities
+              (org_id, kind, subject, body, ticket_id, contact_id, company_id, payload, created_by)
+            values ($1, 'email', $2, $3, $4, $5, $6, $7::jsonb, $8)
+            """,
+            user.org_id, f"An {an}: {betreff}", payload.text, ticket_id, t["contact_id"], t["company_id"],
+            orjson.dumps({"richtung": "ausgehend", "an": an, "message_id": zeile["message_id"],
+                          "mail_id": str(mail_id)}).decode(),
+            user.user_id,
+        )
+        # Die erste Antwort zählt einmal; danach wartet das Ticket auf den
+        # Kunden — falls die Pipeline eine solche Stufe kennt.
+        wartestufe = await conn.fetchval(
+            "select id from public.ticket_stages where pipeline_id = $1 and art = 'wartet_auf_kontakt' "
+            "order by position limit 1",
+            t["pipeline_id"],
+        )
+        await conn.execute(
+            """
+            update public.tickets
+               set erste_antwort_am = coalesce(erste_antwort_am, now()),
+                   stage_id = case when $2::uuid is not null and geschlossen_am is null then $2 else stage_id end,
+                   updated_at = now()
+             where id = $1
+            """,
+            ticket_id, wartestufe,
+        )
+        await audit.log_fuer(
+            conn, user, action="update", entity="tickets", entity_id=ticket_id,
+            diff={"antwort": "per Mail", "an": an},
+        )
         z = await conn.fetchrow(TICKET_SQL + " and t.id = $1", ticket_id)
     return _aus_zeile(dict(z))
 

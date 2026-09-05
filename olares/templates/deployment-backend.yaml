@@ -69,6 +69,11 @@ spec:
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
               value: "{{ .Values.postgres.databases.aicrm }}"
+            # Die Domain des ersten Entrance (z. B. 4d3bf559.<nutzer>.olares.de).
+            # Daraus leitet app/versand.py die Adresse des öffentlichen
+            # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
+            - name: APP_DOMAIN
+              value: "{{ (.Values.domain).aicrm | default "" }}"
           command:
             - python3
             - -c
@@ -155,6 +160,11 @@ spec:
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
               value: "{{ .Values.postgres.databases.aicrm }}"
+            # Die Domain des ersten Entrance (z. B. 4d3bf559.<nutzer>.olares.de).
+            # Daraus leitet app/versand.py die Adresse des öffentlichen
+            # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
+            - name: APP_DOMAIN
+              value: "{{ (.Values.domain).aicrm | default "" }}"
 
             # Kein Punktzugriff auf .Values.llm.baseUrl, und das ist keine
             # Stilfrage: Ein Upgrade spielt die bei der Installation
@@ -228,6 +238,11 @@ spec:
               value: "{{ .Values.postgres.password }}"
             - name: DB_NAME
               value: "{{ .Values.postgres.databases.aicrm }}"
+            # Die Domain des ersten Entrance (z. B. 4d3bf559.<nutzer>.olares.de).
+            # Daraus leitet app/versand.py die Adresse des öffentlichen
+            # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
+            - name: APP_DOMAIN
+              value: "{{ (.Values.domain).aicrm | default "" }}"
             - name: APP_DATA_DIR
               value: "/app/data"
             - name: DEV_USER

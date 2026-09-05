@@ -15,6 +15,7 @@ import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
 import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
 import { Postausgangblock } from "@/components/postausgang";
+import { Marketingversandblock, Versandblock } from "@/components/versand";
 import { AnreicherungEinstellungen } from "@/components/anreicherung-einstellungen";
 
 export default function EinstellungenSeite() {
@@ -153,6 +154,10 @@ export default function EinstellungenSeite() {
         <Katalogblock />
 
         <Verlustgruendeblock />
+
+        <Versandblock />
+
+        <Marketingversandblock />
 
         <Postausgangblock />
 

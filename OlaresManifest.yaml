@@ -26,7 +26,7 @@ metadata:
   title: aicrm
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
-  version: 0.1.10
+  version: 0.1.11
   categories:
     - AI
 
@@ -93,7 +93,7 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.1.10'
+  versionName: '0.1.11'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/aicrm/main/icon.png
   promoteImage:

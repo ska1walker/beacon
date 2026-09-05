@@ -355,6 +355,21 @@ class OrgSettingsIn(Absender):
     imap_ordner: str | None = None
     imap_takt_minuten: int | None = Field(default=None, ge=1, le=1440)
     imap_aktiv: bool | None = None
+    # Versand (0019). Passwort und Schlüssel gehen nur hinein.
+    smtp_host: str | None = None
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    smtp_benutzer: str | None = None
+    smtp_passwort: str | None = None
+    smtp_sicherheit: Literal["starttls", "ssl", "keine"] | None = None
+    smtp_absender: str | None = None
+    smtp_absender_name: str | None = None
+    marketing_versand: Literal["smtp", "brevo"] | None = None
+    brevo_api_key: str | None = None
+    marketing_absender: str | None = None
+    marketing_absender_name: str | None = None
+    links_basis_url: str | None = None
+    doi_betreff: str | None = None
+    doi_text: str | None = None
     default_currency: str | None = None
     locale: str | None = None
 
@@ -386,6 +401,26 @@ class OrgSettings(Absender):
     imap_aktiv: bool = False
     imap_zuletzt: datetime | None = None
     imap_letzter_fehler: str | None = None
+    # Versand. Dasselbe Muster: Konto sichtbar, Passwort nur als „hinterlegt".
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_benutzer: str | None = None
+    smtp_passwort_set: bool = False
+    smtp_sicherheit: str = "starttls"
+    smtp_absender: str | None = None
+    smtp_absender_name: str | None = None
+    smtp_zuletzt: datetime | None = None
+    smtp_letzter_fehler: str | None = None
+    smtp_ready: bool = False
+    marketing_versand: str = "smtp"
+    brevo_api_key_set: bool = False
+    marketing_absender: str | None = None
+    marketing_absender_name: str | None = None
+    links_basis_url: str | None = None
+    # Was tatsächlich gilt: der eigene Wert oder die abgeleitete Adresse.
+    links_basis_wirksam: str | None = None
+    doi_betreff: str | None = None
+    doi_text: str | None = None
     default_currency: str = "EUR"
     locale: str = "de"
 
