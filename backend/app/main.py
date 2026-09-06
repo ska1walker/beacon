@@ -39,8 +39,8 @@ from app.routers import (
     tasks,
     tickets,
 )
-from app.routers import qualifizierung as qualifizierung_router
 from app.routers import finden as finden_router
+from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
 from app.routers import suche as suche_router
