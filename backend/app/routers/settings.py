@@ -37,6 +37,7 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         llm_ready=cfg.eingerichtet,
         suche_endpoint_url=(row["suche_endpoint_url"] if row else None),
         suche_api_key_set=bool(row and row["suche_api_key"]),
+        suche_region=(row["suche_region"] if row else "DE"),
         anreicherung_automatisch=(row["anreicherung_automatisch"] if row else True),
         anreicherung_uebernahme=(row["anreicherung_uebernahme"] if row else "leere_felder"),
         imap_host=(row["imap_host"] if row else None),

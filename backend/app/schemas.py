@@ -344,6 +344,7 @@ class OrgSettingsIn(Absender):
     llm_api_key: str | None = None
     suche_endpoint_url: str | None = None
     suche_api_key: str | None = None
+    suche_region: str | None = Field(default=None, pattern=r"^([A-Z]{2})?$")
     anreicherung_automatisch: bool | None = None
     anreicherung_uebernahme: Literal["leere_felder", "vorschlag"] | None = None
     # Das Postfach, aus dem Tickets entstehen. Das Passwort geht nur
@@ -388,6 +389,7 @@ class OrgSettings(Absender):
     # sichtbar, Schlüssel nur als „hinterlegt".
     suche_endpoint_url: str | None = None
     suche_api_key_set: bool = False
+    suche_region: str = "DE"
     anreicherung_automatisch: bool = True
     anreicherung_uebernahme: str = "leere_felder"
     # Das Postfach. Adresse und Benutzer sichtbar, das Passwort nur als

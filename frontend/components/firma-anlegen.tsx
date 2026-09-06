@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { STUFEN_TEXT } from "@/lib/format";
 import type { Company, Erfassungsvorschlag, LifecycleStage } from "@/lib/typen";
 import { Erfassung } from "@/components/erfassung";
+import { Finden, Wegwahl } from "@/components/finden";
 import { Fehler } from "@/components/zustaende";
 
 export function FirmaAnlegen({
@@ -20,6 +21,7 @@ export function FirmaAnlegen({
   const [branche, setBranche] = useState("");
   const [ort, setOrt] = useState("");
   const [stufe, setStufe] = useState<LifecycleStage>("lead");
+  const [weg, setWeg] = useState<"finden" | "werfen">("finden");
   // Was das Modell noch gelesen hat und wofür die Maske kein Feld führt.
   // Es geht trotzdem mit — sonst wäre es zweimal getippt.
   const [weitere, setWeitere] = useState<Record<string, string>>({});
@@ -62,7 +64,8 @@ export function FirmaAnlegen({
       <div className="karte dialog-karte" style={{ maxWidth: "480px", width: "100%" }}>
         <h2 style={{ marginBottom: "var(--am-raum-4)", fontSize: "1.125rem" }}>Firma anlegen</h2>
 
-        <Erfassung art="company" beiErgebnis={uebernehmen} />
+        <Wegwahl weg={weg} setWeg={setWeg} />
+        {weg === "finden" ? <Finden art="company" beiErgebnis={uebernehmen} /> : <Erfassung art="company" beiErgebnis={uebernehmen} />}
         <form
           onSubmit={(e) => {
             e.preventDefault();

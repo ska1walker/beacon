@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { firmenschluessel } from "@/lib/format";
 import type { Company, Contact, Erfassungsvorschlag } from "@/lib/typen";
 import { Erfassung } from "@/components/erfassung";
+import { Finden, Wegwahl } from "@/components/finden";
 import { Fehler } from "@/components/zustaende";
 
 const LEER = {
@@ -35,11 +36,19 @@ export function KontaktAnlegen({
   // Die Firma aus der Signatur, die es im Bestand noch nicht gibt. Sie
   // wegzuwerfen wäre die schlechteste Antwort: Sie stand da.
   const [neueFirma, setNeueFirma] = useState<Record<string, string> | null>(null);
+  const [weg, setWeg] = useState<"finden" | "werfen">("finden");
 
   const firmen = useQuery({
     queryKey: ["firmen-auswahl"],
     queryFn: () => api.get<Company[]>("/api/companies?limit=200"),
     enabled: !firmaId,
+  });
+  // Von der Firmenseite aus steht die Firma fest — dann sucht „Beschreiben“
+  // nur noch die Person, und braucht dafür Name und Website.
+  const feste = useQuery({
+    queryKey: ["firma", firmaId],
+    queryFn: () => api.get<Company>(`/api/companies/${firmaId}`),
+    enabled: Boolean(firmaId),
   });
 
   const anlegen = useMutation({
@@ -102,7 +111,16 @@ export function KontaktAnlegen({
       <div className="karte dialog-karte" style={{ maxWidth: "520px", width: "100%" }}>
         <h2 style={{ marginBottom: "var(--am-raum-4)", fontSize: "1.125rem" }}>Kontakt anlegen</h2>
 
-        <Erfassung art="contact" beiErgebnis={uebernehmen} />
+        <Wegwahl weg={weg} setWeg={setWeg} />
+        {weg === "finden" ? (
+          <Finden
+            art="contact"
+            firma={firmaId && feste.data ? { name: feste.data.name, website: feste.data.website || feste.data.domain } : undefined}
+            beiErgebnis={uebernehmen}
+          />
+        ) : (
+          <Erfassung art="contact" beiErgebnis={uebernehmen} />
+        )}
 
         {neueFirma && (
           <p className="erfassung-hinweis">

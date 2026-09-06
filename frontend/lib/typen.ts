@@ -226,6 +226,8 @@ export interface OrgSettings extends Absender {
   llm_ready: boolean;
   suche_endpoint_url: string | null;
   suche_api_key_set: boolean;
+  /** Länderkürzel für die Suche, leer für „keine Vorgabe“. */
+  suche_region: string;
   anreicherung_automatisch: boolean;
   anreicherung_uebernahme: "leere_felder" | "vorschlag";
   /** Das Postfach, aus dem Tickets entstehen. Das Passwort kommt nie
@@ -632,6 +634,36 @@ export interface Erfassungsvorschlag {
   rest: string | null;
   modell: string;
   /** Ein vorhandener Datensatz, der dasselbe sein könnte. */
+  dublette: Record<string, string | null> | null;
+}
+
+/** Eine Firma, die zur Beschreibung passen könnte — Website aus den Treffern. */
+export interface Kandidat {
+  name: string;
+  website: string;
+  ort: string | null;
+  grund: string;
+  quelle: string;
+}
+
+export interface Kandidatenantwort {
+  kandidaten: Kandidat[];
+  /** Was die Beschreibung über die gesuchte Person sagt: vorname, nachname, rolle. */
+  person: Record<string, string>;
+  quellen: Record<string, unknown>[];
+  hinweise: string[];
+  modell: string;
+}
+
+/** Ein gefundener Datensatz vor dem Anlegen — Felder mit Beleg je Feld. */
+export interface Fund {
+  art: "contact" | "company";
+  felder: Record<string, string>;
+  belege: Record<string, { quelle: string; belegt: boolean }>;
+  quellen: { url: string; titel: string; art: string; anfrage?: string }[];
+  hinweise: string[];
+  rest: string | null;
+  modell: string;
   dublette: Record<string, string | null> | null;
 }
 

@@ -82,14 +82,35 @@ KONTAKT_PFADE = [
 PFAD_WOERTER = ("impressum", "imprint", "kontakt", "contact", "team", "ueber", "about", "ansprechpartner", "management")
 
 
-class SucheNichtEingerichtet(RuntimeError):  # noqa: N818
+class SucheProblem(RuntimeError):  # noqa: N818
+    """Der Suchdienst kann gerade nicht helfen — aus welchem Grund, sagt die Unterklasse."""
+
+
+class SucheNichtEingerichtet(SucheProblem):
     """Kein Suchdienst hinterlegt — die Anreicherung kennt dann nur die Website."""
+
+
+class SucheGestoert(SucheProblem):
+    """Der Dienst antwortet, aber die Suchmaschinen dahinter sind gesperrt.
+
+    SearXNG fragt Google, Bing, DuckDuckGo ohne Schlüssel — und die sperren
+    einen Selbstbetreiber nach wenigen Anfragen für Stunden. Das Ergebnis
+    ist dann leer, aber nicht, weil es nichts gäbe. Das muss die
+    Oberfläche unterscheiden können, sonst heißt es „nichts gefunden“.
+    """
+
+
+# Länder, für die eine Region gesetzt werden darf. Zwei Buchstaben, und
+# beide Dienste verstehen sie: Brave als `country`, SearXNG über die
+# Sprache `de-DE`.
+REGIONEN = {"DE": "de-DE", "AT": "de-AT", "CH": "de-CH", "NL": "nl-NL", "FR": "fr-FR", "GB": "en-GB", "US": "en-US"}
 
 
 @dataclass(frozen=True)
 class Suchdienst:
     endpoint_url: str
     api_key: str
+    region: str = "DE"  # Länderkürzel oder leer für „keine Vorgabe“
 
     @property
     def eingerichtet(self) -> bool:
@@ -110,7 +131,7 @@ class Einrichtung:
 
 async def load_einrichtung(conn: asyncpg.Connection, org_id: UUID) -> Einrichtung:
     row = await conn.fetchrow(
-        "select suche_endpoint_url, suche_api_key, anreicherung_automatisch, anreicherung_uebernahme "
+        "select suche_endpoint_url, suche_api_key, suche_region, anreicherung_automatisch, anreicherung_uebernahme "
         "from public.org_settings where org_id = $1",
         org_id,
     )
@@ -118,6 +139,7 @@ async def load_einrichtung(conn: asyncpg.Connection, org_id: UUID) -> Einrichtun
         suche=Suchdienst(
             endpoint_url=((row["suche_endpoint_url"] if row else None) or "").strip(),
             api_key=((row["suche_api_key"] if row else None) or "").strip(),
+            region=((row["suche_region"] if row else None) or "").strip().upper(),
         ),
         automatisch=bool(row["anreicherung_automatisch"]) if row else True,
         uebernahme=(row["anreicherung_uebernahme"] if row else None) or "leere_felder",
@@ -224,14 +246,22 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
     Jeder Treffer ist eine eigene Quelle: Titel und Kurztext, so wie die
     Suchmaschine sie zeigt. Mehr als das braucht die Anreicherung nicht —
     und mehr als das holt sie von LinkedIn auch nicht.
+
+    Die Region geht mit, wenn eine gesetzt ist: „Baustoffhandel“ ohne
+    Land liefert Fürth, wenn man Tecklenburg meint.
     """
     if not suche.eingerichtet:
         raise SucheNichtEingerichtet("Kein Suchdienst hinterlegt.")
 
+    region = suche.region if suche.region in REGIONEN else ""
     if suche.art == "brave":
+        params: dict[str, Any] = {"q": anfrage, "count": anzahl}
+        if region:
+            params["country"] = region
+            params["search_lang"] = REGIONEN[region].split("-")[0]
         antwort = await client.get(
             suche.endpoint_url,
-            params={"q": anfrage, "count": anzahl},
+            params=params,
             headers={"X-Subscription-Token": suche.api_key, "Accept": "application/json"},
         )
         antwort.raise_for_status()
@@ -243,9 +273,24 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
         kopf = {"Accept": "application/json"}
         if suche.api_key:
             kopf["Authorization"] = f"Bearer {suche.api_key}"
-        antwort = await client.get(url, params={"q": anfrage, "format": "json"}, headers=kopf)
+        params = {"q": anfrage, "format": "json"}
+        if region:
+            params["language"] = REGIONEN[region]
+        antwort = await client.get(url, params=params, headers=kopf)
         antwort.raise_for_status()
-        treffer = antwort.json().get("results") or []
+        daten = antwort.json()
+        treffer = daten.get("results") or []
+        if not treffer:
+            gesperrt = [
+                str(e[0]) for e in (daten.get("unresponsive_engines") or [])
+                if isinstance(e, list | tuple) and e
+            ]
+            if gesperrt:
+                raise SucheGestoert(
+                    "Der Suchdienst ist gerade gesperrt — "
+                    + ", ".join(sorted(set(gesperrt)))
+                    + " lassen ihn nicht mehr suchen. Das gibt sich meist nach einigen Stunden."
+                )
         rohe = [(t.get("url"), t.get("title"), t.get("content")) for t in treffer]
 
     quellen: list[Quelle] = []
@@ -529,7 +574,7 @@ async def firma_anreichern(
             return erg
         try:
             treffer = await suchen(client, einrichtung.suche, f'"{name}" {firma.get("city") or ""}'.strip())
-        except (httpx.HTTPError, SucheNichtEingerichtet) as exc:
+        except (httpx.HTTPError, SucheProblem) as exc:
             erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
             treffer = []
         for t in treffer:
@@ -552,7 +597,7 @@ async def firma_anreichern(
     if einrichtung.suche.eingerichtet:
         try:
             erg.quellen.extend(await suchen(client, einrichtung.suche, f'"{name}" site:linkedin.com/company', anzahl=3))
-        except (httpx.HTTPError, SucheNichtEingerichtet) as exc:
+        except (httpx.HTTPError, SucheProblem) as exc:
             erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
 
     gefunden = _linkedin_in(erg.quellen, "company/")
@@ -609,7 +654,7 @@ async def kontakt_anreichern(
         for anfrage in anfragen:
             try:
                 erg.quellen.extend(await suchen(client, einrichtung.suche, anfrage, anzahl=4))
-            except (httpx.HTTPError, SucheNichtEingerichtet) as exc:
+            except (httpx.HTTPError, SucheProblem) as exc:
                 erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
                 break
     elif not website:

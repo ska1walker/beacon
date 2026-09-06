@@ -40,6 +40,7 @@ from app.routers import (
     tickets,
 )
 from app.routers import qualifizierung as qualifizierung_router
+from app.routers import finden as finden_router
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
 from app.routers import suche as suche_router
@@ -250,6 +251,7 @@ app.include_router(anreicherung.router)
 app.include_router(ansichten.router)
 app.include_router(tickets.router)
 app.include_router(erfassen.router)
+app.include_router(finden_router.router)
 app.include_router(listen.router)
 app.include_router(suche_router.router)
 app.include_router(kampagnen.router)

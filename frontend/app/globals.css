@@ -2924,6 +2924,83 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .erfassung-hinweis.warnung { color: var(--am-achtung); }
   .erfassung-hinweis a { color: inherit; font-weight: 500; }
 
+  /* ── Beschreiben statt tippen ─────────────────────────────────────
+     Zwei Wege in dieselbe Maske; die Wegwahl sitzt über dem Kasten. */
+
+  .wegwahl {
+    display: inline-flex;
+    gap: var(--am-raum-1);
+    padding: var(--am-raum-1);
+    margin-bottom: var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+  }
+
+  .wegwahl button {
+    border: 0;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    padding: var(--am-raum-1) var(--am-raum-3);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--am-text-sekundaer);
+    cursor: pointer;
+    min-height: 2rem;
+  }
+
+  .wegwahl button.aktiv {
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    box-shadow: var(--am-schatten-1);
+  }
+
+  .wegwahl button:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+
+  .finden-kandidaten { margin-top: var(--am-raum-2); }
+  .finden-kandidaten ul { list-style: none; margin: var(--am-raum-2) 0 0; padding: 0; display: grid; gap: var(--am-raum-2); }
+
+  .finden-kandidat {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name aktion" "unter aktion";
+    align-items: center;
+    gap: 0 var(--am-raum-3);
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    text-align: left;
+    font: inherit;
+    color: var(--am-text-primaer);
+    cursor: pointer;
+    min-height: 2.75rem;
+  }
+
+  .finden-kandidat:hover:not(:disabled) { border-color: var(--am-handlung-ruhend); }
+  .finden-kandidat.aktiv { border-color: var(--am-gold-500); }
+  .finden-kandidat:disabled { cursor: default; opacity: 0.7; }
+  .finden-kandidat:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+  .finden-kandidat-name { grid-area: name; font-size: 0.875rem; font-weight: 500; }
+  .finden-kandidat-unter { grid-area: unter; font-size: 0.75rem; color: var(--am-text-sekundaer); line-height: 1.4; }
+  .finden-kandidat-aktion { grid-area: aktion; font-size: 0.75rem; font-weight: 500; color: var(--am-handlung-ruhend); white-space: nowrap; }
+
+  .finden-belege {
+    margin: var(--am-raum-2) 0 0;
+    padding: 0 0 0 var(--am-raum-4);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--am-text-sekundaer);
+  }
+
+  .finden-belege a { color: inherit; font-weight: 500; }
+
+  .dunkel .wegwahl button.aktiv,
+  .dunkel .finden-kandidat { background: var(--am-flaeche-2); }
+  .dunkel .finden-kandidat-aktion { color: var(--am-gold-beschriftung); }
+
   /* Ein Knopf, der wie ein Verweis aussieht — er führt keine Sache aus,
      die man rückgängig machen müsste, sondern ergänzt die Maske. */
   .alsLink {

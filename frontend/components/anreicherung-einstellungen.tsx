@@ -18,11 +18,13 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
   const client = useQueryClient();
   const [adresse, setAdresse] = useState(einstellungen.suche_endpoint_url ?? "");
   const [schluessel, setSchluessel] = useState("");
+  const [region, setRegion] = useState(einstellungen.suche_region ?? "DE");
   const [automatisch, setAutomatisch] = useState(einstellungen.anreicherung_automatisch);
   const [uebernahme, setUebernahme] = useState<OrgSettings["anreicherung_uebernahme"]>(einstellungen.anreicherung_uebernahme);
 
   useEffect(() => {
     setAdresse(einstellungen.suche_endpoint_url ?? "");
+    setRegion(einstellungen.suche_region ?? "DE");
     setAutomatisch(einstellungen.anreicherung_automatisch);
     setUebernahme(einstellungen.anreicherung_uebernahme);
   }, [einstellungen]);
@@ -33,6 +35,7 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
         suche_endpoint_url: adresse.trim() || null,
         // Leer heißt „nicht angefasst" — wie beim Modellschlüssel.
         suche_api_key: schluessel,
+        suche_region: region,
         anreicherung_automatisch: automatisch,
         anreicherung_uebernahme: uebernahme,
       }),
@@ -54,7 +57,7 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
         </span>
       </div>
       <div className="block-inhalt">
-        <Erklaerung kurz="Neue Firmen und Kontakte werden automatisch aus öffentlichen Quellen ergänzt — nie überschrieben." lang={<>Neue Firmen und Kontakte werden aus öffentlichen Quellen ergänzt: Impressum, Kontakt- und
+        <Erklaerung kurz="Beacon ergänzt Firmen und Kontakte aus öffentlichen Quellen und findet beim Anlegen, wen Sie beschreiben — nie wird etwas überschrieben." lang={<>Neue Firmen und Kontakte werden aus öffentlichen Quellen ergänzt: Impressum, Kontakt- und
           Team-Seiten der Firmen-Website, dazu die Treffer eines Suchdienstes — darüber auch
           LinkedIn-Seiten und -Profile, ohne LinkedIn selbst abzurufen. Jeder Wert nennt seine
           Quelle; Kontaktdaten müssen wörtlich dort stehen. Was schon eingetragen ist, wird nie
@@ -96,6 +99,21 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
               autoComplete="off"
             />
             <p className="feld-hinweis">Brave verlangt einen; eine eigene SearXNG-Instanz meist nicht.</p>
+          </div>
+
+          <div className="feld">
+            <label htmlFor="suche-region">Region der Suche</label>
+            <select id="suche-region" value={region} onChange={(ev) => setRegion(ev.target.value)}>
+              <option value="DE">Deutschland</option>
+              <option value="AT">Österreich</option>
+              <option value="CH">Schweiz</option>
+              <option value="NL">Niederlande</option>
+              <option value="FR">Frankreich</option>
+              <option value="GB">Großbritannien</option>
+              <option value="US">USA</option>
+              <option value="">Keine Vorgabe</option>
+            </select>
+            <p className="feld-hinweis">„Baustoffhandel“ ohne Land liefert Fürth, wenn Sie Tecklenburg meinen.</p>
           </div>
 
           <div className="feld">

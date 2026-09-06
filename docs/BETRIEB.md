@@ -415,6 +415,67 @@ Jeder Lauf liegt in `anreicherungen`: gelesene Adressen mit Bytes,
 gestellte Suchanfragen, Vorschlag, Übernommenes. Das ist der Nachweis,
 was die Box verlassen hat.
 
+**Region.** Seit 0.3.0 geht ein Länderkürzel mit (*Einstellungen → KI
+und Programme → Region der Suche*, Vorgabe DE): Brave als `country`,
+SearXNG als Sprache `de-DE`. Ohne Region liefert „Baustoffhandel“ Fürth,
+wenn man Tecklenburg meint.
+
+**SearXNG ist auf einer Heim-Box nicht verlässlich.** Es fragt Google,
+Bing, DuckDuckGo und Startpage ohne Schlüssel — und die sperren einen
+Selbstbetreiber mit fester IP nach wenigen Anfragen für Stunden bis
+Tage. Gemessen am 6. September 2026 aus Beacons Namespace heraus: JSON
+in 0,4 s, aber null Treffer, alle Maschinen `Suspended` oder `CAPTCHA`;
+Bing lieferte für drei verschiedene Anfragen dieselben zehn Treffer, also
+eine Abwehrseite. Beacon erkennt das seit 0.3.0 am Feld
+`unresponsive_engines` und meldet *„Der Suchdienst ist gerade gesperrt“*
+statt „nichts gefunden“ (`SucheGestoert` in `anreicherung.py`). Für ein
+CRM, das je Anlegen fünf bis zehn Anfragen stellt, ist Brave der
+tragfähige Weg; SearXNG bleibt als Wahl erhalten.
+
+## Beschreiben statt tippen — Firma und Kontakt finden
+
+Seit 0.3.0 beginnt der Anlegen-Dialog mit einer Wegwahl: **Beschreiben**
+oder **Hineinwerfen** (Signatur, Visitenkarte, wie bisher). Beschreiben
+nimmt einen Satz wie „Baustoffhandel im Tecklenburger Land, der
+Geschäftsführer heißt vermutlich Sebastian“ und arbeitet in drei
+Schritten (`backend/app/finden.py`, Endpunkte unter `/api/finden`):
+
+1. **Kandidaten** (`POST /api/finden/kandidaten`). Die Beschreibung geht
+   zweimal an den Suchdienst — pur und mit „Impressum“. Das Modell nennt
+   aus den Treffern bis zu vier Firmen mit Website; Verzeichnisse
+   (Gelbe Seiten, LinkedIn, Northdata …) sind keine Kandidaten, und eine
+   Website, die in keinem Treffer steht, fällt weg. Dazu liest es aus der
+   Beschreibung, was über die Person gesagt ist (Vorname, Nachname,
+   Rolle). Ein Mensch wählt.
+2. **Firma** (`POST /api/finden/firma`). Dieselbe Anreicherung wie am
+   Datensatz — Impressum, Kontaktseite, LinkedIn-Treffer — nur ohne
+   Datensatz. Name, Website und Domain kommen vom Kandidaten.
+3. **Person** (`POST /api/finden/kontakt`). Team-, Impressums- und
+   Kontaktseiten der Firma, gefiltert auf den Namen, plus Suchtreffer.
+   Gefunden ist eine Person erst, wenn eine gelesene Quelle ihren
+   **Nachnamen** nennt; der Vorname bleibt nur mit Beleg. „Vermutlich
+   Sebastian“ wird nicht zu einem Kontakt, wenn ihn niemand nennt.
+
+Die Antwort hat die Form eines Erfassungsvorschlags (`felder`) plus
+`belege` je Feld (Quelle, wörtlich belegt) und `quellen` mit den
+Suchanfragen, die den Suchdienst verlassen haben. Die Maske füllt nur
+leere Felder und zeigt darunter je Quelle, welche Felder von ihr
+stammen. **Gespeichert wird nichts** — Anlegen drückt ein Mensch über
+die gewohnten Endpunkte; die Dublettenprüfung aus `erfassen.py` läuft
+vorher.
+
+Voraussetzungen: Sprachmodell (409 ohne) und für Schritt 1 ein
+Suchdienst (409 ohne, 503 wenn gesperrt). Von der Firmenseite aus steht
+die Firma fest; dann sucht der Dialog nur die Person und nimmt die
+Beschreibung als Rolle.
+
+Nachbau für die eigene Prüfung ohne Brave-Schlüssel: ein kleiner
+HTTP-Server, der `/search` im SearXNG-Format, `/v1/chat/completions`
+im OpenAI-Format und drei Seiten einer Firma liefert — beide Adressen
+unter Einstellungen eintragen, dann läuft der Dialog gegen bekannte
+Antworten. Die Tests in `backend/tests/test_finden.py` tun dasselbe
+mit `httpx.MockTransport`.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an
