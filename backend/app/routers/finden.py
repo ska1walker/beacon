@@ -69,6 +69,8 @@ class Fund(BaseModel):
     rest: str | None = None
     modell: str
     dublette: dict[str, Any] | None = None
+    # Wer sonst genannt wird, wenn die beschriebene Person nicht da ist.
+    alternativen: list[dict[str, Any]] = Field(default_factory=list)
 
 
 async def _einrichtung(user: CurrentUser):
@@ -159,6 +161,7 @@ async def kontakt(payload: Personenwahl, user: CurrentUser = Depends(get_current
         "contact", erg, modell,
         firma_name=payload.firma.name, firma_domain=finden.domain_aus(payload.firma.website),
     )
+    fund.alternativen = getattr(erg, "alternativen", [])
     if not erg.vorschlag:
         # Ohne Person bleibt die Firma trotzdem in der Maske — sie ist
         # gewählt, nicht erfunden.

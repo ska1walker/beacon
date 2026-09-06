@@ -2987,6 +2987,28 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .finden-kandidat-unter { grid-area: unter; font-size: 0.75rem; color: var(--am-text-sekundaer); line-height: 1.4; }
   .finden-kandidat-aktion { grid-area: aktion; font-size: 0.75rem; font-weight: 500; color: var(--am-handlung-ruhend); white-space: nowrap; }
 
+  .finden-personen { list-style: none; margin: var(--am-raum-2) 0 0; padding: 0; display: grid; gap: var(--am-raum-2); }
+  .finden-person {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name aktion" "unter aktion";
+    align-items: center;
+    gap: 0 var(--am-raum-3);
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    text-align: left;
+    font: inherit;
+    color: var(--am-text-primaer);
+    cursor: pointer;
+    min-height: 2.75rem;
+  }
+  .finden-person:hover { border-color: var(--am-handlung-ruhend); }
+  .finden-person:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+  .dunkel .finden-person { background: var(--am-flaeche-2); }
+
   .finden-belege {
     margin: var(--am-raum-2) 0 0;
     padding: 0 0 0 var(--am-raum-4);

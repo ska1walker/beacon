@@ -213,7 +213,19 @@ export function Finden({
         </div>
       )}
 
-      {fund && !laeuft && <Fundbericht fund={fund} />}
+      {fund && !laeuft && (
+        <Fundbericht
+          fund={fund}
+          beiPerson={(a) => {
+            beiErgebnis({
+              art: "contact",
+              felder: { first_name: a.first_name, last_name: a.last_name, job_title: a.job_title },
+              rest: null, modell: fund.modell, dublette: null,
+            });
+            setFund({ ...fund, felder: { ...fund.felder, first_name: a.first_name, last_name: a.last_name, job_title: a.job_title }, alternativen: [] });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -239,7 +251,7 @@ const FELDTEXT: Record<string, string> = {
 };
 
 /** Was gefüllt wurde, und woher — je Quelle eine Zeile, damit man nachsehen kann. */
-function Fundbericht({ fund }: { fund: Fund }) {
+function Fundbericht({ fund, beiPerson }: { fund: Fund; beiPerson: (a: NonNullable<Fund["alternativen"]>[number]) => void }) {
   const jeQuelle = new Map<string, string[]>();
   for (const [feld, b] of Object.entries(fund.belege)) {
     const liste = jeQuelle.get(b.quelle) ?? [];
@@ -272,6 +284,19 @@ function Fundbericht({ fund }: { fund: Fund }) {
       {fund.hinweise.map((h) => (
         <p key={h} className="erfassung-hinweis warnung">{h}</p>
       ))}
+      {fund.alternativen && fund.alternativen.length > 0 && (
+        <ul className="finden-personen">
+          {fund.alternativen.map((a) => (
+            <li key={`${a.first_name}-${a.last_name}`}>
+              <button type="button" className="finden-person" onClick={() => beiPerson(a)}>
+                <span className="finden-kandidat-name">{[a.first_name, a.last_name].filter(Boolean).join(" ")}</span>
+                {a.job_title && <span className="finden-kandidat-unter">{a.job_title} · {host(a.quelle)}{pfad(a.quelle)}</span>}
+                <span className="finden-kandidat-aktion">Übernehmen</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {fund.dublette && (
         <p className="erfassung-hinweis warnung">
           Gibt es womöglich schon:{" "}

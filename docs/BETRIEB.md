@@ -481,6 +481,13 @@ Schritten (`backend/app/finden.py`, Endpunkte unter `/api/finden`):
    Gefunden ist eine Person erst, wenn eine gelesene Quelle ihren
    **Nachnamen** nennt; der Vorname bleibt nur mit Beleg. „Vermutlich
    Sebastian“ wird nicht zu einem Kontakt, wenn ihn niemand nennt.
+   Passt niemand, kommen unter `alternativen` die Personen zurück, die
+   die Quellen bei dieser Firma nennen (Geschäftsführung, Inhaber,
+   Ansprechpartner) — als Wahl in der Maske, nicht als Wert. Gemessen am
+   6. September 2026 an „Baustoffhandel Tecklenburger Land, Geschäftsführer
+   vermutlich Sebastian“: Firma vollständig belegt aus Impressum und
+   LinkedIn-Treffer; die Geschäftsführer heißen laut Impressum anders,
+   Sebastian Specht ist dort „verantwortlich für den Inhalt“.
 
 Die Antwort hat die Form eines Erfassungsvorschlags (`felder`) plus
 `belege` je Feld (Quelle, wörtlich belegt) und `quellen` mit den

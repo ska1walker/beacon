@@ -46,6 +46,15 @@ VERZEICHNISSE = (
 
 PERSON_FELDER = ["first_name", "last_name", "job_title", "email", "phone", "mobile", "linkedin_url"]
 
+
+@dataclass
+class Personenfund(Ergebnis):
+    # Wer sonst noch bei dieser Firma genannt wird — wenn die beschriebene
+    # Person nicht (eindeutig) da ist. „Der Geschäftsführer heißt vermutlich
+    # Sebastian“ trifft oft daneben; die drei, die das Impressum nennt,
+    # sind dann die bessere Antwort als ein leeres Feld.
+    alternativen: list[dict[str, Any]] = field(default_factory=list)
+
 SYSTEM_KANDIDATEN = (
     "Du liest eine Beschreibung, die jemand über eine Firma im Kopf hat, und eine "
     "Liste von Suchtreffern. Du nennst, welche Firmen aus den Treffern gemeint sein "
@@ -234,14 +243,15 @@ async def person(
     firmenname: str,
     website: str | None,
     hinweis: dict[str, str],
-) -> Ergebnis:
+) -> Personenfund:
     """Sucht die beschriebene Person bei dieser Firma.
 
     `hinweis` trägt, was man weiß: vorname, nachname, rolle — jedes
     einzeln optional. Gefunden ist eine Person erst, wenn eine Quelle
-    ihren Nachnamen nennt.
+    ihren Nachnamen nennt. Passt niemand, kommen die Personen zurück, die
+    die Quellen bei dieser Firma nennen — als Wahl, nicht als Wert.
     """
-    erg = Ergebnis()
+    erg = Personenfund()
     vorname = (hinweis.get("vorname") or "").strip()
     nachname = (hinweis.get("nachname") or "").strip()
     rolle = (hinweis.get("rolle") or "").strip()
@@ -286,13 +296,26 @@ async def person(
         "Finde in den Quellen unten genau die eine Person bei dieser Firma, die dazu passt. "
         "Ordne ihr diese Felder zu, soweit sie dort stehen:\n"
         "  first_name, last_name, job_title (Position bei dieser Firma), email, phone (Festnetz), "
-        "mobile, linkedin_url (öffentliches LinkedIn-Profil dieser Person).\n\n"
-        'Antworte als {"felder": {"<feld>": {"wert": ..., "quelle": <Nummer der Quelle>}}}.\n'
-        "Passt niemand eindeutig, antworte {\"felder\": {}}. Namen, E-Mail und Telefon wörtlich abschreiben.\n\n"
+        "mobile, linkedin_url (öffentliches LinkedIn-Profil dieser Person).\n"
+        "Nenne außerdem unter \"andere\" bis zu fünf weitere Personen, die die Quellen bei dieser "
+        "Firma nennen — Geschäftsführung, Inhaber, Ansprechpartner — je mit first_name, last_name, "
+        "job_title und quelle.\n\n"
+        'Antworte als {"felder": {"<feld>": {"wert": ..., "quelle": <Nummer>}}, '
+        '"andere": [{"first_name": ..., "last_name": ..., "job_title": ..., "quelle": <Nummer>}]}.\n'
+        "Passt niemand eindeutig, lass \"felder\" leer. Namen, E-Mail und Telefon wörtlich abschreiben.\n\n"
         f"{an._quellenblock(erg.quellen)}"
     )
-    roh = await an._zuordnen(erg, cfg, frage)
+    try:
+        antwort = await an.chat(cfg, an.SYSTEM, frage, temperature=0.0, max_tokens=6000)
+        ganz = an.json_aus_antwort(antwort) if antwort.strip() else {}
+    except ValueError as exc:
+        erg.fehler = f"Das Modell hat kein verwertbares Ergebnis geliefert: {exc}"
+        ganz = {}
+    if not isinstance(ganz, dict):
+        ganz = {}
+    roh = ganz.get("felder") if isinstance(ganz.get("felder"), dict) else {}
     vorschlag = an._vorschlag_bauen(roh, erg.quellen, PERSON_FELDER, {})
+    erg.alternativen = _andere_personen(ganz.get("andere"), erg.quellen)
 
     # Namen wie Kontaktdaten: Nennt die zitierte Quelle ihn nicht, tut es
     # vielleicht eine andere der gelesenen — das Modell verzählt sich bei
@@ -308,11 +331,51 @@ async def person(
     # und „ausgedacht“. Der Vorname bleibt nur, wenn ihn dieselbe Welt nennt.
     nn = vorschlag.get("last_name")
     if not nn or not nn["belegt"]:
-        erg.hinweise.append("Keine Quelle nennt eine passende Person.")
+        erg.hinweise.append(
+            "Keine Quelle nennt eine passende Person."
+            + (" Genannt werden stattdessen:" if erg.alternativen else "")
+        )
         erg.vorschlag = {}
         return erg
+    # Wer gefunden wurde, steht nicht noch einmal unter den anderen.
+    erg.alternativen = [
+        a for a in erg.alternativen
+        if a["last_name"].casefold() != str(nn["wert"]).casefold()
+        or a.get("first_name", "").casefold() != str(vorschlag.get("first_name", {}).get("wert", "")).casefold()
+    ]
     vn = vorschlag.get("first_name")
     if vn and not vn["belegt"]:
         vorschlag.pop("first_name")
     erg.vorschlag = vorschlag
     return erg
+
+
+def _andere_personen(roh: Any, quellen: list[Quelle]) -> list[dict[str, Any]]:
+    """Die anderen Genannten — nur mit belegtem Nachnamen, ohne Dubletten."""
+    ergebnis: list[dict[str, Any]] = []
+    for eintrag in (roh or [])[:8] if isinstance(roh, list) else []:
+        if not isinstance(eintrag, dict):
+            continue
+        nachname = _text(eintrag.get("last_name"), 80)
+        if not nachname:
+            continue
+        vorname = _text(eintrag.get("first_name"), 80) or ""
+        try:
+            quelle = quellen[int(eintrag.get("quelle")) - 1]
+        except (TypeError, ValueError, IndexError):
+            quelle = None  # type: ignore[assignment]
+        if quelle is None or not ist_belegt("last_name", nachname, quelle):
+            quelle = next((q for q in quellen if ist_belegt("last_name", nachname, q)), None)  # type: ignore[assignment]
+        if quelle is None:
+            continue
+        if vorname and not ist_belegt("first_name", vorname, quelle):
+            vorname = ""
+        if any(a["last_name"].casefold() == nachname.casefold() and a["first_name"].casefold() == vorname.casefold() for a in ergebnis):
+            continue
+        ergebnis.append({
+            "first_name": vorname, "last_name": nachname,
+            "job_title": _text(eintrag.get("job_title"), 120) or "", "quelle": quelle.url,
+        })
+        if len(ergebnis) >= 5:
+            break
+    return ergebnis

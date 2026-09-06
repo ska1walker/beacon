@@ -91,7 +91,12 @@ PERSON = (
     '"job_title": {"wert": "Geschäftsführer", "quelle": 1}, "email": {"wert": "s.brinkmann@baustoffe-brinkmann.de", "quelle": 1},'
     '"mobile": {"wert": "+49 170 9999999", "quelle": 1}}}'
 )
-FREMDE_PERSON = '{"felder": {"first_name": {"wert": "Sebastian", "quelle": 1}, "last_name": {"wert": "Meier", "quelle": 1}}}'
+FREMDE_PERSON = (
+    '{"felder": {"first_name": {"wert": "Sebastian", "quelle": 1}, "last_name": {"wert": "Meier", "quelle": 1}},'
+    ' "andere": [{"first_name": "Sebastian", "last_name": "Brinkmann", "job_title": "Geschäftsführer", "quelle": 2},'
+    ' {"first_name": "Petra", "last_name": "Lüttmann", "job_title": "Verkauf Innendienst", "quelle": 3},'
+    ' {"first_name": "Karl", "last_name": "Erfunden", "job_title": "Inhaber", "quelle": 2}]}'
+)
 
 
 @pytest.fixture
@@ -218,6 +223,11 @@ async def test_person_ohne_beleg_ist_keine_person(datenbank, welt):
         assert "last_name" not in d["felder"] and "first_name" not in d["felder"]
         assert d["felder"]["firma_name"] == "Brinkmann Baustoffe GmbH"
         assert any("Keine Quelle nennt" in h for h in d["hinweise"])
+        # Die anderen Genannten kommen als Wahl — nur mit belegtem Nachnamen.
+        assert [(a["first_name"], a["last_name"], a["job_title"]) for a in d["alternativen"]] == [
+            ("Sebastian", "Brinkmann", "Geschäftsführer"), ("Petra", "Lüttmann", "Verkauf Innendienst"),
+        ]
+        assert d["alternativen"][0]["quelle"].startswith("https://www.baustoffe-brinkmann.de")
 
 
 async def test_ohne_modell_409(datenbank, welt):

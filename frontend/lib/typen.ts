@@ -665,6 +665,8 @@ export interface Fund {
   rest: string | null;
   modell: string;
   dublette: Record<string, string | null> | null;
+  /** Wer sonst bei der Firma genannt wird, wenn die beschriebene Person nicht da ist. */
+  alternativen?: { first_name: string; last_name: string; job_title: string; quelle: string }[];
 }
 
 export interface Firmenverknuepfung {
