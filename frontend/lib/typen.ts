@@ -669,6 +669,25 @@ export interface Fund {
   alternativen?: { first_name: string; last_name: string; job_title: string; quelle: string }[];
 }
 
+/** Eine Person, die die Quellen bei einer Firma nennen — als Wahl. */
+export interface Personenvorschlag {
+  first_name: string;
+  last_name: string;
+  job_title: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  linkedin_url?: string;
+  quelle: string;
+}
+
+export interface Personenliste {
+  personen: Personenvorschlag[];
+  quellen: Record<string, unknown>[];
+  hinweise: string[];
+  modell: string;
+}
+
 export interface Firmenverknuepfung {
   company_id: string;
   company_name: string;

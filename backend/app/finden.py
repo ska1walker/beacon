@@ -350,10 +350,76 @@ async def person(
     return erg
 
 
-def _andere_personen(roh: Any, quellen: list[Quelle]) -> list[dict[str, Any]]:
-    """Die anderen Genannten — nur mit belegtem Nachnamen, ohne Dubletten."""
+# ---------------------------------------------------------------------------
+# 4. Personen bei einer Firma — ohne eine bestimmte zu meinen
+# ---------------------------------------------------------------------------
+
+
+async def personen(
+    client: httpx.AsyncClient,
+    cfg: LLMConfig,
+    einr: Einrichtung,
+    firmenname: str,
+    website: str | None,
+    wunsch: str | None = None,
+) -> Personenfund:
+    """Wer bei dieser Firma genannt wird — Geschäftsführung, Ansprechpartner,
+    Team — als Wahl für „als Kontakte anlegen“.
+
+    `wunsch` ist ein Halbsatz wie „Einkauf“ oder „Geschäftsführung“: Er
+    lenkt die Suche und die Reihenfolge, schließt aber niemanden aus.
+    Gefunden ist jede Person nur mit belegtem Nachnamen; E-Mail und
+    Telefon nur, wenn sie wörtlich dastehen.
+    """
+    erg = Personenfund()
+    wurzel = _wurzel(website) if website else None
+    if wurzel:
+        erg.quellen.extend(await an._seiten_sammeln(client, wurzel, an.KONTAKT_PFADE, hoechstens=6))
+    if einr.suche.eingerichtet:
+        anfragen = [f'"{firmenname}" {wunsch or "Geschäftsführung Ansprechpartner Team"}', f'"{firmenname}" site:linkedin.com/in']
+        for anfrage in anfragen:
+            try:
+                for q in await an.suchen(client, einr.suche, anfrage, anzahl=5):
+                    if not any(q.url == v.url for v in erg.quellen):
+                        erg.quellen.append(q)
+            except (httpx.HTTPError, SucheProblem) as exc:
+                erg.hinweise.append(f"Suchdienst: {exc}")
+                break
+    elif not wurzel:
+        erg.hinweise.append("Die Firma hat keine Website, und es ist kein Suchdienst hinterlegt.")
+    if not erg.quellen:
+        erg.hinweise.append("Keine Quelle nennt Personen bei dieser Firma.")
+        return erg
+
+    frage = (
+        f"Firma: {firmenname}\n"
+        + (f"Gesucht werden bevorzugt: {wunsch}\n" if wunsch else "")
+        + "\nAlle Personen, die die Quellen unten bei dieser Firma nennen — Geschäftsführung, "
+        "Inhaber, Ansprechpartner, Team — je mit first_name, last_name, job_title und, soweit "
+        "wörtlich dort steht, email, phone, mobile, linkedin_url. Die wichtigsten zuerst, "
+        "höchstens zehn. Keine Personen anderer Firmen.\n\n"
+        'Antworte als {"andere": [{"first_name": ..., "last_name": ..., "job_title": ..., '
+        '"email": ..., "phone": ..., "quelle": <Nummer der Quelle>}]}.\n\n'
+        f"{an._quellenblock(erg.quellen)}"
+    )
+    try:
+        antwort = await an.chat(cfg, an.SYSTEM, frage, temperature=0.0, max_tokens=6000)
+        ganz = an.json_aus_antwort(antwort) if antwort.strip() else {}
+    except ValueError as exc:
+        erg.fehler = f"Das Modell hat kein verwertbares Ergebnis geliefert: {exc}"
+        ganz = {}
+    if not isinstance(ganz, dict):
+        ganz = {}
+    erg.alternativen = _andere_personen(ganz.get("andere"), erg.quellen, hoechstens=10)
+    if not erg.alternativen:
+        erg.hinweise.append("Keine Quelle nennt Personen bei dieser Firma.")
+    return erg
+
+
+def _andere_personen(roh: Any, quellen: list[Quelle], *, hoechstens: int = 5) -> list[dict[str, Any]]:
+    """Die Genannten — nur mit belegtem Nachnamen, ohne Dubletten."""
     ergebnis: list[dict[str, Any]] = []
-    for eintrag in (roh or [])[:8] if isinstance(roh, list) else []:
+    for eintrag in (roh or [])[: hoechstens + 4] if isinstance(roh, list) else []:
         if not isinstance(eintrag, dict):
             continue
         nachname = _text(eintrag.get("last_name"), 80)
@@ -372,10 +438,16 @@ def _andere_personen(roh: Any, quellen: list[Quelle]) -> list[dict[str, Any]]:
             vorname = ""
         if any(a["last_name"].casefold() == nachname.casefold() and a["first_name"].casefold() == vorname.casefold() for a in ergebnis):
             continue
-        ergebnis.append({
+        person: dict[str, Any] = {
             "first_name": vorname, "last_name": nachname,
             "job_title": _text(eintrag.get("job_title"), 120) or "", "quelle": quelle.url,
-        })
-        if len(ergebnis) >= 5:
+        }
+        # Kontaktdaten nur wörtlich — aus irgendeiner gelesenen Quelle.
+        for feld in ("email", "phone", "mobile", "linkedin_url"):
+            wert = an._normalisiert(feld, eintrag.get(feld))
+            if wert and any(ist_belegt(feld, wert, q) for q in quellen):
+                person[feld] = wert
+        ergebnis.append(person)
+        if len(ergebnis) >= hoechstens:
             break
     return ergebnis

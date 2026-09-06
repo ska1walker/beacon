@@ -3005,6 +3005,11 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     cursor: pointer;
     min-height: 2.75rem;
   }
+  label.finden-person { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "kasten name" "kasten unter"; }
+  label.finden-person input { grid-area: kasten; width: 1rem; height: 1rem; margin: 0; accent-color: var(--am-handlung-ruhend); }
+  .finden-person.aktiv { border-color: var(--am-gold-500); }
+  .finden-person.schon-da { opacity: 0.6; cursor: default; }
+  .finden-kandidat-unter a { color: inherit; }
   .finden-person:hover { border-color: var(--am-handlung-ruhend); }
   .finden-person:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
   .dunkel .finden-person { background: var(--am-flaeche-2); }

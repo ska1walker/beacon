@@ -99,6 +99,14 @@ FREMDE_PERSON = (
 )
 
 
+PERSONEN = (
+    '{"andere": [{"first_name": "Sebastian", "last_name": "Brinkmann", "job_title": "Geschäftsführer",'
+    ' "email": "s.brinkmann@baustoffe-brinkmann.de", "phone": "+49 5482 1234-10", "quelle": 3},'
+    ' {"first_name": "Petra", "last_name": "Lüttmann", "job_title": "Verkauf Innendienst", "email": "p.luettmann@baustoffe-brinkmann.de", "quelle": 3},'
+    ' {"first_name": "Karl", "last_name": "Erfunden", "job_title": "Inhaber", "quelle": 2}]}'
+)
+
+
 @pytest.fixture
 def welt(monkeypatch):
     ANFRAGEN.clear()
@@ -111,6 +119,8 @@ def welt(monkeypatch):
     async def modell(cfg, system, user, **kwargs):
         if user.startswith("Beschreibung:"):
             return KANDIDATEN
+        if "Alle Personen" in user:
+            return PERSONEN
         if "Gesucht:" in user.split("\n", 2)[1]:
             return skript["person"]
         return FIRMA
@@ -235,3 +245,19 @@ async def test_ohne_modell_409(datenbank, welt):
         await k.put("/api/settings", json={"llm_base_url": None, "suche_endpoint_url": "https://such.local"})
         r = await k.post("/api/finden/kandidaten", json={"beschreibung": "Baustoffhandel Tecklenburg"})
         assert r.status_code == 409
+
+
+async def test_personen_bei_einer_firma(datenbank, welt):
+    """Alle Genannten als Wahl — mit belegten Kontaktdaten, ohne Erfundenes."""
+    async with klient_fuer("finden-personen") as k:
+        await _eingerichtet(k)
+        r = await k.post("/api/finden/personen", json={"firma": {"name": "Brinkmann Baustoffe GmbH", "website": "https://www.baustoffe-brinkmann.de"}, "wunsch": "Geschäftsführung"})
+        assert r.status_code == 200, r.text
+        d = r.json()
+        p = d["personen"]
+        assert [(x["first_name"], x["last_name"]) for x in p] == [("Sebastian", "Brinkmann"), ("Petra", "Lüttmann")]
+        assert p[0]["email"] == "s.brinkmann@baustoffe-brinkmann.de" and p[0]["phone"] == "+49 5482 1234-10"
+        # Die E-Mail von Petra steht in keiner Quelle — weg.
+        assert "email" not in p[1]
+        assert p[0]["quelle"].startswith("https://www.baustoffe-brinkmann.de")
+        assert any(q.get("anfrage", "").endswith("Geschäftsführung") for q in d["quellen"] if q["art"] == "suche")

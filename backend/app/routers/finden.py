@@ -55,6 +55,18 @@ class Personenwahl(BaseModel):
     beschreibung: str | None = Field(default=None, max_length=300)
 
 
+class Personenwunsch(BaseModel):
+    firma: Firmenwahl
+    wunsch: str | None = Field(default=None, max_length=120)
+
+
+class Personenliste(BaseModel):
+    personen: list[dict[str, Any]]
+    quellen: list[dict[str, Any]]
+    hinweise: list[str]
+    modell: str
+
+
 class Fund(BaseModel):
     """Dieselbe Form wie ein Erfassungsvorschlag — plus Belege.
 
@@ -169,3 +181,20 @@ async def kontakt(payload: Personenwahl, user: CurrentUser = Depends(get_current
     async with acquire_as(user.user_id) as conn:
         fund.dublette = await _dublette(conn, "contact", fund.felder, user.org_id)
     return fund
+
+
+@router.post("/personen", response_model=Personenliste)
+async def personen(payload: Personenwunsch, user: CurrentUser = Depends(get_current_user)) -> Personenliste:
+    """Wer bei dieser Firma genannt wird — für „als Kontakte anlegen“."""
+    wunsch = " ".join(payload.wunsch.split())[:120] if payload.wunsch and payload.wunsch.strip() else None
+    erg, modell = await _laufen(
+        user, lambda c, cfg, e: finden.personen(c, cfg, e, payload.firma.name, payload.firma.website, wunsch)
+    )
+    if erg.fehler:
+        erg.hinweise.append(erg.fehler)
+    return Personenliste(
+        personen=getattr(erg, "alternativen", []),
+        quellen=[q.als_json() for q in erg.quellen],
+        hinweise=erg.hinweise,
+        modell=modell,
+    )

@@ -15,6 +15,7 @@ import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
 import { Anreicherungsblock } from "@/components/anreicherung";
 import { KontaktAnlegen } from "@/components/kontakt-anlegen";
+import { PersonenFinden } from "@/components/personen-finden";
 import { DealAnlegen } from "@/components/deal-anlegen";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Pipeline } from "@/lib/typen";
@@ -34,6 +35,7 @@ function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
 export default function FirmaSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [kontaktOffen, setKontaktOffen] = useState(false);
+  const [suchenOffen, setSuchenOffen] = useState(false);
   const [dealOffen, setDealOffen] = useState(false);
   const client = useQueryClient();
   const pipelines = useQuery({ queryKey: ["pipelines"], queryFn: () => api.get<Pipeline[]>("/api/pipelines") });
@@ -168,9 +170,17 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
           <section className="block">
             <div className="block-kopf">
               <h2>Kontakte</h2>
-              <button type="button" className="btn btn-still btn-klein" onClick={() => setKontaktOffen(true)}>Anlegen</button>
+              <div className="btn-reihe" style={{ marginTop: 0 }}>
+                <button type="button" className="btn btn-still btn-klein" onClick={() => setSuchenOffen((o) => !o)} aria-expanded={suchenOffen} title="Ansprechpartner aus Website und Suchtreffern finden">Finden</button>
+                <button type="button" className="btn btn-still btn-klein" onClick={() => setKontaktOffen(true)}>Anlegen</button>
+              </div>
             </div>
             <div className="block-inhalt">
+              {suchenOffen && (
+                <div className="erfassung" style={{ marginBottom: "var(--am-raum-4)" }}>
+                  <PersonenFinden firmaId={id} firma={{ name: f.name, website: f.website || f.domain }} vorhanden={kontakte.data ?? []} />
+                </div>
+              )}
               {kontakte.data?.length === 0 && (
                 <p style={{ fontSize: "0.875rem", color: "var(--am-text-gedaempft)" }}>
                   Noch niemand hinterlegt.

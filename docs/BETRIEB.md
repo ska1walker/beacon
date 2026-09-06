@@ -489,6 +489,18 @@ Schritten (`backend/app/finden.py`, Endpunkte unter `/api/finden`):
    LinkedIn-Treffer; die Geschäftsführer heißen laut Impressum anders,
    Sebastian Specht ist dort „verantwortlich für den Inhalt“.
 
+4. **Personen bei einer Firma** (`POST /api/finden/personen`, seit 0.3.5).
+   Ohne eine bestimmte Person zu meinen: alle, die Team-, Kontakt- und
+   Impressumsseite und die Suchtreffer bei dieser Firma nennen, mit Rolle
+   und wörtlich belegten Kontaktdaten. Ein Wunsch wie „Einkauf“ lenkt
+   Suche und Reihenfolge. Die Maske zeigt sie als Auswahl: Im
+   Firmen-Dialog läuft die Suche von selbst an, sobald eine Firma gewählt
+   ist, und die gewählten Personen entstehen mit der Firma
+   (`Anlegen, mit 2 Kontakten`); auf der Firmenseite unter Kontakte →
+   *Finden* legt „als Kontakte anlegen“ sie direkt an, wer schon da ist,
+   trägt „schon im Bestand“. Herkunft der so angelegten Kontakte:
+   `Recherche`.
+
 Die Antwort hat die Form eines Erfassungsvorschlags (`felder`) plus
 `belege` je Feld (Quelle, wörtlich belegt) und `quellen` mit den
 Suchanfragen, die den Suchdienst verlassen haben. Die Maske füllt nur
