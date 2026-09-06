@@ -47,15 +47,25 @@ from app.routers import suche as suche_router
 
 
 async def _stammdaten_nachziehen() -> None:
-    """Sät Produktkatalog und Verlustgründe, wo sie fehlen.
+    """Sät Produktkatalog, Verlustgründe und Ticket-Pipeline, wo sie fehlen.
 
     Läuft einmal beim Start. Die Aussaat beim Anlegen einer Organisation
     deckt nur neue ab — eine Box, die vor dieser Ausbaustufe installiert
     wurde, hätte nach dem Upgrade eine leere Produktliste und könnte kein
     Angebot schreiben. Für jede spätere Erweiterung des Katalogs greift
     derselbe Weg.
+
+    Geprüft wird **mit** Nutzerkontext. Ohne ihn sieht die Zeilensicherheit
+    keine einzige Zeile, „fehlt“ ist dann immer wahr — und jede Box bekam
+    bei jedem Start eine weitere Ticket-Pipeline. Die Dubletten aus dieser
+    Zeit räumt `_ticketpipelines_bereinigen` weg.
     """
-    from app.auth import _seed_produkte, _seed_ticketpipeline, _seed_verlustgruende
+    from app.auth import (
+        _seed_produkte,
+        _seed_ticketpipeline,
+        _seed_verlustgruende,
+        _ticketpipelines_bereinigen,
+    )
 
     aufgaben = (
         ("products", _seed_produkte, "Produktkatalog"),
@@ -63,60 +73,100 @@ async def _stammdaten_nachziehen() -> None:
         ("ticket_pipelines", _seed_ticketpipeline, "Ticket-Pipeline"),
     )
     try:
-        for tabelle, saeen, bezeichnung in aufgaben:
-            async with acquire() as conn:
-                orgs = await conn.fetch(
-                    f"""
-                    select o.id, r.user_id
-                    from public.orgs o
-                    join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
-                    where o.deleted_at is null
-                      and not exists (select 1 from public.{tabelle} t where t.org_id = o.id)
-                    """
-                )
-            for org in orgs:
-                async with acquire_as(org["user_id"]) as conn:
-                    await saeen(conn, org["id"])
-            if orgs:
-                print(f"{bezeichnung} für {len(orgs)} Organisation(en) nachgezogen.", flush=True)
+        async with acquire() as conn:
+            orgs = await conn.fetch(
+                """
+                select o.id, r.user_id
+                from public.orgs o
+                join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
+                where o.deleted_at is null
+                """
+            )
+        for org in orgs:
+            async with acquire_as(org["user_id"]) as conn:
+                weg = await _ticketpipelines_bereinigen(conn, org["id"])
+                if weg:
+                    print(f"{weg} doppelte Ticket-Pipeline(n) weggeräumt.", flush=True)
+                for tabelle, saeen, bezeichnung in aufgaben:
+                    da = await conn.fetchval(
+                        f"select exists (select 1 from public.{tabelle} where org_id = $1 and deleted_at is null)"
+                        if tabelle == "ticket_pipelines"
+                        else f"select exists (select 1 from public.{tabelle} where org_id = $1)",
+                        org["id"],
+                    )
+                    if not da:
+                        await saeen(conn, org["id"])
+                        print(f"{bezeichnung} nachgezogen.", flush=True)
     except Exception as exc:
         # Fehlende Stammdaten sind ärgerlich, aber kein Grund, die
         # Anwendung nicht zu starten.
         print(f"Stammdaten konnten nicht nachgezogen werden: {exc}", flush=True)
 
 
-async def _sicherungsschleife() -> None:
-    """Schreibt in festem Abstand einen Abzug je Organisation.
+# Je Organisation: Kennung des zuletzt geschriebenen Abzugs und wann.
+_sicherungsstand: dict[str, tuple[str, float]] = {}
 
-    Ohne das hinge die einzige Rettung daran, dass jemand daran denkt. Der
-    Abstand steht in den Einstellungen; im schlimmsten Fall ist ein halber
-    Arbeitstag verloren, nicht der ganze Bestand.
+
+async def _sichern(*, erzwingen: bool = False) -> int:
+    """Schreibt für jede Organisation einen Abzug — wenn sich etwas
+    geändert hat, oder das Intervall abgelaufen ist, oder `erzwingen`.
+
+    Gibt zurück, wie viele Abzüge geschrieben wurden.
+    """
+    import time
+
+    intervall = settings.sicherung_intervall_stunden * 3600
+    geschrieben = 0
+    async with acquire() as conn:
+        orgs = await conn.fetch(
+            """
+            select o.id, o.slug, r.user_id
+            from public.orgs o
+            join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
+            where o.deleted_at is null
+            """
+        )
+    for org in orgs:
+        async with acquire_as(org["user_id"]) as conn:
+            daten = await sicherung.abzug_erstellen(conn, org["id"])
+        kennung = sicherung.abzug_kennung(daten)
+        letzte = _sicherungsstand.get(str(org["id"]))
+        faellig = (
+            erzwingen
+            or letzte is None
+            or letzte[0] != kennung
+            or time.monotonic() - letzte[1] >= intervall
+        )
+        if not faellig:
+            continue
+        sicherung.abzug_schreiben(daten, org["slug"])
+        _sicherungsstand[str(org["id"])] = (kennung, time.monotonic())
+        geschrieben += 1
+    return geschrieben
+
+
+async def _sicherungsschleife() -> None:
+    """Sieht alle paar Minuten nach, ob sich etwas geändert hat, und
+    schreibt dann einen Abzug je Organisation.
+
+    Was ein Mensch anlegt oder einstellt, muss die nächste Deinstallation
+    überleben — und die kommt nicht zum Sechs-Stunden-Takt. Darum wird
+    nach jeder Änderung gesichert, spätestens nach dem Intervall. Ohne
+    Änderung entsteht keine Datei: Die Ablage füllt sich nicht mit
+    demselben Stand.
 
     Läuft als Aufgabe in der Anwendung und nicht als Celery-Job: Es gibt
-    keinen Broker in dieser Ausbaustufe, und eine Schleife, die alle sechs
-    Stunden einmal aufwacht, rechtfertigt keinen.
+    keinen Broker in dieser Ausbaustufe, und eine Schleife, die alle paar
+    Minuten einmal nachsieht, rechtfertigt keinen.
     """
-    abstand = settings.sicherung_intervall_stunden * 3600
     while True:
         try:
-            async with acquire() as conn:
-                orgs = await conn.fetch(
-                    """
-                    select o.id, o.slug, r.user_id
-                    from public.orgs o
-                    join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
-                    where o.deleted_at is null
-                    """
-                )
-            for org in orgs:
-                async with acquire_as(org["user_id"]) as conn:
-                    daten = await sicherung.abzug_erstellen(conn, org["id"])
-                sicherung.abzug_schreiben(daten, org["slug"])
+            await _sichern()
         except Exception as exc:
             # Eine gescheiterte Sicherung darf die Anwendung nicht
             # mitnehmen — aber sie muss im Protokoll stehen.
             print(f"Selbsttätige Sicherung fehlgeschlagen: {exc}", flush=True)
-        await asyncio.sleep(abstand)
+        await asyncio.sleep(settings.sicherung_pruefung_minuten * 60)
 
 
 async def _postschleife() -> None:
@@ -218,6 +268,10 @@ async def lifespan(app: FastAPI):
     # Ein Anreicherungslauf, der gerade eine Website liest, soll sein
     # Ergebnis noch ablegen dürfen — sonst bleibt eine Zeile auf „läuft".
     await anreicherung_kern.hintergrund_abwarten()
+    # Der letzte Stand geht mit — ein Upgrade oder Neustart soll nichts
+    # zwischen zwei Prüfungen verlieren.
+    with contextlib.suppress(Exception):
+        await _sichern()
     await close_pool()
 
 

@@ -53,7 +53,7 @@ export function Sicherungsblock() {
       <div className="block-inhalt">
         <Erklaerung
           kurz="Beacon sichert Ihren Bestand regelmäßig auf dieser Box — und stellt ihn nach einer Neuinstallation von selbst wieder her."
-          lang={<>Alle sechs Stunden entsteht ein Abzug unter <code>/app/data</code>; die letzten vierzehn bleiben. Die Ausfuhr unten ist derselbe Stand als Datei — ohne den Zugangsschlüssel zum Sprachmodell.</>}
+          lang={<>Sobald sich etwas ändert, entsteht ein Abzug unter <code>/app/data</code> — auch die Einstellungen; die letzten vierzehn bleiben. Die Ausfuhr unten ist derselbe Stand als Datei — ohne den Zugangsschlüssel zum Sprachmodell.</>}
         />
         <div className="hinweis" data-art="achtung">
           <AlertTriangle size={16} aria-hidden="true" />
@@ -66,7 +66,7 @@ export function Sicherungsblock() {
         </div>
 
         <p style={{ fontSize: "0.875rem", color: "var(--am-text-sekundaer)", margin: "var(--am-raum-4) 0" }}>
-          Selbsttätig alle sechs Stunden, die letzten vierzehn Stände bleiben liegen.
+          Selbsttätig nach jeder Änderung, die letzten vierzehn Stände bleiben liegen.
         </p>
 
         <div className="btn-reihe">

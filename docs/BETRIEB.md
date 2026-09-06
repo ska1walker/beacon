@@ -156,6 +156,32 @@ Von Hand geht weiterhin:
 pg_dump -h <box> -U beacon beacon > beacon-$(date +%F).sql
 ```
 
+**Seit 0.3.2: Sicherung nach jeder Änderung, samt Einstellungen.**
+Die Schleife sieht alle fünf Minuten nach (`sicherung_pruefung_minuten`)
+und schreibt nur, wenn sich der Fingerabdruck des Abzugs bewegt hat
+(`abzug_kennung`, ohne Zeitstempel) — spätestens nach
+`sicherung_intervall_stunden`, und einmal beim Herunterfahren. Der Abzug
+trägt jetzt auch `listen`, `listen_mitglieder`, `vorlagen`, `kampagnen`
+und `audit_log`; ein Test (`test_jede_tabelle_ist_im_abzug_oder_ausdruecklich_nicht`)
+bricht, sobald eine neue Tabelle weder in `TABELLEN` noch in
+`AUSGENOMMEN` steht. Die Spalten, die auf `users` zeigen, kommen aus den
+Fremdschlüsseln der Datenbank (`_nutzerspalten`), nicht mehr aus einer
+Liste — die hatte `anreicherungen.created_by` vergessen, und jede
+Wiederherstellung mit einem Anreicherungslauf wäre daran gescheitert.
+
+**Die Einstellungen werden zurückgespielt.** Bis 0.3.1 standen sie im
+Abzug, kamen aber nie zurück: Sprachmodell, Suchdienst, SMTP, Postfach
+waren nach einer Neuinstallation weg. Beim Wiederanlauf (erste Anmeldung
+in eine leere Datenbank) gelten sie ganz (`frisch=True`), bei einer
+Wiederherstellung von Hand füllen sie nur leere Felder.
+
+**Doppelte Ticket-Pipelines.** Bis 0.3.1 prüfte der Start ohne
+Nutzerkontext, ob eine Ticket-Pipeline da ist; unter Zeilensicherheit
+sah er nie eine und legte bei jedem Start eine weitere „Anliegen“ an —
+auf Kais Box waren es 16. Der Start prüft jetzt mit Kontext und räumt
+Dubletten ohne Tickets weg (`_ticketpipelines_bereinigen`), die älteste
+bleibt.
+
 ## Insilo anschließen
 
 Nach einer Besprechung schickt Insilo ein signiertes Ereignis mit dem

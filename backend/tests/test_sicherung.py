@@ -310,3 +310,113 @@ async def test_wiederanlauf_nach_deinstallation(eigene_ablage):
     assert nachher[0]["contact_count"] == vorher[0]["contact_count"]
     # Und die Stufe des Geschäfts steht wieder da, wo sie stand.
     assert deals_nachher[0]["stage_name"] == deals_vorher[0]["stage_name"]
+
+
+# ---- Was seit 0.3.2 dazukam --------------------------------------------
+
+
+async def test_jede_tabelle_ist_im_abzug_oder_ausdruecklich_nicht(kai):
+    """Eine neue Tabelle, die niemand in TABELLEN einträgt, wäre nach der
+    nächsten Deinstallation weg — still. Dieser Test schreit vorher."""
+    async with acquire_as(await _kennung(kai)) as conn:
+        tabellen = {
+            z["table_name"] for z in await conn.fetch(
+                "select table_name from information_schema.tables "
+                "where table_schema = 'public' and table_type = 'BASE TABLE'"
+            )
+        }
+    fehlt = tabellen - set(sicherung.TABELLEN) - sicherung.AUSGENOMMEN
+    assert not fehlt, f"nicht im Abzug: {sorted(fehlt)}"
+    assert not (set(sicherung.TABELLEN) - tabellen), "TABELLEN nennt eine Tabelle, die es nicht gibt"
+
+
+async def test_nutzerspalten_kommen_aus_den_fremdschluesseln(kai):
+    async with acquire_as(await _kennung(kai)) as conn:
+        assert await sicherung._nutzerspalten(conn, "anreicherungen") == ["created_by"]
+        assert set(await sicherung._nutzerspalten(conn, "kampagnen")) == {"gestartet_von", "created_by"}
+        assert set(await sicherung._nutzerspalten(conn, "tasks")) >= {"assigned_to", "created_by"}
+        assert await sicherung._nutzerspalten(conn, "products") == []
+
+
+async def test_wiederanlauf_bringt_einstellungen_listen_und_laeufe_zurueck(datenbank, eigene_ablage):
+    """Was ein Mensch einstellt und anlegt, kommt nach der Neuinstallation
+    wieder — auch die Dinge, die nicht in der ersten Fassung des Abzugs
+    standen: Einstellungen, Listen, Kampagnen, Anreicherungsläufe."""
+    from app.db import acquire
+
+    async with klient_fuer("wiederanlauf-2") as c:
+        await c.put("/api/settings", json={
+            "llm_base_url": "http://modell.local/v1", "llm_model": "chat", "llm_api_key": "geheim-1",
+            "suche_region": "AT", "anreicherung_automatisch": False,
+        })
+        firma = (await c.post("/api/companies", json={"name": "Listenfirma"})).json()
+        kontakt = (await c.post("/api/contacts", json={"first_name": "Lena", "last_name": "List", "company_id": firma["id"]})).json()
+        liste = (await c.post("/api/listen", json={"name": "Messe 2026"})).json()
+        await c.post(f"/api/listen/{liste['id']}/mitglieder", json={"contact_ids": [kontakt["id"]]})
+        await c.post("/api/kampagnen", json={"name": "Herbstpost", "betreff": "Hallo", "text": "Text", "liste_id": liste["id"]})
+        meine = await _kennung(c)
+        async with acquire_as(meine) as conn:
+            org_id, _ = await _org_und_nutzer(conn)
+            await conn.execute(
+                "insert into public.anreicherungen (org_id, entity, entity_id, created_by, modell, status) "
+                "values ($1, 'companies', $2, $3, 'chat', 'leer')",
+                org_id, firma["id"], meine,
+            )
+        await c.post("/api/sicherung")
+
+    async with acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("set local app.current_user_id = ''")
+            for tabelle in ("anreicherungen", "listen_mitglieder", "kampagnen", "listen", "activities", "tasks",
+                            "deal_contacts", "deals", "contact_companies", "contacts", "pipeline_stages", "pipelines",
+                            "companies", "audit_log", "org_settings", "user_org_roles", "orgs", "users"):
+                await conn.execute(f"alter table public.{tabelle} disable row level security")
+                await conn.execute(f"delete from public.{tabelle}")
+                await conn.execute(f"alter table public.{tabelle} enable row level security")
+
+    async with klient_fuer("wiederanlauf-2") as c:
+        e = (await c.get("/api/settings")).json()
+        assert e["llm_base_url"] == "http://modell.local/v1" and e["llm_model"] == "chat"
+        assert e["llm_api_key_set"] is True
+        assert e["suche_region"] == "AT"
+        assert e["anreicherung_automatisch"] is False
+        listen = (await c.get("/api/listen")).json()
+        assert [x["name"] for x in listen] == ["Messe 2026"]
+        mitglieder = (await c.get(f"/api/listen/{listen[0]['id']}/mitglieder")).json()
+        assert any(m["last_name"] == "List" for m in (mitglieder if isinstance(mitglieder, list) else mitglieder.get("eintraege", [])))
+        assert [k["name"] for k in (await c.get("/api/kampagnen")).json()] == ["Herbstpost"]
+        firma = next(f for f in (await c.get("/api/companies")).json() if f["name"] == "Listenfirma")
+        laeufe = (await c.get(f"/api/anreicherungen?entity=companies&entity_id={firma['id']}")).json()
+        assert len(laeufe) == 1
+
+
+async def test_start_saet_ticketpipeline_nicht_doppelt(kai):
+    from app.auth import _seed_ticketpipeline, _ticketpipelines_bereinigen
+    from app.main import _stammdaten_nachziehen
+
+    async with acquire_as(await _kennung(kai)) as conn:
+        org_id, _ = await _org_und_nutzer(conn)
+        # Die Dubletten, die der alte Start hinterlassen hat.
+        await _seed_ticketpipeline(conn, org_id)
+        await _seed_ticketpipeline(conn, org_id)
+        vorher = await conn.fetchval("select count(*) from public.ticket_pipelines where org_id = $1 and deleted_at is null", org_id)
+        assert vorher >= 3
+
+    await _stammdaten_nachziehen()
+    await _stammdaten_nachziehen()
+
+    async with acquire_as(await _kennung(kai)) as conn:
+        assert await conn.fetchval("select count(*) from public.ticket_pipelines where org_id = $1 and deleted_at is null", org_id) == 1
+        assert await _ticketpipelines_bereinigen(conn, org_id) == 0
+
+
+async def test_kennung_bewegt_sich_nur_bei_aenderung(kai):
+    async with acquire_as(await _kennung(kai)) as conn:
+        org_id, _ = await _org_und_nutzer(conn)
+        a = sicherung.abzug_kennung(await sicherung.abzug_erstellen(conn, org_id))
+        b = sicherung.abzug_kennung(await sicherung.abzug_erstellen(conn, org_id))
+    assert a == b
+    await kai.post("/api/companies", json={"name": "Kennungsfirma"})
+    async with acquire_as(await _kennung(kai)) as conn:
+        c = sicherung.abzug_kennung(await sicherung.abzug_erstellen(conn, org_id))
+    assert c != a

@@ -174,6 +174,35 @@ async def _seed_ticketpipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
         )
 
 
+async def _ticketpipelines_bereinigen(conn: asyncpg.Connection, org_id: UUID) -> int:
+    """Räumt doppelte Standard-Pipelines weg — die älteste bleibt.
+
+    Bis 0.3.1 prüfte der Start ohne Nutzerkontext, ob eine Ticket-Pipeline
+    da ist; unter Zeilensicherheit sah er nie eine und säte bei jedem
+    Start eine neue „Anliegen“. Weggeräumt wird nur, was kein Ticket
+    trägt: Eine Pipeline mit Tickets ist eine Entscheidung, keine Dublette.
+    """
+    return await conn.fetchval(
+        """
+        with behalten as (
+            select id from public.ticket_pipelines
+             where org_id = $1 and deleted_at is null
+             order by created_at, id limit 1
+        ), weg as (
+            update public.ticket_pipelines p
+               set deleted_at = now()
+             where p.org_id = $1 and p.deleted_at is null
+               and p.id <> (select id from behalten)
+               and p.name = (select name from public.ticket_pipelines where id = (select id from behalten))
+               and not exists (select 1 from public.tickets t where t.pipeline_id = p.id and t.deleted_at is null)
+            returning 1
+        )
+        select count(*) from weg
+        """,
+        org_id,
+    )
+
+
 async def _seed_verlustgruende(conn: asyncpg.Connection, org_id: UUID) -> None:
     for position, grund in enumerate(STANDARD_VERLUSTGRUENDE):
         await conn.execute(
@@ -229,7 +258,7 @@ async def _einrichten(conn: asyncpg.Connection, org_id: UUID, user_id: UUID) -> 
     if letzter is not None:
         try:
             daten = sicherung.abzug_lesen(letzter["name"])
-            await sicherung.zurueckspielen(conn, daten, org_id, user_id)
+            await sicherung.zurueckspielen(conn, daten, org_id, user_id, frisch=True)
         except Exception as exc:
             # Ein kaputter Abzug darf die Anmeldung nicht verhindern. Dann
             # gibt es eben eine leere Pipeline, und der Stand liegt weiter

@@ -17,6 +17,7 @@ deshalb mit Rechten 0600.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -54,25 +55,30 @@ TABELLEN: list[str] = [
     "tasks",
     "eingang",
     "ansichten",
+    "listen",
+    "listen_mitglieder",
+    "vorlagen",
+    "kampagnen",
+    # Links und Mails zeigen auf Kampagnen — sie kommen danach.
     "oeffentliche_links",
     "mails",
+    "audit_log",
 ]
 
-# Spalten, die auf public.users zeigen. Beim Zurückspielen nach einer
-# Neuinstallation gibt es die alten Nutzer-Kennungen nicht mehr; sie
-# werden über den Olares-Namen zugeordnet und sonst auf den
-# Wiederherstellenden gesetzt.
-NUTZERSPALTEN: dict[str, list[str]] = {
-    "companies": ["owner_id", "created_by"],
-    "quotes": ["created_by"],
-    "contacts": ["owner_id", "created_by"],
-    "deals": ["owner_id", "created_by"],
-    "tickets": ["owner_id", "created_by"],
-    "activities": ["created_by"],
-    "tasks": ["assigned_to", "created_by"],
-    "ansichten": ["owner_id"],
-    "mails": ["created_by"],
+# Tabellen, die bewusst nicht im Abzug stehen: Identität und Zugehörigkeit
+# legt Olares beim Anmelden neu an (die Nutzer gehen gesondert mit, siehe
+# `nutzer`), und die Einstellungen gehen als eigener Block.
+AUSGENOMMEN = {"orgs", "users", "user_org_roles", "org_settings"}
+
+# Tabellen ohne eigene org_id — sie hängen an einer Elterntabelle.
+UEBER_ELTERN: dict[str, str] = {
+    "deal_contacts": "select dc.* from public.deal_contacts dc join public.deals d on d.id = dc.deal_id where d.org_id = $1",
+    "listen_mitglieder": "select m.* from public.listen_mitglieder m join public.listen l on l.id = m.liste_id where l.org_id = $1",
 }
+
+# Spalten, die nicht mit zurückgespielt werden: `org_id` wird auf die
+# Zielorganisation gesetzt, die Zeitstempel bleiben, wie sie waren.
+EINSTELLUNGEN_NICHT = {"org_id"}
 
 FORMAT_VERSION = 1
 
@@ -127,16 +133,8 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     ]
 
     for tabelle in TABELLEN:
-        if tabelle == "deal_contacts":
-            # Hängt am Deal, hat selbst keine org_id.
-            zeilen = await conn.fetch(
-                """
-                select dc.* from public.deal_contacts dc
-                join public.deals d on d.id = dc.deal_id
-                where d.org_id = $1
-                """,
-                org_id,
-            )
+        if tabelle in UEBER_ELTERN:
+            zeilen = await conn.fetch(UEBER_ELTERN[tabelle], org_id)
         else:
             zeilen = await conn.fetch(
                 f"select * from public.{tabelle} where org_id = $1", org_id
@@ -162,6 +160,17 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     )
 
     return daten
+
+
+def abzug_kennung(daten: dict[str, Any]) -> str:
+    """Ein Fingerabdruck des Inhalts — ohne den Zeitstempel der Erstellung.
+
+    Zwei Abzüge mit gleicher Kennung enthalten dasselbe. Die Schleife
+    schreibt nur, wenn sich die Kennung bewegt hat: Sonst füllte sie die
+    Ablage alle fünf Minuten mit demselben Stand.
+    """
+    ohne_zeit = {k: v for k, v in daten.items() if k != "erstellt_am"}
+    return hashlib.sha256(json.dumps(ohne_zeit, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
 def abzug_schreiben(daten: dict[str, Any], slug: str | None = None) -> pathlib.Path:
@@ -277,12 +286,19 @@ async def zurueckspielen(
     daten: dict[str, Any],
     ziel_org: UUID,
     handelnder: UUID,
+    *,
+    frisch: bool = False,
 ) -> dict[str, dict[str, int]]:
     """Spielt einen Abzug in die angegebene Organisation zurück.
 
     Vorhandene Zeilen bleiben unangetastet (`on conflict do nothing`).
     Das ist Absicht: Eine Wiederherstellung soll nichts überschreiben, was
     seither entstanden ist — sie füllt auf, was fehlt.
+
+    `frisch` sagt: Die Organisation ist gerade erst entstanden (Wiederanlauf
+    nach einer Deinstallation). Dann gelten auch die Einstellungen aus dem
+    Abzug ganz — sonst blieben die Vorgaben stehen, die Olares gerade neu
+    angelegt hat, und die Wahl des Menschen wäre verloren.
     """
     if daten.get("format") != FORMAT_VERSION:
         raise ValueError(
@@ -293,9 +309,14 @@ async def zurueckspielen(
     bilanz: dict[str, int] = {}
     uebersprungen: dict[str, int] = {}
 
+    bilanz["einstellungen"] = await _einstellungen_zurueckspielen(
+        conn, daten.get("einstellungen") or {}, ziel_org, nutzer, handelnder, ueberschreiben=frisch
+    )
+
     for tabelle in TABELLEN:
         zeilen = daten["tabellen"].get(tabelle, [])
         typen = await _spaltentypen(conn, tabelle)
+        nutzerspalten = await _nutzerspalten(conn, tabelle)
         gesetzt = 0
         schon_da = 0
 
@@ -303,7 +324,7 @@ async def zurueckspielen(
             werte = dict(zeile)
             if "org_id" in werte:
                 werte["org_id"] = str(ziel_org)
-            for spalte in NUTZERSPALTEN.get(tabelle, []):
+            for spalte in nutzerspalten:
                 alt = werte.get(spalte)
                 if alt:
                     werte[spalte] = str(nutzer.get(alt, handelnder))
@@ -347,6 +368,71 @@ async def zurueckspielen(
 
 
 _typen_zwischenspeicher: dict[str, dict[str, str]] = {}
+_nutzerspalten_zwischenspeicher: dict[str, list[str]] = {}
+
+
+async def _nutzerspalten(conn: asyncpg.Connection, tabelle: str) -> list[str]:
+    """Welche Spalten dieser Tabelle auf public.users zeigen — aus den
+    Fremdschlüsseln der Datenbank, nicht aus einer Liste.
+
+    Eine gepflegte Liste vergisst die nächste Tabelle, und dann scheitert
+    die Wiederherstellung an genau dem Fremdschlüssel, den niemand
+    eingetragen hat. Die Datenbank weiß es immer.
+    """
+    if tabelle not in _nutzerspalten_zwischenspeicher:
+        zeilen = await conn.fetch(
+            """
+            select a.attname
+              from pg_constraint c
+              join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any(c.conkey)
+             where c.contype = 'f'
+               and c.conrelid = ('public.' || quote_ident($1))::regclass
+               and c.confrelid = 'public.users'::regclass
+            """,
+            tabelle,
+        )
+        _nutzerspalten_zwischenspeicher[tabelle] = [z["attname"] for z in zeilen]
+    return _nutzerspalten_zwischenspeicher[tabelle]
+
+
+async def _einstellungen_zurueckspielen(
+    conn: asyncpg.Connection,
+    einstellungen: dict[str, Any],
+    ziel_org: UUID,
+    nutzer: dict[str, UUID],
+    handelnder: UUID,
+    *,
+    ueberschreiben: bool = False,
+) -> int:
+    """Füllt die Einstellungen der Organisation auf — nur, was leer ist,
+    oder alles, wenn die Organisation frisch ist.
+
+    Sprachmodell, Suchdienst, SMTP, Postfach, Absender: Das ist, was ein
+    Mensch eingerichtet hat, und es ist nach einer Neuinstallation genauso
+    weg wie der Bestand. Vorhandene Werte bleiben, wie beim Bestand.
+    """
+    if not einstellungen:
+        return 0
+    typen = await _spaltentypen(conn, "org_settings")
+    nutzerspalten = await _nutzerspalten(conn, "org_settings")
+    await conn.execute(
+        "insert into public.org_settings (org_id) values ($1) on conflict do nothing", ziel_org
+    )
+    gesetzt = 0
+    for spalte, wert in einstellungen.items():
+        if spalte in EINSTELLUNGEN_NICHT or spalte not in typen or wert is None:
+            continue
+        if spalte in nutzerspalten:
+            wert = str(nutzer.get(wert, handelnder))
+        bedingung = "" if ueberschreiben else f" and {spalte} is null"
+        geschrieben = await conn.fetchval(
+            f"update public.org_settings set {spalte} = $1::text::{typen[spalte]} "
+            f"where org_id = $2{bedingung} returning 1",
+            _als_text(wert), ziel_org,
+        )
+        if geschrieben:
+            gesetzt += 1
+    return gesetzt
 
 
 async def _spaltentypen(conn: asyncpg.Connection, tabelle: str) -> dict[str, str]:

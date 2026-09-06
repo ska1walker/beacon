@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Abstand zwischen den selbsttätigen Sicherungen. Sechs Stunden heißt:
     # Im schlimmsten Fall ist ein halber Arbeitstag verloren.
     sicherung_intervall_stunden: float = 6.0
+    # Wie oft nachgesehen wird, ob sich etwas geändert hat. Geschrieben wird
+    # nur bei Änderung — und spätestens nach dem Intervall oben.
+    sicherung_pruefung_minuten: float = 5.0
 
     # --- Sprachmodell ---
     # Kein Vorgabewert, aus demselben Grund wie bei Insilo: jede geratene
