@@ -61,6 +61,9 @@ function KIBlock({ e }: { e: OrgSettings }) {
       setSchluessel("");
       client.invalidateQueries({ queryKey: ["einstellungen"] });
       client.invalidateQueries({ queryKey: ["ki-status"] });
+      // Der Anlegen-Dialog fragt denselben Stand ab — sonst sagt er noch
+      // eine Minute lang „kein Sprachmodell“, obwohl gerade eins gespeichert wurde.
+      client.invalidateQueries({ queryKey: ["anreicherung-status"] });
     },
   });
 
