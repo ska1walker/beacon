@@ -210,6 +210,11 @@ export function Finden({
           {suchen.data.hinweise.map((h) => (
             <p key={h} className="erfassung-hinweis warnung">{h}</p>
           ))}
+          {holen.isPending && (
+            <p className="erfassung-hinweis">
+              Liest Impressum, Kontakt- und Team-Seite und die Suchtreffer — das dauert mit einem Modell auf der Box bis zu einer Minute.
+            </p>
+          )}
         </div>
       )}
 
