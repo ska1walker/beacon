@@ -1193,6 +1193,10 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     border-bottom: 1px solid var(--am-trennlinie);
   }
 
+  /* Mehrere Handlungen im Kopf: eine Zeile, kein Umbruch — der Kopf
+     bleibt so hoch wie mit einem Knopf. */
+  .block-kopf-aktionen { display: inline-flex; flex: none; align-items: center; gap: var(--am-raum-1); flex-wrap: nowrap; }
+
   .block-kopf h2 {
     font-size: 0.8125rem;
     font-weight: 600;
