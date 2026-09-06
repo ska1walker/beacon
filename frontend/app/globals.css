@@ -2924,6 +2924,67 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .erfassung-hinweis.warnung { color: var(--am-achtung); }
   .erfassung-hinweis a { color: inherit; font-weight: 500; }
 
+  /* ── Erkenntnisse ─────────────────────────────────────────────────
+     Themen aus Gesprächsnotizen. Farbe trägt die Art nie allein — das
+     Wort steht immer daneben. */
+
+  .erkenntnis-art {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--am-raum-2);
+    min-height: 1.25rem;
+    border-radius: var(--am-radius-voll);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: var(--am-flaeche-2);
+    color: var(--am-text-sekundaer);
+  }
+  .erkenntnis-art[data-art="lob"] { color: var(--am-erfolg); }
+  .erkenntnis-art[data-art="kritik"] { color: var(--am-achtung); }
+  .erkenntnis-art[data-art="wunsch"] { color: var(--am-gold-beschriftung); }
+  .erkenntnis-art[data-art="einwand"] { color: var(--am-handlung-ruhend); }
+
+  .themen { display: grid; gap: var(--am-raum-4); max-width: 860px; }
+  .thema { padding: var(--am-raum-5) var(--am-raum-6); }
+  .thema-kopf h2 { margin: 0 0 var(--am-raum-2); font-size: 1rem; font-weight: 600; }
+  .thema-marken { display: flex; flex-wrap: wrap; align-items: center; gap: var(--am-raum-2); }
+  .thema-zahl { font-size: 0.75rem; color: var(--am-text-gedaempft); }
+  .thema-bedeutung { margin: var(--am-raum-3) 0 0; font-size: 0.875rem; line-height: 1.55; }
+  .thema-vorschlag {
+    display: flex;
+    gap: var(--am-raum-2);
+    align-items: flex-start;
+    margin: var(--am-raum-3) 0 0;
+    padding: var(--am-raum-3);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-flaeche-1);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .thema-vorschlag svg { color: var(--am-gold-beschriftung); flex: none; margin-top: 2px; }
+  .thema-auf { display: inline-flex; align-items: center; gap: var(--am-raum-1); margin-top: var(--am-raum-3); font-size: 0.8125rem; text-decoration: none; }
+  .thema-belege { list-style: none; margin: var(--am-raum-3) 0 0; padding: 0; display: grid; gap: var(--am-raum-2); }
+  .thema-belege li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "art text" "art quelle";
+    gap: var(--am-raum-1) var(--am-raum-3);
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .thema-belege .erkenntnis-art { grid-area: art; align-self: start; }
+  .thema-beleg-text { grid-area: text; }
+  .thema-beleg-text q { display: block; color: var(--am-text-sekundaer); font-style: italic; }
+  .thema-beleg-text q::before, .thema-beleg-text q::after { content: "„"; }
+  .thema-beleg-text q::after { content: "“"; }
+  .thema-beleg-quelle { grid-area: quelle; font-size: 0.75rem; color: var(--am-text-gedaempft); }
+  .thema-beleg-quelle a { color: inherit; font-weight: 500; }
+
   /* ── Beschreiben statt tippen ─────────────────────────────────────
      Zwei Wege in dieselbe Maske; die Wegwahl sitzt über dem Kasten. */
 

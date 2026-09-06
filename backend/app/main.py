@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app import anreicherung as anreicherung_kern
+from app import erkenntnisse as erkenntnisse_kern
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
@@ -39,6 +40,7 @@ from app.routers import (
     tasks,
     tickets,
 )
+from app.routers import erkenntnisse as erkenntnisse_router
 from app.routers import finden as finden_router
 from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
@@ -268,6 +270,7 @@ async def lifespan(app: FastAPI):
     # Ein Anreicherungslauf, der gerade eine Website liest, soll sein
     # Ergebnis noch ablegen dürfen — sonst bleibt eine Zeile auf „läuft".
     await anreicherung_kern.hintergrund_abwarten()
+    await erkenntnisse_kern.hintergrund_abwarten()
     # Der letzte Stand geht mit — ein Upgrade oder Neustart soll nichts
     # zwischen zwei Prüfungen verlieren.
     with contextlib.suppress(Exception):
@@ -306,6 +309,7 @@ app.include_router(ansichten.router)
 app.include_router(tickets.router)
 app.include_router(erfassen.router)
 app.include_router(finden_router.router)
+app.include_router(erkenntnisse_router.router)
 app.include_router(listen.router)
 app.include_router(suche_router.router)
 app.include_router(kampagnen.router)

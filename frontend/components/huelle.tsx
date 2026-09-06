@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   ListChecks,
   Megaphone,
+  Lightbulb,
   MessageCircleQuestion,
   TrendingUp,
   Settings,
@@ -37,6 +38,7 @@ const ZIELE = [
   { pfad: "/kampagnen", text: "Kampagnen", Zeichen: Megaphone },
   { pfad: "/aufgaben", text: "Aufgaben", Zeichen: CheckSquare },
   { pfad: "/fragen", text: "Fragen", Zeichen: MessageCircleQuestion },
+  { pfad: "/erkenntnisse", text: "Erkenntnisse", Zeichen: Lightbulb },
   { pfad: "/eingang", text: "Eingang", Zeichen: Inbox },
 ];
 

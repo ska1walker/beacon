@@ -907,3 +907,51 @@ export interface Ticketbrett {
   pipeline: Ticketpipeline;
   spalten: Ticketspalte[];
 }
+
+/** Eine Aussage eines Kunden aus einer Gesprächsnotiz. */
+export interface Aussage {
+  id: string;
+  activity_id: string;
+  company_id: string | null;
+  deal_id: string | null;
+  contact_id: string | null;
+  firma: string | null;
+  art: "lob" | "kritik" | "wunsch" | "einwand" | "frage";
+  produkt: string | null;
+  text: string;
+  zitat: string | null;
+  occurred_at: string;
+}
+
+/** Ein Thema aus mehreren Aussagen — mit dem, was es fürs Produkt heißt. */
+export interface Thema {
+  titel: string;
+  produkt: string | null;
+  art: Aussage["art"];
+  aussagen: string[];
+  firmen: string[];
+  bedeutung: string;
+  vorschlag: string | null;
+}
+
+export interface Erkenntnislauf {
+  id: string;
+  status: "laeuft" | "fertig" | "fehler";
+  zeitraum_tage: number;
+  fortschritt: { gelesen?: number; gesamt?: number; schritt?: string };
+  aussagen_anzahl: number;
+  themen: Thema[];
+  fehler: string | null;
+  modell: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Erkenntnisse {
+  llm_ready: boolean;
+  zeitraum_tage: number;
+  lauf: Erkenntnislauf | null;
+  aussagen: Aussage[];
+  nach_art: Record<string, number>;
+  offene_notizen: number;
+}

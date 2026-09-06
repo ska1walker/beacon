@@ -521,6 +521,34 @@ unter Einstellungen eintragen, dann läuft der Dialog gegen bekannte
 Antworten. Die Tests in `backend/tests/test_finden.py` tun dasselbe
 mit `httpx.MockTransport`.
 
+## Erkenntnisse — aus Gesprächsnotizen lernen
+
+Seit 0.3.6 gibt es die Seite *Erkenntnisse*: Was Kunden in Gesprächen
+über die Produkte sagen, gebündelt zu Themen, je Thema mit dem, was das
+fürs Produkt heißt. Zwei Schritte (`backend/app/erkenntnisse.py`):
+
+1. **Aussagen ziehen.** Verlaufseinträge der Arten Notiz, Anruf, E-Mail,
+   Termin mit mindestens 40 Zeichen Text werden in Stapeln von sechs ans
+   Modell gegeben. Je Aussage: Art (Lob, Kritik, Wunsch, Einwand, Frage),
+   Produkt, ein neutraler Satz und das **Zitat aus der Notiz** — ohne
+   Zitat, das in der Notiz steht, fällt die Aussage weg. Jede Notiz wird
+   genau einmal gelesen (`auswertungen`); die Aussagen bleiben
+   (`aussagen`).
+2. **Themen bilden.** Alle Aussagen des Zeitraums (höchstens 300) gehen
+   gebündelt ans Modell; es nennt Themen mit Zuordnung, Bedeutung und
+   Vorschlag. Ein Thema ohne zugeordnete Aussage fällt weg, jede Aussage
+   zählt nur einmal. Der Lauf liegt in `themenlaeufe` mit Fortschritt
+   (`gelesen`/`gesamt`/`schritt`), damit die Seite ihn zeigen kann.
+
+Endpunkte: `GET /api/erkenntnisse?tage=90` (letzter Lauf des Zeitraums,
+Aussagen, Zähler je Art, noch nicht gelesene Notizen),
+`POST /api/erkenntnisse/auswerten {tage}` startet den Lauf im
+Hintergrund (202; 409 ohne Modell oder wenn einer läuft). Auf der Box
+dauert ein Lauf mit vierzig Notizen und dem Denkmodell einige Minuten;
+die Seite fragt alle drei Sekunden nach. Jedes Thema zeigt die
+Gespräche dahinter mit Zitat, Firma und Datum — niemand muss dem Modell
+glauben. Die drei Tabellen stehen im Abzug.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an
