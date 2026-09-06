@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Assistent } from "@/components/assistent";
 import { Darstellungsschalter } from "@/components/darstellung";
 import { Marke } from "@/components/marke";
 import { Klappschalter, useNavigationKlapp } from "@/components/navigation";
@@ -131,6 +132,7 @@ export function Huelle({ children }: { children: React.ReactNode }) {
       </nav>
 
       <main className="huelle-inhalt">{children}</main>
+      <Assistent />
     </div>
   );
 }

@@ -591,7 +591,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     padding: var(--am-raum-2);
     background: var(--am-flaeche-1);
     border-top: 1px solid var(--am-trennlinie);
-    box-shadow: var(--am-schatten-2);
+    box-shadow: 0 -8px 24px rgba(5, 23, 41, 0.12);
   }
 
   .huelle-nav-item {
@@ -2966,6 +2966,170 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .erfassung-hinweis.warnung { color: var(--am-achtung); }
   .erfassung-hinweis a { color: inherit; font-weight: 500; }
 
+  /* ── Assistent ────────────────────────────────────────────────────
+     Unten rechts, wie in Relay: ein Knopf mit dem Schild, darüber das
+     Panel. Karten sind Vorschläge — Ausführen drückt ein Mensch. */
+
+  .assistent-knopf {
+    position: fixed;
+    right: var(--am-raum-6);
+    bottom: calc(var(--am-raum-6) + env(safe-area-inset-bottom));
+    z-index: 90;
+    width: 3.25rem;
+    height: 3.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-blau-900);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(5, 23, 41, 0.28);
+    cursor: pointer;
+    transition: transform var(--am-dauer-kurz) ease, box-shadow var(--am-dauer-kurz) ease;
+  }
+  .assistent-knopf:hover { transform: translateY(-1px); }
+  .assistent-knopf:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 2px; }
+  .assistent-knopf.offen { transform: none; }
+
+  .assistent-panel {
+    position: fixed;
+    right: var(--am-raum-6);
+    bottom: calc(var(--am-raum-6) + 3.25rem + var(--am-raum-3) + env(safe-area-inset-bottom));
+    z-index: 90;
+    width: min(26rem, calc(100vw - 2 * var(--am-raum-6)));
+    height: min(36rem, calc(100dvh - 8rem));
+    display: flex;
+    flex-direction: column;
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-seite);
+    box-shadow: 0 16px 40px rgba(5, 23, 41, 0.22);
+    overflow: hidden;
+  }
+
+  .assistent-kopf {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-3) var(--am-raum-4);
+    border-bottom: 1px solid var(--am-trennlinie);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--am-text-gedaempft);
+  }
+  .assistent-zu {
+    margin-left: auto;
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+  .assistent-zu:hover { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
+
+  .assistent-verlauf {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--am-raum-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--am-raum-3);
+  }
+  .assistent-leer { font-size: 0.8125rem; color: var(--am-text-sekundaer); line-height: 1.5; }
+  .assistent-leer p { margin: 0 0 var(--am-raum-3); }
+  .assistent-leer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--am-raum-2); }
+  .assistent-leer .alsLink { text-align: left; text-decoration: none; }
+  .assistent-leer .alsLink::before { content: "→ "; color: var(--am-text-gedaempft); }
+
+  .assistent-nachricht {
+    margin: 0;
+    max-width: 92%;
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .assistent-nachricht.nutzer { align-self: flex-end; background: var(--am-blau-900); color: #fff; }
+  .assistent-nachricht.arbeitet { color: var(--am-text-gedaempft); font-style: italic; }
+  .assistent-nachricht.fehler { color: var(--am-achtung); background: transparent; padding: 0; }
+  .assistent-antwort { display: flex; flex-direction: column; gap: var(--am-raum-2); align-items: flex-start; }
+  .assistent-hinweis { margin: 0; font-size: 0.75rem; color: var(--am-text-gedaempft); display: inline-flex; align-items: center; gap: var(--am-raum-1); }
+  .assistent-hinweis a { color: var(--am-handlung-ruhend); font-weight: 500; }
+
+  .assistent-karte {
+    width: 100%;
+    padding: var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-left: 3px solid var(--am-gold-500);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    font-size: 0.8125rem;
+  }
+  .assistent-karte.verworfen { opacity: 0.55; border-left-color: var(--am-rand); }
+  .assistent-karte.ausgefuehrt { border-left-color: var(--am-erfolg); }
+  .assistent-karte-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--am-raum-2); margin-bottom: var(--am-raum-2); }
+  .assistent-karte-zeilen { margin: 0; display: grid; gap: var(--am-raum-1); }
+  .assistent-karte-zeilen div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: var(--am-raum-2); }
+  .assistent-karte-zeilen dt { color: var(--am-text-gedaempft); }
+  .assistent-karte-zeilen dd { margin: 0; overflow-wrap: anywhere; }
+
+  .assistent-eingabe {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-3);
+    border-top: 1px solid var(--am-trennlinie);
+    background: var(--am-flaeche-1);
+  }
+  .assistent-eingabe textarea {
+    flex: 1;
+    resize: none;
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    color: var(--am-text-primaer);
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .assistent-eingabe textarea:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+  .assistent-senden {
+    width: var(--am-ziel-zeiger);
+    height: var(--am-ziel-zeiger);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--am-radius-voll);
+    background: var(--am-blau-900);
+    color: #fff;
+    cursor: pointer;
+  }
+  .assistent-senden:disabled { opacity: 0.4; cursor: default; }
+
+  /* Auf dem Telefon sitzt die Navigation unten — Knopf und Panel darüber. */
+  @media (max-width: 1023px) {
+    .assistent-knopf { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+    .assistent-panel { bottom: calc(5rem + 3.25rem + var(--am-raum-3) + env(safe-area-inset-bottom)); height: min(30rem, calc(100dvh - 12rem)); }
+  }
+
+  .dunkel .assistent-knopf,
+  .dunkel .assistent-senden,
+  .dunkel .assistent-nachricht.nutzer { border: 1px solid var(--am-rand); }
+  .dunkel .assistent-nachricht { background: var(--am-flaeche-2); }
+  .dunkel .assistent-karte { background: var(--am-flaeche-2); }
+
   /* ── Erkenntnisse ─────────────────────────────────────────────────
      Themen aus Gesprächsnotizen. Farbe trägt die Art nie allein — das
      Wort steht immer daneben. */
@@ -2989,7 +3153,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .erkenntnis-art[data-art="einwand"] { color: var(--am-handlung-ruhend); }
 
   .themen { display: grid; gap: var(--am-raum-4); max-width: 860px; }
-  .thema { padding: var(--am-raum-5) var(--am-raum-6); }
+  .thema { padding: var(--am-raum-6) var(--am-raum-6); }
   .thema-kopf h2 { margin: 0 0 var(--am-raum-2); font-size: 1rem; font-weight: 600; }
   .thema-marken { display: flex; flex-wrap: wrap; align-items: center; gap: var(--am-raum-2); }
   .thema-zahl { font-size: 0.75rem; color: var(--am-text-gedaempft); }

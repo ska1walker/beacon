@@ -961,3 +961,22 @@ export interface Erkenntnisse {
   nach_art: Record<string, number>;
   offene_notizen: number;
 }
+
+/** Eine Karte des Assistenten: die fertige Anfrage, zur Bestätigung. */
+export interface AssistentKarte {
+  id: string;
+  art: "aufgabe" | "notiz" | "kontakt" | "lead_stufe" | string;
+  titel: string;
+  zeilen: [string, string][];
+  anfrage: { methode: "POST" | "PATCH" | "PUT"; pfad: string; koerper: Record<string, unknown> };
+  /** Wohin es nach dem Ausführen geht; `{id}` wird durch die Kennung der Antwort ersetzt. */
+  danach: string | null;
+}
+
+export interface AssistentAntwort {
+  antwort: string;
+  karten: AssistentKarte[];
+  navigation: string | null;
+  schritte: string[];
+  modell: string;
+}

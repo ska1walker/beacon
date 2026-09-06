@@ -40,6 +40,7 @@ from app.routers import (
     tasks,
     tickets,
 )
+from app.routers import assistent as assistent_router
 from app.routers import erkenntnisse as erkenntnisse_router
 from app.routers import finden as finden_router
 from app.routers import qualifizierung as qualifizierung_router
@@ -310,6 +311,7 @@ app.include_router(tickets.router)
 app.include_router(erfassen.router)
 app.include_router(finden_router.router)
 app.include_router(erkenntnisse_router.router)
+app.include_router(assistent_router.router)
 app.include_router(listen.router)
 app.include_router(suche_router.router)
 app.include_router(kampagnen.router)

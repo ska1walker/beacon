@@ -112,6 +112,48 @@ async def chat(
         raise RuntimeError(f"Unerwartete Antwort vom Endpunkt {url}: {data!r}") from exc
 
 
+async def chat_werkzeuge(
+    cfg: LLMConfig,
+    nachrichten: list[dict[str, Any]],
+    werkzeuge: list[dict[str, Any]],
+    *,
+    max_tokens: int = 6000,
+) -> dict[str, Any]:
+    """Ein Gesprächsschritt mit Werkzeugen — gibt die Antwortnachricht zurück.
+
+    OpenAI-Form: `tool_calls` in der Antwort, `tool`-Nachrichten in der
+    Frage. Auf der Box geprüft: LiteLLM mit `chat` liefert saubere
+    Aufrufe, samt aufgelöstem Datum. `reasoning_content` eines
+    Denkmodells wird nicht weitergereicht — es ist Weg, nicht Ergebnis.
+    """
+    if not cfg.eingerichtet:
+        raise LLMNichtEingerichtet(
+            "Es ist kein Sprachmodell hinterlegt. Adresse und Modellname stehen unter Einstellungen."
+        )
+    url = cfg.base_url.rstrip("/") + "/chat/completions"
+    payload = {
+        "model": cfg.model or "default",
+        "messages": nachrichten,
+        "tools": werkzeuge,
+        "tool_choice": "auto",
+        "temperature": 0.0,
+        "max_tokens": max_tokens,
+    }
+    async with httpx.AsyncClient(timeout=settings.llm_timeout_s) as client:
+        response = await client.post(url, json=payload, headers=cfg.auth_header)
+        response.raise_for_status()
+        data = response.json()
+    try:
+        nachricht = data["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise RuntimeError(f"Unerwartete Antwort vom Endpunkt {url}: {data!r}") from exc
+    return {
+        "role": "assistant",
+        "content": nachricht.get("content") or "",
+        "tool_calls": nachricht.get("tool_calls") or [],
+    }
+
+
 def json_aus_antwort(text: str) -> Any:
     """Holt das JSON-Objekt aus einer Modellantwort.
 

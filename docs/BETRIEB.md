@@ -580,6 +580,37 @@ Eintrag seinen Namen als Tooltip, Gruppen trennt eine Linie.
 aufgefüllt aus Start, Leads, Firmen, Kontakte bis vier, dazu „Mehr“ mit
 allen übrigen Bereichen samt Einstellungen.
 
+## Assistent — Aufträge in Worten, Handlungen mit Karte
+
+Seit 0.4.0 sitzt unten rechts ein Knopf mit dem Schild (`components/assistent.tsx`).
+Ein Auftrag wie „Leg für Brinkmann eine Aufgabe an: Angebot nachfassen,
+Freitag“ geht an `POST /api/assistent` (`backend/app/assistent.py`). Das
+Modell bekommt Beacons Funktionen als Werkzeuge im OpenAI-Format
+(`llm.chat_werkzeuge`; auf der Box geprüft: `chat` über LiteLLM liefert
+saubere Aufrufe samt aufgelöstem Datum, rund zehn Sekunden je Schritt),
+plant, und Beacon führt aus — höchstens fünf Schritte je Auftrag.
+
+**Lesen sofort, Schreiben mit Karte.** `suchen`, `aufgaben_offen` und
+`seite_oeffnen` laufen direkt (Öffnen navigiert die Oberfläche). Die
+schreibenden Werkzeuge — `aufgabe_anlegen`, `notiz_anlegen`,
+`kontakt_anlegen`, `lead_verschieben` — schreiben nichts: Sie lösen Namen
+im Bestand auf und geben eine **Karte** zurück, in der die Anfrage fertig
+steht (`anfrage.methode/pfad/koerper`). Die Oberfläche führt sie erst auf
+„Ausführen“ aus, mit den Rechten der Person, über die normalen Endpunkte.
+Das Modell schreibt nie selbst, und es erfindet keine Kennungen: Bei
+mehreren Treffern bekommt es die Kandidaten als `nachfrage` und fragt
+zurück; bei keinem Treffer sagt es das.
+
+Verlauf: die letzten zehn Nachrichten gehen mit, je Sitzung im Browser,
+nichts wird gespeichert. Ohne Sprachmodell antwortet der Endpunkt 409.
+Tests in `backend/tests/test_assistent.py` fahren die Schleife mit einem
+Skript statt Modell: Karte statt Schreibzugriff, Nachfrage bei
+Mehrdeutigkeit, Stufenwechsel kennt die Pipeline.
+
+Nächste Stufen, bewusst noch nicht gebaut: Ketten („für jede Firma der
+Liste …“) und Versand (Ticket-Antwort, Kampagne) — Versand nie ohne
+ausdrückliche Bestätigung.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an
