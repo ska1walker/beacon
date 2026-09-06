@@ -3118,6 +3118,22 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   }
   .assistent-senden:disabled { opacity: 0.4; cursor: default; }
 
+  /* Das Schild zwinkert, wenn nichts zu tun ist: alle sieben Sekunden ein
+     kurzes Blinzeln, zwei Augen zugleich, mit eigenem Versatz je Schild. */
+  .schild-zwinkert .schild-auge {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: schild-zwinkern 7s ease-in-out infinite;
+    animation-delay: var(--schild-versatz, 0s);
+  }
+  @keyframes schild-zwinkern {
+    0%, 91%, 100% { transform: scaleY(1); }
+    93.5%, 95% { transform: scaleY(0.12); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .schild-zwinkert .schild-auge { animation: none; }
+  }
+
   /* Auf dem Telefon sitzt die Navigation unten — Knopf und Panel darüber. */
   @media (max-width: 1023px) {
     .assistent-knopf { bottom: calc(5rem + env(safe-area-inset-bottom)); }
