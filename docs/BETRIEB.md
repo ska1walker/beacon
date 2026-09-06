@@ -549,6 +549,37 @@ die Seite fragt alle drei Sekunden nach. Jedes Thema zeigt die
 Gespräche dahinter mit Zitat, Firma und Datum — niemand muss dem Modell
 glauben. Die drei Tabellen stehen im Abzug.
 
+## Navigation — Gruppen, Favoriten, Einklappen
+
+Seit 0.3.8 ist die linke Leiste gegliedert statt flach (`frontend/lib/navigation.ts`
+trägt die Daten, `components/huelle.tsx` die Symbole): **Verkauf** (Start,
+Leads, Angebote, Prognose, Aufgaben), **Bestand** (Firmen, Kontakte, Listen),
+**Post** (Eingang, Tickets, Kampagnen), **Wissen** (Fragen, Erkenntnisse),
+Einstellungen unten. Kein Aufklappen — bei dreizehn Einträgen versteckt es
+mehr, als es ordnet. HubSpot, Linear und Attio machen es genauso: Suche
+oben, Favoriten, benannte Abschnitte, einklappbar.
+
+**Favoriten** hängen an der Person, nicht am Browser: Stern am Eintrag
+(bei Hover oder Tastaturfokus), gemerkte Einträge stehen oben unter
+„Favoriten“. Gespeichert in `users.einstellungen` (jsonb, Migration 0024)
+über `PATCH /api/mitglieder/wer/einstellungen {"favoriten": [...]}`; `null`
+löscht den Schlüssel, unbekannte Schlüssel werden abgewiesen. `user_id` ist
+die handelnde Person — Marc am Sitzplatz hat seine eigenen. Die Oberfläche
+schaltet sofort um und nimmt sich bei Fehler zurück (`frontend/lib/wer.ts`).
+Kein Protokolleintrag: eine Vorliebe ist kein Geschäftsdatum. In der
+Sicherung reist `einstellungen` im `nutzer`-Block mit und wird beim
+Wiederanlauf nur gefüllt, wo es leer ist.
+
+**Einklappen** auf Symbole: Knopf in der Kopfecke oder ⌘B / Strg+B. Zustand
+je Browser im Cookie `beacon-navigation`, vor dem ersten Anstrich per
+Inline-Script als `html[data-navigation="eingeklappt"]` gesetzt
+(`components/navigation.tsx`, wie die Darstellung). Eingeklappt zeigt jeder
+Eintrag seinen Namen als Tooltip, Gruppen trennt eine Linie.
+
+**Mobil** (unter 1024 px) bleibt die Leiste unten: die ersten Favoriten,
+aufgefüllt aus Start, Leads, Firmen, Kontakte bis vier, dazu „Mehr“ mit
+allen übrigen Bereichen samt Einstellungen.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an

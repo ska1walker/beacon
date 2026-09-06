@@ -201,3 +201,38 @@ async def test_fremde_person_bleibt_unbenannt(datenbank):
         assert antwort.status_code == 404
         liste = (await x.get("/api/mitglieder")).json()
         assert [m["display_name"] for m in liste if m["id"] == marc["id"]] == ["Marc Bayer"]
+
+
+# ---- Persönliche Einstellungen (seit 0.3.8) ---------------------------------
+
+
+async def test_einstellungen_rundlauf(datenbank):
+    async with klient_fuer("einst-a") as k:
+        assert (await k.get("/api/mitglieder/wer")).json()["einstellungen"] == {}
+        r = await k.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/firmen", "/deals", "/firmen"]})
+        assert r.status_code == 200, r.text
+        # Reihenfolge bleibt, Dubletten fallen weg.
+        assert r.json()["einstellungen"] == {"favoriten": ["/firmen", "/deals"]}
+        assert (await k.get("/api/mitglieder/wer")).json()["einstellungen"]["favoriten"] == ["/firmen", "/deals"]
+        # null löscht den Schlüssel.
+        r = await k.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": None})
+        assert r.json()["einstellungen"] == {}
+
+
+async def test_einstellungen_gehoeren_zum_sitzplatz(datenbank):
+    async with klient_fuer("einst-b") as kai:
+        marc = (await kai.post("/api/mitglieder", json={"display_name": "Marc Bayer"})).json()
+        async with mit_sitzplatz("einst-b", marc["id"]) as als_marc:
+            await als_marc.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/kampagnen"]})
+            assert (await als_marc.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/kampagnen"]}
+        assert (await kai.get("/api/mitglieder/wer")).json()["einstellungen"] == {}
+        await kai.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/firmen"]})
+        async with mit_sitzplatz("einst-b", marc["id"]) as als_marc:
+            assert (await als_marc.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/kampagnen"]}
+
+
+async def test_einstellungen_werden_geprueft(datenbank):
+    async with klient_fuer("einst-c") as k:
+        for schlecht in ({"favoriten": "x"}, {"favoriten": ["javascript:alert(1)"]}, {"unbekannt": 1}, {"favoriten": ["/a"] * 21 and [f"/p{i}" for i in range(21)]}):
+            assert (await k.patch("/api/mitglieder/wer/einstellungen", json=schlecht)).status_code == 422, schlecht
+        assert (await k.patch("/api/mitglieder/wer/einstellungen", json={})).status_code == 400

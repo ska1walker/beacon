@@ -11,12 +11,14 @@ halten:
   Anmeldung, und die Oberfläche sagt das auch so.
 """
 
+import json
 import re
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app import audit
 from app.auth import CurrentUser, get_current_user
@@ -56,6 +58,43 @@ class Wer(BaseModel):
     login_username: str
     # Wahr, wenn ein anderer Sitzplatz als der des Zugangs gewählt ist.
     sitzplatz_gewaehlt: bool
+    # Was diese Person für sich eingestellt hat — Favoriten in der Navigation.
+    einstellungen: dict[str, Any] = Field(default_factory=dict)
+
+
+PFAD = re.compile(r"^/[a-z0-9-]*$")
+
+
+class WerEinstellungenPatch(BaseModel):
+    """Persönliche Einstellungen, teilweise: Nur gesendete Schlüssel ändern
+    sich, `null` löscht einen. Unbekannte Schlüssel werden abgewiesen, damit
+    das Feld nur trägt, was die Anwendung kennt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    favoriten: list[str] | None = None
+
+    @field_validator("favoriten")
+    @classmethod
+    def _pfade(cls, wert: list[str] | None) -> list[str] | None:
+        if wert is None:
+            return None
+        sauber: list[str] = []
+        for pfad in wert:
+            if not isinstance(pfad, str) or len(pfad) > 64 or not PFAD.match(pfad):
+                raise ValueError(f"kein Pfad der Navigation: {pfad!r}")
+            if pfad not in sauber:
+                sauber.append(pfad)
+        if len(sauber) > 20:
+            raise ValueError("höchstens 20 Favoriten")
+        return sauber
+
+
+async def _einstellungen(conn, user_id: UUID) -> dict[str, Any]:
+    # Kein JSON-Codec am Pool (siehe db.py): jsonb kommt als Text.
+    roh = await conn.fetchval("select einstellungen from public.users where id = $1", user_id)
+    daten = json.loads(roh) if isinstance(roh, str | bytes) else (roh or {})
+    return daten if isinstance(daten, dict) else {}
 
 
 def _kennung(name: str) -> str:
@@ -74,15 +113,51 @@ def _kennung(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", ersetzt).strip("-") or "person"
 
 
-@router.get("/wer", response_model=Wer)
-async def wer(user: CurrentUser = Depends(get_current_user)) -> Wer:
+def _wer(user: CurrentUser, einstellungen: dict[str, Any]) -> Wer:
     return Wer(
         user_id=user.user_id,
         display_name=user.display_name,
         org_id=user.org_id,
         login_username=user.login_username or user.olares_username,
         sitzplatz_gewaehlt=user.sitzplatz,
+        einstellungen=einstellungen,
     )
+
+
+@router.get("/wer", response_model=Wer)
+async def wer(user: CurrentUser = Depends(get_current_user)) -> Wer:
+    async with acquire_as(user.user_id) as conn:
+        einst = await _einstellungen(conn, user.user_id)
+    return _wer(user, einst)
+
+
+@router.patch("/wer/einstellungen", response_model=Wer)
+async def einstellungen_aendern(
+    payload: WerEinstellungenPatch, user: CurrentUser = Depends(get_current_user)
+) -> Wer:
+    """Ändert, was die handelnde Person für sich eingestellt hat.
+
+    Persönlich, nicht organisationsweit: `user.user_id` ist der gewählte
+    Sitzplatz. Kein Protokolleintrag — eine Vorliebe in der Oberfläche ist
+    kein Geschäftsdatum, und ein Verlauf voller Sternklicks hülfe niemandem.
+    """
+    felder = payload.model_dump(exclude_unset=True)
+    if not felder:
+        raise HTTPException(400, "Nichts zu ändern.")
+    async with acquire_as(user.user_id) as conn:
+        roh = await conn.fetchval(
+            """
+            update public.users
+               set einstellungen = jsonb_strip_nulls(einstellungen || $2::jsonb)
+             where id = $1 and deleted_at is null
+            returning einstellungen
+            """,
+            user.user_id, json.dumps(felder),
+        )
+    if roh is None:
+        raise HTTPException(404, "Person nicht gefunden")
+    daten = json.loads(roh) if isinstance(roh, str | bytes) else roh
+    return _wer(user, daten if isinstance(daten, dict) else {})
 
 
 @router.get("", response_model=list[Mitglied])

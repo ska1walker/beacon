@@ -420,3 +420,31 @@ async def test_kennung_bewegt_sich_nur_bei_aenderung(kai):
     async with acquire_as(await _kennung(kai)) as conn:
         c = sicherung.abzug_kennung(await sicherung.abzug_erstellen(conn, org_id))
     assert c != a
+
+
+async def test_nutzereinstellungen_ueberleben_die_wiederherstellung(datenbank, eigene_ablage):
+    """Favoriten hängen am Menschen — auch nach der Neuinstallation, und
+    auch für die Person am Sitzplatz, die dabei neu angelegt wird."""
+    from tests.test_mitglieder import mit_sitzplatz
+
+    async with klient_fuer("quelle-einst") as quelle:
+        marc = (await quelle.post("/api/mitglieder", json={"display_name": "Marc Einst"})).json()
+        await quelle.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/firmen"]})
+        async with mit_sitzplatz("quelle-einst", marc["id"]) as als_marc:
+            await als_marc.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/kampagnen", "/listen"]})
+        await quelle.post("/api/sicherung")
+
+    daten = sicherung.abzug_lesen(sicherung.staende()[0]["name"])
+    je_name = {n["olares_username"]: n for n in daten["nutzer"]}
+    assert '"/kampagnen"' in je_name["marc-einst"]["einstellungen"]
+
+    async with klient_fuer("ziel-einst") as ziel:
+        # Das Ziel hat selbst schon etwas eingestellt — das bleibt.
+        await ziel.patch("/api/mitglieder/wer/einstellungen", json={"favoriten": ["/tickets"]})
+        async with acquire_as(await _kennung(ziel)) as conn:
+            org_id, user_id = await _org_und_nutzer(conn)
+            await sicherung.zurueckspielen(conn, daten, org_id, user_id)
+        neu = next(m for m in (await ziel.get("/api/mitglieder")).json() if m["olares_username"] == "marc-einst")
+        async with mit_sitzplatz("ziel-einst", neu["id"]) as als_marc:
+            assert (await als_marc.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/kampagnen", "/listen"]}
+        assert (await ziel.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/tickets"]}

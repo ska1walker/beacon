@@ -2,11 +2,12 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { initialenAusName } from "@/lib/format";
-import { liesSitzplatz, setzeSitzplatz } from "@/lib/sitzplatz";
-import type { Mitglied, Wer } from "@/lib/typen";
+import { setzeSitzplatz } from "@/lib/sitzplatz";
+import type { Mitglied } from "@/lib/typen";
+import { useWer } from "@/lib/wer";
 
 /**
  * Wer gerade arbeitet — unten in der Navigation, immer sichtbar.
@@ -23,18 +24,11 @@ import type { Mitglied, Wer } from "@/lib/typen";
 export function Personenanzeige() {
   const client = useQueryClient();
   const [offen, setOffen] = useState(false);
-  const [gewaehlt, setGewaehlt] = useState<string | null>(null);
-
-  useEffect(() => setGewaehlt(liesSitzplatz()), []);
+  const { wer, setGewaehlt } = useWer();
 
   const mitglieder = useQuery({
     queryKey: ["mitglieder"],
     queryFn: () => api.get<Mitglied[]>("/api/mitglieder"),
-  });
-
-  const wer = useQuery({
-    queryKey: ["wer", gewaehlt],
-    queryFn: () => api.get<Wer>("/api/mitglieder/wer"),
   });
 
   const aktuell = wer.data;

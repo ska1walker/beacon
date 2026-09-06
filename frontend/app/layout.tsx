@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { DARSTELLUNG_SCRIPT } from "@/components/darstellung";
+import { NAVIGATION_SCRIPT } from "@/components/navigation";
 import { Huelle } from "@/components/huelle";
 import { Abfrageanbieter } from "@/components/abfrageanbieter";
 import "./globals.css";
@@ -40,6 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Setzt die Klasse `dunkel` vor dem ersten Anstrich — sonst
             blitzt bei dunkler Einstellung kurz die helle Fläche auf. */}
         <script dangerouslySetInnerHTML={{ __html: DARSTELLUNG_SCRIPT }} />
+        {/* Dasselbe für die eingeklappte Navigation — sonst springt die
+            Leiste beim Laden von breit auf schmal. */}
+        <script dangerouslySetInnerHTML={{ __html: NAVIGATION_SCRIPT }} />
       </head>
       <body>
         <Abfrageanbieter>

@@ -567,8 +567,31 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: none;
   }
 
-  .huelle-nav-gruppe {
+  /* Gruppen, Titel, Sterne und der Klappschalter gehören der Seitenspalte.
+     Die schmale Leiste unten zeigt vier Ziele und „Mehr“. */
+  .huelle-nav-gruppe,
+  .huelle-nav-titel,
+  .huelle-nav-stern,
+  .huelle-klapp {
+    display: none;
+  }
+
+  .huelle-nav-mobil {
     display: contents;
+  }
+
+  .huelle-nav-mehr {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--am-raum-1);
+    padding: var(--am-raum-2);
+    background: var(--am-flaeche-1);
+    border-top: 1px solid var(--am-trennlinie);
+    box-shadow: var(--am-schatten-2);
   }
 
   .huelle-nav-item {
@@ -580,10 +603,14 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     padding: var(--am-raum-2);
     min-width: var(--am-ziel-beruehrung);
     min-height: var(--am-ziel-beruehrung);
+    border: 0;
     border-radius: var(--am-radius-klein);
+    background: transparent;
+    font: inherit;
     font-size: 0.6875rem;
     color: var(--am-text-sekundaer);
     text-align: center;
+    cursor: pointer;
     transition: color var(--am-dauer-kurz) ease;
   }
 
@@ -592,13 +619,6 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .huelle-nav-item.aktiv {
     color: var(--am-gold-beschriftung);
     font-weight: 600;
-  }
-
-  /* Auf der Leiste ist Platz für fünf Ziele. „Über Insilo" ist eine
-     Infoseite und war auch in der alten Kopfzeile mobil ausgeblendet —
-     erreichbar bleibt sie über die Einstellungen. */
-  .huelle-nav-item[data-nachrangig="true"] {
-    display: none;
   }
 
   /* Herkunftsvermerk — wie der Nachweis nur in der Seitenspalte
@@ -611,37 +631,12 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: none;
   }
 
-  .huelle-herkunft-marke {
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    color: var(--am-text-sekundaer);
-    border-radius: var(--am-radius-klein);
-    transition: color var(--am-dauer-kurz) ease;
-  }
-
-  .huelle-herkunft-marke:hover {
-    color: var(--am-text-primaer);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .huelle-herkunft-marke:focus-visible {
-    outline: 2px solid var(--am-fokus-ring);
-    outline-offset: 2px;
-  }
-
   .huelle-herkunft-recht {
     font-family: var(--am-schrift-mono);
     font-size: 0.625rem;
     color: var(--am-text-deaktiviert);
   }
 
-  /* ── Datenschutz-Nachweis ─────────────────────────────────────────
-     Sitzt unten in der Navigation. Auf der schmalen Leiste hat er keinen
-     Platz — dort trägt ihn die Ansicht „Was verlässt diese Box?" selbst. */
-  .huelle-schutz {
-    display: none;
-  }
 
   .huelle-inhalt {
     grid-row: 1;
@@ -660,12 +655,19 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   @media (min-width: 1024px) {
     .huelle {
-      grid-template-columns: 220px minmax(0, 1fr);
+      --huelle-nav-breite: 220px;
+      grid-template-columns: var(--huelle-nav-breite) minmax(0, 1fr);
       grid-template-rows: 1fr;
     }
 
     .huelle.hat-ablage {
-      grid-template-columns: 220px minmax(0, 1fr) 280px;
+      grid-template-columns: var(--huelle-nav-breite) minmax(0, 1fr) 280px;
+    }
+
+    /* Eingeklappt: nur Symbole. Das Attribut setzt navigation.tsx am <html>,
+       vor dem ersten Anstrich per Inline-Script. */
+    html[data-navigation="eingeklappt"] .huelle {
+      --huelle-nav-breite: 64px;
     }
 
     .huelle-nav {
@@ -709,7 +711,26 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .huelle-nav-gruppe {
       display: flex;
       flex-direction: column;
-      gap: var(--am-raum-1);
+      gap: 2px;
+      margin-bottom: var(--am-raum-2);
+    }
+
+    /* Eine Überschrift je Gruppe — klein, versal, gedämpft, wie ein
+       Tabellenkopf. Sie ordnet, sie klappt nichts auf. */
+    .huelle-nav-titel {
+      display: block;
+      margin: 0;
+      padding: var(--am-raum-3) var(--am-raum-3) var(--am-raum-1);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--am-text-gedaempft);
+    }
+
+    .huelle-nav-mobil,
+    .huelle-nav-mehr {
+      display: none;
     }
 
     .huelle-nav-spacer {
@@ -717,7 +738,14 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       flex: 1;
     }
 
+    .huelle-nav-eintrag {
+      position: relative;
+      display: flex;
+    }
+
     .huelle-nav-item {
+      flex: 1;
+      min-width: 0;
       flex-direction: row;
       justify-content: flex-start;
       gap: var(--am-raum-3);
@@ -727,65 +755,75 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       text-align: left;
     }
 
-    /* In der Seitenspalte ist Platz für alle Ziele. */
-    .huelle-nav-item[data-nachrangig="true"] {
-      display: flex;
-    }
+    .huelle-nav-eintrag .huelle-nav-item { padding-right: 2rem; }
+    .huelle-nav-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .huelle-nav-item:hover { background: var(--am-flaeche-2); }
 
-    .huelle-schutz {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--am-raum-2);
-      margin-top: var(--am-raum-3);
-      padding: var(--am-raum-2) var(--am-raum-3);
+    /* Der Stern: unsichtbar, bis man hinzeigt — und stehend, wenn er gilt.
+       Gold zeichnet aus, es handelt nicht. */
+    .huelle-nav-stern {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      right: var(--am-raum-2);
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 0;
       border-radius: var(--am-radius-klein);
-      border: 1px solid transparent;
-      font-family: var(--am-schrift-mono);
-      font-size: 0.6875rem;
-      line-height: 1.4;
-      transition: background var(--am-dauer-kurz) ease;
+      background: transparent;
+      color: var(--am-text-gedaempft);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity var(--am-dauer-kurz) ease, color var(--am-dauer-kurz) ease;
     }
 
-    .huelle-schutz-text {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
+    .huelle-nav-eintrag:hover .huelle-nav-stern,
+    .huelle-nav-eintrag:focus-within .huelle-nav-stern,
+    .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { opacity: 1; }
+    .huelle-nav-stern:hover { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
+    .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { color: var(--am-gold-beschriftung); }
+    .huelle-nav-stern:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
 
-    .huelle-schutz-kopf {
-      font-weight: 600;
+    .huelle-klapp {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      width: var(--am-ziel-zeiger);
+      height: var(--am-ziel-zeiger);
+      border: 0;
+      border-radius: var(--am-radius-klein);
+      background: transparent;
+      color: var(--am-text-gedaempft);
+      cursor: pointer;
     }
+    .huelle-klapp:hover { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
+    .huelle-klapp:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
 
-    .huelle-schutz-unter {
-      opacity: 0.85;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Alles intern — der ruhige Normalfall. */
-    .huelle-schutz-erfolg {
-      background: var(--am-erfolg-flaeche);
-      border-color: var(--am-erfolg-rand);
-      color: var(--am-erfolg);
-    }
-
-    /* Ziele konfiguriert, aber bewusst: neutral halten, nicht warnen. */
-    .huelle-schutz-neutral {
-      background: var(--am-flaeche-2);
-      border-color: var(--am-rand);
-      color: var(--am-text-sekundaer);
-    }
-
-    /* Sprachmodell außerhalb der Box — hier gehen ganze Transkripte
-       hinaus. Das ist der Fall, der auffallen muss. */
-    .huelle-schutz-achtung {
-      background: var(--am-achtung-flaeche);
-      border-color: var(--am-achtung-rand);
-      color: var(--am-achtung);
-    }
+    /* Eingeklappt: Symbole zentriert, Beschriftung als Tooltip, Gruppen
+       durch eine Linie getrennt statt durch eine Überschrift. */
+    html[data-navigation="eingeklappt"] .huelle-nav { padding: 0 var(--am-raum-2) var(--am-raum-2); }
+    html[data-navigation="eingeklappt"] .huelle-kopfecke { justify-content: center; }
+    html[data-navigation="eingeklappt"] .huelle-kopfecke .marke { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-klapp { margin-left: 0; }
+    html[data-navigation="eingeklappt"] .huelle-suche { display: flex; justify-content: center; padding-left: 0; padding-right: 0; }
+    html[data-navigation="eingeklappt"] .suchfeld-knopf { width: var(--am-ziel-zeiger); min-width: var(--am-ziel-zeiger); justify-content: center; padding: 0; }
+    html[data-navigation="eingeklappt"] .suchfeld-knopf svg { flex: none; width: 18px; height: 18px; }
+    html[data-navigation="eingeklappt"] .suchfeld-knopf span,
+    html[data-navigation="eingeklappt"] .suchfeld-knopf kbd { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-nav-titel { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-nav-gruppe + .huelle-nav-gruppe { border-top: 1px solid var(--am-trennlinie); padding-top: var(--am-raum-2); }
+    html[data-navigation="eingeklappt"] .huelle-nav-eintrag .huelle-nav-item { padding: var(--am-raum-2); justify-content: center; }
+    html[data-navigation="eingeklappt"] .huelle-nav-item span { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-nav-stern { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-fuss { padding: 0; align-items: center; }
+    html[data-navigation="eingeklappt"] .person-text,
+    html[data-navigation="eingeklappt"] .person-pfeil,
+    html[data-navigation="eingeklappt"] .huelle-herkunft { display: none; }
 
     .huelle-fuss {
       display: flex;

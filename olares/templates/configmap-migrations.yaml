@@ -1918,3 +1918,17 @@ data:
     create policy themenlaeufe_org on public.themenlaeufe
       for all using (org_id in (select public.current_user_orgs()))
       with check (org_id in (select public.current_user_orgs()));
+  0024_nutzereinstellungen.sql: |
+    -- ========================================================================
+    -- 0024_nutzereinstellungen.sql
+    -- Was eine Person für sich einstellt — am Menschen, nicht am Zugang.
+    --
+    -- Favoriten in der Navigation sind eine Vorliebe, kein Geschäftsdatum. Sie
+    -- gehören zur Person, die gerade handelt: Marc am Sitzplatz hat seine
+    -- eigenen, auf jedem Gerät dieselben. Ein jsonb-Feld am Nutzer reicht —
+    -- es wächst mit („dichte" käme später an dieselbe Stelle), braucht keine
+    -- eigene Tabelle und reist in der Sicherung im Nutzerblock mit.
+    -- ========================================================================
+
+    alter table public.users
+      add column if not exists einstellungen jsonb not null default '{}'::jsonb;

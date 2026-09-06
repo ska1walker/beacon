@@ -122,7 +122,7 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     # Neuinstallation nicht ins Leere zeigt.
     nutzer = await conn.fetch(
         """
-        select u.id, u.olares_username, u.display_name, u.email, u.zugang, r.role
+        select u.id, u.olares_username, u.display_name, u.email, u.zugang, u.einstellungen, r.role
         from public.users u
         join public.user_org_roles r on r.user_id = u.id
         where r.org_id = $1
@@ -255,17 +255,32 @@ async def _nutzerzuordnung(
             "select id from public.users where olares_username = $1", name
         )
 
+        # Was die Person für sich eingestellt hatte, kommt mit — im Abzug
+        # als Text (kein JSON-Codec am Pool), zur Sicherheit auch als dict.
+        einst = eintrag.get("einstellungen") or "{}"
+        if not isinstance(einst, str):
+            einst = json.dumps(einst)
+
         if heutige is None and eintrag.get("zugang") == "sitzplatz":
             heutige = await conn.fetchval(
                 """
-                insert into public.users (olares_username, display_name, email, zugang)
-                values ($1, $2, $3, 'sitzplatz')
+                insert into public.users (olares_username, display_name, email, zugang, einstellungen)
+                values ($1, $2, $3, 'sitzplatz', $4::jsonb)
                 on conflict (olares_username) do update set display_name = excluded.display_name
                 returning id
                 """,
                 name,
                 eintrag.get("display_name"),
                 eintrag.get("email"),
+                einst,
+            )
+        elif heutige is not None:
+            # Wer schon da ist und schon etwas eingestellt hat, behält es —
+            # Wiederherstellen füllt nur, was leer ist.
+            await conn.execute(
+                "update public.users set einstellungen = $2::jsonb "
+                "where id = $1 and einstellungen = '{}'::jsonb",
+                heutige, einst,
             )
 
         if heutige is not None:
