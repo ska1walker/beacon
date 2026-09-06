@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { api } from "@/lib/api";
 import type { Contact, Personenliste, Personenvorschlag } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
@@ -34,6 +34,7 @@ export function PersonenFinden({
   vorhanden?: { first_name: string | null; last_name: string | null }[];
 }) {
   const client = useQueryClient();
+  const feldId = useId();
   const [wunsch, setWunsch] = useState("");
   const [gewaehlt, setGewaehlt] = useState<Set<string>>(new Set());
   const [angelegt, setAngelegt] = useState<number | null>(null);
@@ -110,25 +111,25 @@ export function PersonenFinden({
 
   return (
     <div className="personen-finden">
-      <div className="erfassung-leiste" style={{ marginTop: 0 }}>
-        <Users size={14} aria-hidden="true" style={{ color: "var(--am-gold-beschriftung)", flex: "none" }} />
-        <input
-          className="input"
-          value={wunsch}
-          onChange={(e) => setWunsch(e.target.value)}
-          placeholder="Wen suchen Sie? z. B. Einkauf, Geschäftsführung — leer heißt alle"
-          aria-label="Gesuchte Rolle"
-          style={{ flex: 1, minWidth: "12rem" }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              suchen.mutate();
-            }
-          }}
-        />
-        <button type="button" className="btn btn-sekundaer btn-klein" disabled={suchen.isPending} onClick={() => suchen.mutate()}>
+      <label className="personen-finden-frage" htmlFor={feldId}>Wen suchen Sie?</label>
+      <input
+        id={feldId}
+        className="input personen-finden-feld"
+        value={wunsch}
+        onChange={(e) => setWunsch(e.target.value)}
+        placeholder="z. B. Einkauf oder Geschäftsführung"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            suchen.mutate();
+          }
+        }}
+      />
+      <div className="personen-finden-zeile">
+        <span className="erfassung-tipp">Leer heißt: alle, die Website und Suchtreffer nennen</span>
+        <button type="button" className="btn btn-primaer btn-klein" disabled={suchen.isPending} onClick={() => suchen.mutate()}>
           <Search size={14} aria-hidden="true" />
-          {suchen.isPending ? "Sucht …" : suchen.data ? "Erneut suchen" : "Personen suchen"}
+          {suchen.isPending ? "Sucht …" : suchen.data ? "Erneut suchen" : "Suchen"}
         </button>
       </div>
 

@@ -3090,6 +3090,18 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .finden-kandidat-unter { grid-area: unter; font-size: 0.75rem; color: var(--am-text-sekundaer); line-height: 1.4; }
   .finden-kandidat-aktion { grid-area: aktion; font-size: 0.75rem; font-weight: 500; color: var(--am-handlung-ruhend); white-space: nowrap; }
 
+  /* Ansprechpartner finden — eine Spalte, damit es auch in der schmalen
+     rechten Spalte der Firmenseite steht: Frage, Feld, darunter Tipp und Knopf. */
+  .personen-finden { display: grid; gap: var(--am-raum-2); }
+  .personen-finden-frage { font-size: 0.8125rem; font-weight: 500; color: var(--am-text-sekundaer); }
+  .personen-finden-feld { width: 100%; }
+  .personen-finden-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--am-raum-2); flex-wrap: wrap; }
+  .personen-finden-zeile .btn { margin-left: auto; }
+  .personen-finden .erfassung-leiste { margin-top: var(--am-raum-1); }
+
+  /* Ein Umschalter, der etwas aufgeklappt hat, zeigt das ruhig — nicht mit einem Rahmen. */
+  .btn-still[aria-expanded="true"] { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
+
   .finden-personen { list-style: none; margin: var(--am-raum-2) 0 0; padding: 0; display: grid; gap: var(--am-raum-2); }
   .finden-person {
     width: 100%;
