@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
+import { Schalter } from "@/components/schalter";
 
 /**
  * Woher die Anreicherung liest und was sie von selbst schreiben darf.
@@ -116,15 +117,12 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
             <p className="feld-hinweis">„Baustoffhandel“ ohne Land liefert Fürth, wenn Sie Tecklenburg meinen.</p>
           </div>
 
-          <div className="feld">
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--am-raum-2)", cursor: "pointer" }}>
-              <input type="checkbox" checked={automatisch} onChange={(ev) => setAutomatisch(ev.target.checked)} />
-              Beim Anlegen von selbst anreichern
-            </label>
-            <p className="feld-hinweis">
-              Abgeschaltet läuft die Anreicherung nur auf Knopfdruck am Datensatz.
-            </p>
-          </div>
+          <Schalter
+            an={automatisch}
+            umschalten={setAutomatisch}
+            text="Beim Anlegen von selbst anreichern"
+            hinweis="Abgeschaltet läuft die Anreicherung nur auf Knopfdruck am Datensatz."
+          />
 
           <div className="feld">
             <label htmlFor="uebernahme">Was ohne Rückfrage geschrieben wird</label>

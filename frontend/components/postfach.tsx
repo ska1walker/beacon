@@ -7,6 +7,7 @@ import { datumZeit } from "@/lib/format";
 import type { OrgSettings } from "@/lib/typen";
 import { Fehler } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
+import { Schalter } from "@/components/schalter";
 
 type Bilanz = { gelesen: number; tickets: number; uebergangen: number; doppelt: number };
 
@@ -132,16 +133,12 @@ export function Postfachblock() {
           </div>
         </div>
 
-        <label className="quelle-freigabe">
-          <input type="checkbox" checked={aktiv} onChange={(x) => setAktiv(x.target.checked)} />
-          <span>
-            Regelmäßig abholen.
-            {" "}
-            <span style={{ color: "var(--am-text-gedaempft)" }}>
-              Abgeschaltet passiert nur etwas, wenn Sie unten auf Abholen drücken.
-            </span>
-          </span>
-        </label>
+        <Schalter
+          an={aktiv}
+          umschalten={setAktiv}
+          text="Regelmäßig abholen"
+          hinweis="Abgeschaltet passiert nur etwas, wenn Sie unten auf Abholen drücken."
+        />
 
         {e?.imap_letzter_fehler && (
           <div style={{ marginTop: "var(--am-raum-3)" }}>

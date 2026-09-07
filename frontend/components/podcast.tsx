@@ -9,6 +9,7 @@ import { datumZeit } from "@/lib/format";
 import { dauerText, fortschrittText, istDeutsch, modellName } from "@/lib/podcast";
 import type { OrgSettings, Podcast, PodcastStatus, Sprecher, Stimmenstand } from "@/lib/typen";
 import { Erklaerung } from "@/components/erklaerung";
+import { Schalter } from "@/components/schalter";
 import { Fehler } from "@/components/zustaende";
 
 /**
@@ -325,12 +326,12 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
           {stimmen.isError && e.tts_ready && <Fehler text={(stimmen.error as Error).message} />}
           <Stimmwahl id="tts-stimme-1" label="Stimme des Kollegen" wert={modell1} setWert={setModell1} stand={stimmen.data} hinweis="Kennt den Bestand und antwortet daraus." />
           <Stimmwahl id="tts-stimme-2" label="Stimme der Moderatorin" wert={modell2} setWert={setModell2} stand={stimmen.data} hinweis="Führt durch die Folge und stellt die Fragen." />
-          <div className="feld">
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--am-raum-2)", cursor: "pointer" }}>
-              <input type="checkbox" style={{ marginTop: "0.2em" }} checked={automatisch} onChange={(ev) => setAutomatisch(ev.target.checked)} />
-              Gespräche mit Termin automatisch vorbereiten — 24 Stunden vorher, für Termine mit Firma oder Lead
-            </label>
-          </div>
+          <Schalter
+            an={automatisch}
+            umschalten={setAutomatisch}
+            text="Gespräche mit Termin automatisch vorbereiten"
+            hinweis="24 Stunden vorher, für Termine mit Firma oder Lead. Die Folge liegt dann auf der Startseite unter „Heute vorbereitet“."
+          />
           {speichern.isError && <Fehler text={(speichern.error as Error).message} />}
           <div className="btn-reihe">
             <button type="submit" className="btn btn-primaer" disabled={speichern.isPending}>

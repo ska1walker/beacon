@@ -378,7 +378,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-gedaempft);
   }
 
-  .feld input,
+  .feld input:not([type="checkbox"]),
   .feld select,
   .feld textarea {
     width: 100%;
@@ -428,9 +428,102 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   }
 
   @media (pointer: coarse) {
-    .feld input,
+    .feld input:not([type="checkbox"]),
     .feld select,
     .feld textarea { min-height: var(--am-ziel-beruehrung); }
+  }
+
+  /* ── Häkchen und Schalter ─────────────────────────────────────────
+     Das Browser-Häkchen ist in keinem System zu Hause. Eines in den
+     Farben des Hauses: ruhend ein Rahmen, gewählt Hanseatenblau mit
+     weißem Haken — im Dunkeln Gold, weil Blau auf Blau nicht trägt. */
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    border: var(--am-rand-betont) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    vertical-align: -0.2em;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  input[type="checkbox"]::before {
+    content: "";
+    width: 0.625rem;
+    height: 0.625rem;
+    transform: scale(0);
+    transition: transform 100ms ease;
+    background: currentColor;
+    clip-path: polygon(14% 44%, 0 62%, 40% 100%, 100% 22%, 84% 8%, 40% 66%);
+  }
+  input[type="checkbox"]:hover { border-color: var(--am-handlung-ruhend); }
+  input[type="checkbox"]:checked {
+    border-color: var(--am-handlung-ruhend);
+    background: var(--am-handlung-ruhend);
+    color: #fff;
+  }
+  input[type="checkbox"]:checked::before { transform: scale(1); }
+  input[type="checkbox"]:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 2px; }
+  input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
+  html.dunkel input[type="checkbox"]:hover { border-color: var(--am-gold-500); }
+  html.dunkel input[type="checkbox"]:checked { border-color: var(--am-gold-500); background: var(--am-gold-500); color: var(--am-blau-900); }
+
+  .schalter-zeile {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--am-raum-3);
+    margin: var(--am-raum-4) 0;
+  }
+  .schalter {
+    flex: none;
+    position: relative;
+    width: 2.5rem;
+    height: 1.5rem;
+    margin-top: 0.05rem;
+    padding: 0;
+    border: var(--am-rand-betont) solid var(--am-rand);
+    border-radius: var(--am-radius-voll);
+    background: var(--am-flaeche-2);
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+  }
+  .schalter-knauf {
+    position: absolute;
+    top: 50%;
+    left: 0.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(5, 23, 41, 0.25);
+    transform: translateY(-50%);
+    transition: transform 140ms ease;
+  }
+  .schalter:hover { border-color: var(--am-handlung-ruhend); }
+  .schalter.an { background: var(--am-handlung-ruhend); border-color: var(--am-handlung-ruhend); }
+  .schalter.an .schalter-knauf { transform: translate(1rem, -50%); }
+  .schalter:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 2px; }
+  html.dunkel .schalter:hover { border-color: var(--am-gold-500); }
+  html.dunkel .schalter.an { background: var(--am-gold-500); border-color: var(--am-gold-500); }
+  html.dunkel .schalter.an .schalter-knauf { background: var(--am-blau-900); }
+  .schalter-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--am-text-primaer);
+    cursor: pointer;
+  }
+  .schalter-hinweis {
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
   }
 
   /* ── Zustandsstreifen ─────────────────────────────────────────────

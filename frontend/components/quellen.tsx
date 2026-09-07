@@ -8,6 +8,7 @@ import { datumZeit } from "@/lib/format";
 import type { Quelle, Quellenart, QuelleNeu } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
+import { Schalter } from "@/components/schalter";
 
 /** Wie eine Quelle heißt, die kein Mensch ist. */
 const ART_TEXT: Record<string, string> = {
@@ -183,21 +184,12 @@ export function Quellenblock() {
         </form>
 
         {art !== "insilo" && (
-          <label className="quelle-freigabe">
-            <input
-              type="checkbox"
-              checked={direkt}
-              onChange={(e) => setDirekt(e.target.checked)}
-            />
-            <span>
-              Legt Tickets unmittelbar an.
-              {" "}
-              <span style={{ color: "var(--am-text-gedaempft)" }}>
-                Abgeschaltet wartet jede Meldung im Eingang, bis jemand sie ansieht — das ist
-                die richtige Einstellung für alles, was aus dem offenen Netz kommt.
-              </span>
-            </span>
-          </label>
+          <Schalter
+            an={direkt}
+            umschalten={setDirekt}
+            text="Legt Tickets unmittelbar an"
+            hinweis="Abgeschaltet wartet jede Meldung im Eingang, bis jemand sie ansieht — das ist die richtige Einstellung für alles, was aus dem offenen Netz kommt."
+          />
         )}
         {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
       </div>
