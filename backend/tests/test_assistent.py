@@ -115,3 +115,16 @@ async def test_ohne_modell_409(datenbank, modell):
     async with klient_fuer("assi-e") as k:
         await k.put("/api/settings", json={"llm_base_url": None})
         assert (await k.post("/api/assistent", json={"nachricht": "Hallo"})).status_code == 409
+
+
+async def test_offene_aufgaben_werden_gelesen(datenbank, modell):
+    async with klient_fuer("assi-f") as k:
+        await k.put("/api/settings", json={"llm_base_url": "http://modell.local/v1", "llm_model": "t", "anreicherung_automatisch": False})
+        a, _, _ = await _bestand(k)
+        await k.post("/api/tasks", json={"title": "Rückruf", "due_at": "2020-01-01T09:00:00", "company_id": a["id"]})
+        modell["runden"] = [{"tool_calls": [_aufruf("aufgaben_offen")]}, {"content": "Überfällig: Rückruf."}]
+        r = await k.post("/api/assistent", json={"nachricht": "Welche Aufgaben sind überfällig?"})
+        assert r.status_code == 200, r.text
+        gesehen = [json.loads(n["content"]) for n in modell["gesehen"] if n["role"] == "tool"][0]
+        assert gesehen["aufgaben"][0]["titel"] == "Rückruf" and gesehen["aufgaben"][0]["ueberfaellig"] is True
+        assert gesehen["aufgaben"][0]["firma"] == "Brinkmann Baustoffe GmbH"

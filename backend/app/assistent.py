@@ -181,7 +181,7 @@ async def w_aufgaben_offen(conn: asyncpg.Connection, args: dict[str, Any]) -> An
         """
         select t.id, t.title, t.due_at::date::text as faellig, f.name as firma
           from public.tasks t left join public.companies f on f.id = t.company_id
-         where t.deleted_at is null and t.completed_at is null
+         where t.status = 'open'
          order by t.due_at nulls last limit 15
         """
     )
