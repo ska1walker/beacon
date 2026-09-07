@@ -371,6 +371,14 @@ class OrgSettingsIn(Absender):
     links_basis_url: str | None = None
     doi_betreff: str | None = None
     doi_text: str | None = None
+    # Sprachausgabe (0025). Der Schlüssel geht nur hinein.
+    tts_endpoint_url: str | None = None
+    tts_api_key: str | None = None
+    tts_modell: str | None = None
+    tts_stimme: str | None = None
+    tts_modell_2: str | None = None
+    tts_stimme_2: str | None = None
+    podcast_automatisch: bool | None = None
     default_currency: str | None = None
     locale: str | None = None
 
@@ -423,6 +431,16 @@ class OrgSettings(Absender):
     links_basis_wirksam: str | None = None
     doi_betreff: str | None = None
     doi_text: str | None = None
+    # Sprachausgabe — dasselbe Muster: Adresse sichtbar, Schlüssel nur als
+    # „hinterlegt".
+    tts_endpoint_url: str | None = None
+    tts_api_key_set: bool = False
+    tts_modell: str = ""
+    tts_stimme: str | None = None
+    tts_modell_2: str = ""
+    tts_stimme_2: str | None = None
+    tts_ready: bool = False
+    podcast_automatisch: bool = False
     default_currency: str = "EUR"
     locale: str = "de"
 

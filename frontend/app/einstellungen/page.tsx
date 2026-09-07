@@ -20,6 +20,7 @@ import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
 import { Postausgangblock } from "@/components/postausgang";
 import { Marketingversandblock, Versandblock } from "@/components/versand";
 import { AnreicherungEinstellungen } from "@/components/anreicherung-einstellungen";
+import { Sprachausgabeblock } from "@/components/podcast";
 
 /**
  * Die Einstellungen in fünf Unterpunkten.
@@ -127,6 +128,7 @@ function Datenwege({ e }: { e: OrgSettings }) {
         <dl>
           <div className="eigenschaft"><dt>Datenbank, Suche, Anhänge</dt><dd>auf dieser Box</dd></div>
           <div className="eigenschaft"><dt>KI-Assistent</dt><dd>{e.llm_ready ? e.llm_base_url : "nicht eingerichtet — keine Anfragen"}</dd></div>
+          <div className="eigenschaft"><dt>Sprachausgabe</dt><dd>{e.tts_ready ? `Skripte der Podcasts an ${e.tts_endpoint_url}` : "nicht eingerichtet — keine Anfragen"}</dd></div>
           <div className="eigenschaft"><dt>Automatisch ergänzen</dt><dd>{e.suche_endpoint_url ? `Firmen- und Personennamen an ${e.suche_endpoint_url}; Websites der Firmen` : "nur die Websites der Firmen — kein Suchdienst eingetragen"}</dd></div>
           <div className="eigenschaft"><dt>E-Mail</dt><dd>{e.smtp_ready ? `über ${e.smtp_host}` : "kein Konto eingetragen"}{e.marketing_versand === "brevo" && e.brevo_api_key_set ? " · Marketing über Brevo" : ""}</dd></div>
           <div className="eigenschaft"><dt>Telemetrie</dt><dd>keine</dd></div>
@@ -193,6 +195,7 @@ function Inhalt() {
         {bereich === "ki" && (
           <>
             <KIBlock e={e} />
+            <Sprachausgabeblock e={e} />
             <AnreicherungEinstellungen einstellungen={e} />
             <Quellenblock />
           </>

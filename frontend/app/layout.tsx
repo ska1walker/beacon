@@ -4,6 +4,7 @@ import { DARSTELLUNG_SCRIPT } from "@/components/darstellung";
 import { NAVIGATION_SCRIPT } from "@/components/navigation";
 import { Huelle } from "@/components/huelle";
 import { Abfrageanbieter } from "@/components/abfrageanbieter";
+import { Fehlermelder } from "@/components/fehlermelder";
 import "./globals.css";
 
 // Geist aus dem Repo, nicht vom Google-CDN — auch nicht zur Bauzeit. Das
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: NAVIGATION_SCRIPT }} />
       </head>
       <body>
+        <Fehlermelder />
         <Abfrageanbieter>
           <Huelle>{children}</Huelle>
         </Abfrageanbieter>

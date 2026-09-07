@@ -7,6 +7,7 @@ import type { Board } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Tagesbriefing } from "@/components/briefing";
+import { HeuteVorbereitet } from "@/components/podcast";
 
 export default function StartSeite() {
   const board = useQuery({
@@ -60,8 +61,8 @@ export default function StartSeite() {
       </dl>
 
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+        <HeuteVorbereitet />
         <Tagesbriefing />
-
       </div>
     </>
   );

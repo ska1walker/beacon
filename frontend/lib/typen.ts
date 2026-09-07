@@ -261,6 +261,15 @@ export interface OrgSettings extends Absender {
   links_basis_wirksam: string | null;
   doi_betreff: string | null;
   doi_text: string | null;
+  // Sprachausgabe (0025). Adresse sichtbar, Schlüssel nur als „hinterlegt".
+  tts_endpoint_url: string | null;
+  tts_api_key_set: boolean;
+  tts_modell: string;
+  tts_stimme: string | null;
+  tts_modell_2: string;
+  tts_stimme_2: string | null;
+  tts_ready: boolean;
+  podcast_automatisch: boolean;
   default_currency: string;
   locale: string;
 }
@@ -979,4 +988,49 @@ export interface AssistentAntwort {
   navigation: string | null;
   schritte: string[];
   modell: string;
+}
+
+// ── Gespräch vorbereiten — Podcast ──────────────────────────────────────
+
+export type Sprecher = "moderatorin" | "kollege";
+
+export interface PodcastSegment {
+  sprecher: Sprecher;
+  text: string;
+}
+
+export interface Podcast {
+  id: string;
+  entity: "companies" | "deals";
+  entity_id: string;
+  task_id: string | null;
+  anlass: string | null;
+  titel: string | null;
+  status: "laeuft" | "fertig" | "fehler";
+  fortschritt: { schritt?: string; segment?: number; gesamt?: number };
+  skript: string | null;
+  segmente: PodcastSegment[];
+  dauer_s: number | null;
+  bytes: number | null;
+  modell: string | null;
+  llm_modell: string | null;
+  fehler: string | null;
+  created_at: string;
+  updated_at: string;
+  // Nur in „heute": wozu die Folge gehört.
+  name: string | null;
+  termin_titel: string | null;
+  termin_am: string | null;
+}
+
+export interface PodcastStatus {
+  llm_ready: boolean;
+  tts_ready: boolean;
+  hint: string;
+}
+
+export interface Stimmenstand {
+  installiert: string[];
+  verfuegbar: string[];
+  installationen: Record<string, string>;
 }

@@ -3510,3 +3510,22 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .suchpalette-frage .suchpalette-titel { flex: 1; }
 .suchpalette-antwort { padding: var(--am-raum-3) var(--am-raum-4) var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); font-size: 0.9375rem; line-height: 1.55; max-height: 40vh; overflow-y: auto; }
 .suchpalette-fundstellen { margin: var(--am-raum-3) 0 0; padding-left: 1.2em; font-size: 0.8125rem; color: var(--am-text-sekundaer); }
+
+/* ── Gespräch vorbereiten — Podcast ──────────────────────────────────── */
+.podcast-folge + .podcast-folge { margin-top: var(--am-raum-4); padding-top: var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); }
+.podcast-folge-kopf { display: flex; align-items: flex-start; gap: var(--am-raum-2); margin-bottom: var(--am-raum-2); }
+.podcast-folge-kopf svg { color: var(--am-gold-beschriftung); flex: none; margin-top: 0.15em; }
+.podcast-titel { font-weight: 600; font-size: 0.9375rem; line-height: 1.35; }
+.podcast-meta { font-size: 0.8125rem; color: var(--am-text-gedaempft); }
+.podcast-meta a { text-decoration: underline; text-underline-offset: 2px; }
+.podcast-player { display: block; width: 100%; height: 40px; }
+.podcast-aktionen { margin-top: var(--am-raum-2); flex-wrap: wrap; }
+.podcast-skript { display: contents; }
+.podcast-skript-text { flex-basis: 100%; margin: var(--am-raum-2) 0 0; padding: var(--am-raum-3); background: var(--am-flaeche-2); border-radius: var(--am-radius-2); font-size: 0.875rem; line-height: 1.55; max-height: 24rem; overflow-y: auto; }
+.podcast-absatz + .podcast-absatz { margin-top: var(--am-raum-3); }
+.podcast-absatz dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--am-text-gedaempft); margin-bottom: 2px; }
+.podcast-absatz[data-sprecher="moderatorin"] dt { color: var(--am-gold-beschriftung); }
+.podcast-absatz dd { margin: 0; }
+.podcast-heute + .podcast-heute { margin-top: var(--am-raum-4); }
+.podcast-heute .podcast-meta { margin-bottom: var(--am-raum-1); }
+.podcast-einrichtung { margin-top: var(--am-raum-4); padding-top: var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); }

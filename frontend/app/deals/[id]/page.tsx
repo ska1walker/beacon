@@ -19,6 +19,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Dealstufe } from "@/components/stufe";
 import { Zeitleiste } from "@/components/zeitleiste";
 import { KiKnopf } from "@/components/ki-knopf";
+import { Podcastblock } from "@/components/podcast";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { AngebotAnlegen } from "@/components/angebot-anlegen";
 import { Qualifizierungsblock } from "@/components/qualifizierung";
@@ -274,6 +275,8 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
               </div>
             </section>
           )}
+
+          <Podcastblock entity="deals" entityId={id} />
         </div>
 
         <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Das AImighty-Schild — gold, mit den zwei Augen. Skaliert über `size`.
@@ -11,8 +11,14 @@ import { useMemo } from "react";
  */
 export function Schild({ size = 20, className, zwinkert = false }: { size?: number; className?: string; zwinkert?: boolean }) {
   // Ein eigener Versatz je Schild: Zwei Schilder auf einer Seite blinzeln
-  // sonst im Gleichtakt, und das sähe nach Maschine aus.
-  const versatz = useMemo(() => `${(Math.random() * 4).toFixed(2)}s`, []);
+  // sonst im Gleichtakt, und das sähe nach Maschine aus. Erst nach dem
+  // Einhängen gewürfelt — ein Zufallswert beim Rendern wäre auf dem Server
+  // ein anderer als im Browser, und React meldete auf jeder Seite einen
+  // Hydrierungsfehler.
+  const [versatz, setVersatz] = useState("0s");
+  useEffect(() => {
+    setVersatz(`${(Math.random() * 4).toFixed(2)}s`);
+  }, []);
   return (
     <svg
       width={size}

@@ -295,3 +295,20 @@ async def conn_nutzer(klient):
         return await conn.fetchval(
             "select id from public.users where olares_username = $1", klient.headers["X-Bfl-User"]
         )
+
+
+async def test_schleifen_finden_wartende_mails_und_faellige_postfaecher(datenbank):
+    """`mails` und `org_settings` stehen unter FORCE ROW LEVEL SECURITY.
+    Die Schleifen fragten ohne Nutzerkontext — und fanden nie etwas."""
+    from app.main import _post_faellig, _versand_offen
+
+    async with klient_fuer("vers-schleife") as k:
+        kontakt = await _kontakt(k)
+        nutzer = await conn_nutzer(k)
+        async with acquire_as(nutzer) as conn:
+            org = await conn.fetchval("select org_id from public.contacts where id = $1", kontakt["id"])
+            await versand.einreihen(conn, org, art="transaktional", an=kontakt["email"], betreff="Hallo", text="Text")
+        assert org in [o["org_id"] for o in await _versand_offen()]
+        assert org not in [o["org_id"] for o in await _post_faellig()]
+        await k.put("/api/settings", json={"imap_host": "imap.test", "imap_benutzer": "x", "imap_passwort": "y", "imap_aktiv": True})
+        assert org in [o["org_id"] for o in await _post_faellig()]

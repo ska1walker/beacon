@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app import anreicherung as anreicherung_kern
 from app import erkenntnisse as erkenntnisse_kern
+from app import podcast as podcast_kern
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
@@ -42,7 +43,9 @@ from app.routers import (
 )
 from app.routers import assistent as assistent_router
 from app.routers import erkenntnisse as erkenntnisse_router
+from app.routers import fehler as fehler_router
 from app.routers import finden as finden_router
+from app.routers import podcast as podcast_router
 from app.routers import qualifizierung as qualifizierung_router
 from app.routers import settings as settings_router
 from app.routers import sicherung as sicherung_router
@@ -104,6 +107,61 @@ async def _stammdaten_nachziehen() -> None:
         # Fehlende Stammdaten sind ärgerlich, aber kein Grund, die
         # Anwendung nicht zu starten.
         print(f"Stammdaten konnten nicht nachgezogen werden: {exc}", flush=True)
+
+
+async def _organisationen() -> list[asyncpg.Record]:
+    """Jede Organisation mit ihrem Eigentümer — der Kontext, unter dem die
+    Schleifen lesen.
+
+    `org_settings` und `mails` stehen unter FORCE ROW LEVEL SECURITY: Ohne
+    Nutzerkontext sind sie leer, und eine Schleife, die ohne Kontext nach
+    fälligen Postfächern oder wartenden Mails fragt, findet nie etwas —
+    still, ohne Fehler. Darum erst die Organisationen (die Tabelle ist
+    nicht erzwungen), dann je Organisation unter der Kennung des Eigentümers.
+    """
+    async with acquire() as conn:
+        return await conn.fetch(
+            """
+            select o.id as org_id, r.user_id
+              from public.orgs o
+              join public.user_org_roles r on r.org_id = o.id and r.role = 'owner'
+             where o.deleted_at is null
+            """
+        )
+
+
+async def _post_faellig() -> list[asyncpg.Record]:
+    """Organisationen, deren Postfach jetzt abzuholen ist."""
+    faellig = []
+    for org in await _organisationen():
+        async with acquire_as(org["user_id"]) as conn:
+            dran = await conn.fetchval(
+                """
+                select s.imap_aktiv and s.imap_host is not null
+                   and (s.imap_zuletzt is null
+                        or s.imap_zuletzt < now() - make_interval(mins => s.imap_takt_minuten))
+                  from public.org_settings s where s.org_id = $1
+                """,
+                org["org_id"],
+            )
+        if dran:
+            faellig.append(org)
+    return faellig
+
+
+async def _versand_offen() -> list[asyncpg.Record]:
+    """Organisationen, in deren Buch eine Mail auf den Versand wartet."""
+    offen = []
+    for org in await _organisationen():
+        async with acquire_as(org["user_id"]) as conn:
+            wartet = await conn.fetchval(
+                "select exists (select 1 from public.mails m where m.org_id = $1 and m.status = 'wartend' "
+                "and (m.naechster_versuch is null or m.naechster_versuch <= now()))",
+                org["org_id"],
+            )
+        if wartet:
+            offen.append(org)
+    return offen
 
 
 # Je Organisation: Kennung des zuletzt geschriebenen Abzugs und wann.
@@ -186,17 +244,7 @@ async def _postschleife() -> None:
     while True:
         await asyncio.sleep(60)
         try:
-            async with acquire() as conn:
-                faellig = await conn.fetch(
-                    """
-                    select s.org_id, r.user_id
-                    from public.org_settings s
-                    join public.user_org_roles r on r.org_id = s.org_id and r.role = 'owner'
-                    where s.imap_aktiv and s.imap_host is not null
-                      and (s.imap_zuletzt is null
-                           or s.imap_zuletzt < now() - make_interval(mins => s.imap_takt_minuten))
-                    """
-                )
+            faellig = await _post_faellig()
         except Exception as exc:
             print(f"Postfach-Schleife: Zeilen nicht lesbar: {exc}", flush=True)
             continue
@@ -233,16 +281,7 @@ async def _versandschleife() -> None:
     while True:
         await asyncio.sleep(30)
         try:
-            async with acquire() as conn:
-                offen = await conn.fetch(
-                    """
-                    select distinct m.org_id, r.user_id
-                      from public.mails m
-                      join public.user_org_roles r on r.org_id = m.org_id and r.role = 'owner'
-                     where m.status = 'wartend'
-                       and (m.naechster_versuch is null or m.naechster_versuch <= now())
-                    """
-                )
+            offen = await _versand_offen()
         except Exception as exc:
             print(f"Versand-Schleife: Zeilen nicht lesbar: {exc}", flush=True)
             continue
@@ -256,6 +295,25 @@ async def _versandschleife() -> None:
                 print(f"Versand fehlgeschlagen: {exc}", flush=True)
 
 
+async def _podcastschleife() -> None:
+    """Bereitet Gespräche vor, die in den nächsten 24 Stunden anstehen —
+    einmal je Termin, stündlich nachgesehen.
+
+    Nur für Organisationen, die das eingeschaltet und eine Sprachausgabe
+    hinterlegt haben. Ein Fehler in einer Folge steht in ihrer Zeile; ein
+    Fehler in der Schleife im Protokoll — beides nimmt die Anwendung nicht mit.
+    """
+    while True:
+        await asyncio.sleep(90)
+        try:
+            gestartet = await podcast_kern.automatisch_vorbereiten()
+            if gestartet:
+                print(f"Gesprächsvorbereitung: {gestartet} Podcast(s) gestartet", flush=True)
+        except Exception as exc:
+            print(f"Gesprächsvorbereitung fehlgeschlagen: {exc}", flush=True)
+        await asyncio.sleep(3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
@@ -263,8 +321,9 @@ async def lifespan(app: FastAPI):
     schleife = asyncio.create_task(_sicherungsschleife())
     post = asyncio.create_task(_postschleife())
     ausgang = asyncio.create_task(_versandschleife())
+    podcasts = asyncio.create_task(_podcastschleife())
     yield
-    for aufgabe in (schleife, post, ausgang):
+    for aufgabe in (schleife, post, ausgang, podcasts):
         aufgabe.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await aufgabe
@@ -272,6 +331,7 @@ async def lifespan(app: FastAPI):
     # Ergebnis noch ablegen dürfen — sonst bleibt eine Zeile auf „läuft".
     await anreicherung_kern.hintergrund_abwarten()
     await erkenntnisse_kern.hintergrund_abwarten()
+    await podcast_kern.hintergrund_abwarten()
     # Der letzte Stand geht mit — ein Upgrade oder Neustart soll nichts
     # zwischen zwei Prüfungen verlieren.
     with contextlib.suppress(Exception):
@@ -312,6 +372,8 @@ app.include_router(erfassen.router)
 app.include_router(finden_router.router)
 app.include_router(erkenntnisse_router.router)
 app.include_router(assistent_router.router)
+app.include_router(fehler_router.router)
+app.include_router(podcast_router.router)
 app.include_router(listen.router)
 app.include_router(suche_router.router)
 app.include_router(kampagnen.router)

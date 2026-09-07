@@ -611,6 +611,94 @@ Nächste Stufen, bewusst noch nicht gebaut: Ketten („für jede Firma der
 Liste …“) und Versand (Ticket-Antwort, Kampagne) — Versand nie ohne
 ausdrückliche Bestätigung.
 
+## Gespräch vorbereiten — der Bestand als Podcast
+
+Seit 0.5.0 gibt es auf jeder Firmen- und Lead-Seite den Block *Gespräch
+vorbereiten* (`components/podcast.tsx`, `backend/app/podcast.py`). Ein
+Klick auf „Podcast erzeugen“ macht aus allem, was zur Firma im Bestand
+steht, ein Gespräch zweier Stimmen von fünf bis acht Minuten: Eine
+Moderatorin fragt, ein Kollege aus dem Vertrieb antwortet — wer sie sind,
+was zuletzt geschah, was offen ist, was Kunden gesagt haben, und drei
+Fragen für den Termin. Zum Anhören auf dem Weg, auch am Handy, nach der
+Olares-Anmeldung. Nichts verlässt die Box.
+
+**Drei Schritte, alle auf der Box.** Der Kontext ist dieselbe
+Zusammenstellung wie für die KI-Zusammenfassung (`routers/ki._kontext_firma`),
+dazu offene Tickets, Aussagen aus den Erkenntnissen (mit Zitat), offene
+Aufgaben und Angebote. Das Sprachmodell schreibt daraus ein Skript in
+acht bis vierzehn Segmenten mit Sprecherwechsel — als JSON, mit dem
+Auftrag, nichts zu erfinden und Fehlendes als Frage zu benennen. Dann
+spricht die Sprachausgabe jedes Segment mit der Stimme seines Sprechers,
+und Beacon fügt die MP3-Teile zu einer Datei zusammen (ID3-Kopf und
+Xing-Rahmen nur einmal). Die Folge liegt unter
+`/app/data/podcasts/<org>/<id>.mp3` mit Rechten 0600, die Zeile in
+`podcasts` (0025) geht in der Sicherung mit — der Pfad steht in der
+Zeile und wird nie neu abgeleitet, weil die Organisation nach einer
+Wiederherstellung eine neue Kennung trägt.
+
+**Die Sprachausgabe** steht unter *Einstellungen › KI und Programme ›
+Sprachausgabe*: ein OpenAI-kompatibler Dienst (`POST /v1/audio/speech`),
+auf der Box **Speaches**. Die Adresse ist je Installation anders —
+`kubectl get svc -A | grep speaches` nennt sie, auf Kais Box
+`http://speaches.speachesv3-shared.svc.cluster.local:8000`. Deutsche
+Stimmen sind Piper-Modelle; Vorgabe ist Thorsten (high) für den Kollegen
+und Kerstin (low) für die Moderatorin. Speaches bringt sie nicht mit:
+„Stimme einrichten“ ruft `POST /v1/models/{id}` — der Dienst lädt das
+Modell einmalig von Hugging Face, ohne Kundendaten, das dauert je nach
+Leitung einige Minuten, und die Seite fragt alle drei Sekunden nach.
+„Kollegen hören“ und „Moderatorin hören“ (`POST /api/podcasts/probe`)
+beweisen die Einrichtung, bevor jemand eine Folge wartet. Ehrlich gesagt:
+Thorsten klingt gut, die weiblichen Piper-Stimmen hörbar einfacher.
+
+Die Stimme (`voice`) je Modell muss man nicht eintragen: Beacon fragt
+`GET /v1/audio/speech/voices`, sonst probiert es die Kennung aus dem
+Modellnamen und merkt sich, was der Dienst annahm (`STIMMEN_ERMITTELT`).
+Ein eingetragener Wert (`tts_stimme`, `tts_stimme_2`) geht vor.
+
+**Automatik.** Mit dem Häkchen „Gespräche mit Termin automatisch
+vorbereiten“ sieht `_podcastschleife` in `main.py` stündlich nach:
+Für jede offene Aufgabe der Art *Termin* mit Firma oder Lead und Frist in
+den nächsten 24 Stunden entsteht eine Folge — genau eine je Termin
+(eindeutiger Teilindex auf `task_id`), im Namen dessen, dem der Termin
+zugewiesen ist. Die Startseite zeigt sie unter *Heute vorbereitet*.
+
+Endpunkte: `GET /api/podcasts/status`, `POST /api/podcasts {entity, entity_id, anlass?}`
+(202, läuft im Hintergrund; 409 ohne Modell oder Sprachausgabe oder solange
+eine Folge entsteht), `GET /api/podcasts?entity&entity_id`, `GET /api/podcasts/heute`,
+`GET /api/podcasts/{id}`, `GET /api/podcasts/{id}/audio` (audio/mpeg, mit
+Range — der Player kann springen), `DELETE /api/podcasts/{id}` (nimmt die
+Datei mit), `GET /api/podcasts/stimmen`, `POST /api/podcasts/stimmen/einrichten`,
+`POST /api/podcasts/probe`. Die Dauer ist eine Schätzung aus der Wortzahl
+(„ca. 6 Min“), keine Messung.
+
+Tests in `backend/tests/test_podcast.py` fahren den Lauf mit Skript statt
+Modell und einem Speaches-Nachbau (`httpx.MockTransport`): Bestand im
+Prompt, Sprecherwechsel, je Stimme ihr Modell, Verkettung ohne doppelte
+Köpfe, 0600, Range, Löschen, Automatik einmal je Termin, fremde
+Organisation sieht nichts.
+
+## Oberflächenfehler stehen im Pod-Log
+
+Zerbricht die Oberfläche („Application error: a client-side exception“),
+zeigt Beacon seit 0.5.0 eine deutsche Fehlerseite (`app/error.tsx`) mit
+„Neu laden“ — und schickt Meldung, Stack, Pfad und Browser an
+`POST /api/fehler` (`routers/fehler.py`). Der Endpunkt schreibt sie ins
+Protokoll des Backend-Pods, nichts sonst:
+
+```bash
+ssh olares@192.168.1.17 "KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl logs -n beacon-kaivostudio deploy/beacon-backend -c backend --since=24h | grep -A12 Oberflächenfehler"
+```
+
+`components/fehlermelder.tsx` hört außerdem auf `error` und
+`unhandledrejection` des Fensters, höchstens fünf Meldungen je Seite,
+per `fetch` mit `keepalive` — nie über `api.post`, der Fehlerpfad darf
+selbst nicht werfen.
+
+Der erste Fund auf diesem Weg kam noch vor dem Release: Das Schild des
+Assistenten würfelte seinen Blinzel-Versatz beim Rendern, auf dem Server
+anders als im Browser — ein Hydrierungsfehler auf jeder Seite (0.4.1).
+Seit 0.5.0 wird erst nach dem Einhängen gewürfelt.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an

@@ -56,6 +56,7 @@ TABELLEN: list[str] = [
     "auswertungen",
     "themenlaeufe",
     "tasks",
+    "podcasts",
     "eingang",
     "ansichten",
     "listen",

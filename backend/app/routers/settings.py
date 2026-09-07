@@ -67,6 +67,14 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         links_basis_wirksam=versand.basis_url(dict(row) if row else None),
         doi_betreff=(row["doi_betreff"] if row else None),
         doi_text=(row["doi_text"] if row else None),
+        tts_endpoint_url=(row["tts_endpoint_url"] if row else None),
+        tts_api_key_set=bool(row and row["tts_api_key"]),
+        tts_modell=(row["tts_modell"] if row else "") or "",
+        tts_stimme=(row["tts_stimme"] if row else None),
+        tts_modell_2=(row["tts_modell_2"] if row else "") or "",
+        tts_stimme_2=(row["tts_stimme_2"] if row else None),
+        tts_ready=bool(row and (row["tts_endpoint_url"] or "").strip()),
+        podcast_automatisch=bool(row and row["podcast_automatisch"]),
         default_currency=(row["default_currency"] if row else "EUR"),
         locale=(row["locale"] if row else "de"),
     )
@@ -90,7 +98,7 @@ async def update_settings(
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
             if name in (
                 "llm_api_key", "mail_endpoint_secret", "suche_api_key", "imap_passwort",
-                "smtp_passwort", "brevo_api_key",
+                "smtp_passwort", "brevo_api_key", "tts_api_key",
             ) and wert == "":
                 continue
             await conn.execute(

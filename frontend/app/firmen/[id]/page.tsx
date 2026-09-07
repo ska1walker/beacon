@@ -18,6 +18,7 @@ import { Anreicherungsblock } from "@/components/anreicherung";
 import { KontaktAnlegen } from "@/components/kontakt-anlegen";
 import { PersonenFinden } from "@/components/personen-finden";
 import { DealAnlegen } from "@/components/deal-anlegen";
+import { Podcastblock } from "@/components/podcast";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Pipeline } from "@/lib/typen";
 import { STUFEN_TEXT } from "@/lib/format";
@@ -130,6 +131,8 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
               </div>
             </section>
           )}
+
+          <Podcastblock entity="companies" entityId={id} />
         </div>
 
         {/* Mitte: was passiert ist */}
