@@ -404,17 +404,30 @@ STIMMEN_ERMITTELT: dict[str, str] = {}
 
 
 async def _stimme_ermitteln(client: httpx.AsyncClient, tts: TTSConfig, modell: str) -> str:
+    """Die Stimme eines Modells, wenn keine eingetragen ist.
+
+    Speaches führt die Stimmen je Modell in `GET /v1/models` (Feld
+    `voices`, gemessen auf der Box am 7.9.2026: Kokoro mit `af_heart` …);
+    einen eigenen Stimmen-Endpunkt gibt es dort nicht. Deutsche Stimme
+    zuerst, sonst die erste. Kennt der Dienst das Feld nicht, werden
+    naheliegende Kennungen durchprobiert — die erste, die er annimmt, gilt.
+    """
     if modell in STIMMEN_ERMITTELT:
         return STIMMEN_ERMITTELT[modell]
     basis = tts.endpoint_url.rstrip("/")
     try:
-        r = await client.get(f"{basis}/v1/audio/speech/voices", params={"model_id": modell}, headers=tts.auth_header)
+        r = await client.get(f"{basis}/v1/models", headers=tts.auth_header)
         if r.status_code == 200:
-            for v in r.json() if isinstance(r.json(), list) else (r.json().get("data") or []):
-                if isinstance(v, dict) and (v.get("model_id") in (None, modell)) and v.get("voice_id"):
-                    STIMMEN_ERMITTELT[modell] = str(v["voice_id"])
+            daten = r.json()
+            for m in (daten.get("data") if isinstance(daten, dict) else daten) or []:
+                if not isinstance(m, dict) or m.get("id") != modell:
+                    continue
+                stimmen = [v for v in (m.get("voices") or []) if isinstance(v, dict) and v.get("id")]
+                deutsch = [v for v in stimmen if str(v.get("language") or "").lower().startswith("de")]
+                for v in deutsch + stimmen:
+                    STIMMEN_ERMITTELT[modell] = str(v["id"])
                     return STIMMEN_ERMITTELT[modell]
-    except httpx.HTTPError:
+    except (httpx.HTTPError, ValueError):
         pass
     kandidaten = [modell.rsplit("piper-", 1)[-1], modell, "0", ""]
     for k in kandidaten:

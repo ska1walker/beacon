@@ -71,10 +71,14 @@ def sprachausgabe(monkeypatch):
             koerper = json.loads(request.content)
             anfragen.append(koerper)
             return httpx.Response(200, content=pseudo_mp3(koerper["input"][:40]), headers={"content-type": "audio/mpeg"})
-        if pfad == "/v1/audio/speech/voices":
-            return httpx.Response(200, json=[{"model_id": "speaches-ai/piper-de_DE-thorsten-high", "voice_id": "de_DE-thorsten-high"}])
         if pfad == "/v1/models":
-            return httpx.Response(200, json={"data": [{"id": "speaches-ai/piper-de_DE-thorsten-high", "task": "text-to-speech"}, {"id": "speaches-ai/Kokoro-82M-v1.0-ONNX", "task": "text-to-speech"}]})
+            # Wie Speaches auf der Box: die Stimmen stehen am Modell, einen
+            # eigenen Stimmen-Endpunkt gibt es nicht.
+            return httpx.Response(200, json={"data": [
+                {"id": "speaches-ai/piper-de_DE-thorsten-high", "task": "text-to-speech",
+                 "voices": [{"id": "en-fallback", "language": "en-us"}, {"id": "de_DE-thorsten-high", "language": "de-de"}]},
+                {"id": "speaches-ai/Kokoro-82M-v1.0-ONNX", "task": "text-to-speech", "voices": [{"id": "af_heart", "language": "en-us"}]},
+            ]})
         if pfad == "/v1/registry":
             return httpx.Response(200, json={"data": [{"id": "speaches-ai/piper-de_DE-kerstin-low"}, {"id": "speaches-ai/piper-en_US-amy-low"}, {"id": "speaches-ai/piper-de_DE-thorsten-high"}]})
         if pfad.startswith("/v1/models/"):
