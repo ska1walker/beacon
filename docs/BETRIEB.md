@@ -699,6 +699,15 @@ Assistenten würfelte seinen Blinzel-Versatz beim Rendern, auf dem Server
 anders als im Browser — ein Hydrierungsfehler auf jeder Seite (0.4.1).
 Seit 0.5.0 wird erst nach dem Einhängen gewürfelt.
 
+Der zweite Fund war der Absturz selbst (0.5.2): `TypeError: u is not a
+function` in Reacts Effekt-Aufräumen. Der Assistent hatte
+`useEffect(() => ende.current?.scrollIntoView(…), [verlauf])` ohne
+Klammern — und **Chrome 152 gibt aus `scrollIntoView` ein Promise
+zurück** (in Kais Browser gemessen). React 19 ruft den Rückgabewert eines
+Effekts als Aufräumfunktion auf; ein Promise ist keine. Regel seitdem:
+kein Effekt ohne Block, damit nie etwas zurückkommt, das keine Funktion
+ist.
+
 ## Veröffentlichen — Abbilder, Chart, Markt
 
 Der Weg ist derselbe wie bei Insilo, nur kürzer. Die Version steht an

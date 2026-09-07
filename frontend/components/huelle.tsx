@@ -68,7 +68,9 @@ export function Huelle({ children }: { children: React.ReactNode }) {
   const { favoriten, umschalten } = useFavoriten();
   const [eingeklappt, klappen] = useNavigationKlapp();
   const [mehrOffen, setMehrOffen] = useState(false);
-  useEffect(() => setMehrOffen(false), [aktuell]);
+  useEffect(() => {
+    setMehrOffen(false);
+  }, [aktuell]);
 
   const meine = favoritenZiele(favoriten);
 

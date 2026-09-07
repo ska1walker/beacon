@@ -41,7 +41,12 @@ export function Assistent() {
   useEffect(() => {
     if (offen) feld.current?.focus();
   }, [offen]);
-  useEffect(() => ende.current?.scrollIntoView({ block: "end" }), [verlauf]);
+  // In Klammern, damit der Effekt nichts zurückgibt: React 19 ruft den
+  // Rückgabewert als Aufräumfunktion auf, und in Kais Chrome (152) gab
+  // scrollIntoView etwas zurück — „u is not a function“, die ganze Seite weg.
+  useEffect(() => {
+    ende.current?.scrollIntoView({ block: "end" });
+  }, [verlauf]);
 
   const senden = useMutation({
     mutationFn: (nachricht: string) =>

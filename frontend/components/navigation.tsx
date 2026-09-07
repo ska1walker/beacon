@@ -44,7 +44,9 @@ function wende(eingeklappt: boolean) {
 /** [eingeklappt | null vor der Hydration, umschalten] */
 export function useNavigationKlapp(): [boolean | null, () => void] {
   const [eingeklappt, setEingeklappt] = useState<boolean | null>(null);
-  useEffect(() => setEingeklappt(liesCookie()), []);
+  useEffect(() => {
+    setEingeklappt(liesCookie());
+  }, []);
 
   function umschalten() {
     setEingeklappt((alt) => {

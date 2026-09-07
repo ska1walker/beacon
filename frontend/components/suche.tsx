@@ -61,7 +61,9 @@ function Suchpalette({ beiSchliessen }: { beiSchliessen: () => void }) {
   const [text, setText] = useState("");
   const [wahl, setWahl] = useState(0);
   const feld = useRef<HTMLInputElement>(null);
-  useEffect(() => feld.current?.focus(), []);
+  useEffect(() => {
+    feld.current?.focus();
+  }, []);
 
   const suche = useQuery({
     queryKey: ["suche", text.trim()],
@@ -78,7 +80,9 @@ function Suchpalette({ beiSchliessen }: { beiSchliessen: () => void }) {
   // Zeilen: erst die Treffer, dann — wenn es eine Frage ist — die Frage.
   const zeilen = treffer.length + (fragbar ? 1 : 0);
 
-  useEffect(() => setWahl(0), [text]);
+  useEffect(() => {
+    setWahl(0);
+  }, [text]);
 
   function oeffnen(t: Suchtreffer) {
     router.push(t.pfad);
