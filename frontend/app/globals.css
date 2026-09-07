@@ -572,7 +572,9 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .huelle-nav-gruppe,
   .huelle-nav-titel,
   .huelle-nav-stern,
-  .huelle-klapp {
+  .huelle-klapp,
+  .huelle-nav .huelle-mehr-knopf,
+  .huelle-mehr {
     display: none;
   }
 
@@ -784,6 +786,41 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .huelle-nav-eintrag:hover .huelle-nav-stern,
     .huelle-nav-eintrag:focus-within .huelle-nav-stern,
     .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { opacity: 1; }
+
+    /* „Mehr“: das Feld rechts neben der Leiste, alle vier Gruppen
+       nebeneinander. Sterne hier immer sichtbar — das Feld ist zum
+       Anheften da, nicht nur zum Hinkommen. */
+    .huelle-nav .huelle-mehr-knopf { display: flex; }
+    .huelle-mehr {
+      display: block;
+      position: fixed;
+      left: var(--huelle-nav-breite);
+      top: 0;
+      bottom: 0;
+      z-index: 60;
+      width: min(760px, calc(100vw - var(--huelle-nav-breite) - var(--am-raum-8)));
+      padding: var(--am-raum-6) var(--am-raum-6) var(--am-raum-8);
+      overflow-y: auto;
+      background: var(--am-flaeche-1);
+      border-right: 1px solid var(--am-trennlinie);
+      box-shadow: 16px 0 40px rgba(5, 23, 41, 0.16);
+    }
+    .huelle-mehr-hinweis {
+      margin: 0 0 var(--am-raum-4);
+      padding: 0 var(--am-raum-3);
+      font-size: 0.8125rem;
+      color: var(--am-text-gedaempft);
+    }
+    .huelle-mehr-spalten {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--am-raum-4);
+    }
+    .huelle-mehr .huelle-nav-gruppe { margin-bottom: 0; }
+    .huelle-mehr .huelle-nav-stern { opacity: 1; }
+    @media (max-width: 1279px) {
+      .huelle-mehr-spalten { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     .huelle-nav-stern:hover { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
     .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { color: var(--am-gold-beschriftung); }
     .huelle-nav-stern:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
@@ -820,6 +857,12 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     html[data-navigation="eingeklappt"] .huelle-nav-eintrag .huelle-nav-item { padding: var(--am-raum-2); justify-content: center; }
     html[data-navigation="eingeklappt"] .huelle-nav-item span { display: none; }
     html[data-navigation="eingeklappt"] .huelle-nav-stern { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-mehr-knopf { padding: var(--am-raum-2); justify-content: center; }
+    html[data-navigation="eingeklappt"] .huelle-mehr .huelle-nav-titel { display: block; }
+    html[data-navigation="eingeklappt"] .huelle-mehr .huelle-nav-gruppe + .huelle-nav-gruppe { border-top: none; padding-top: 0; }
+    html[data-navigation="eingeklappt"] .huelle-mehr .huelle-nav-item { padding: var(--am-raum-2) var(--am-raum-3); padding-right: 2rem; justify-content: flex-start; }
+    html[data-navigation="eingeklappt"] .huelle-mehr .huelle-nav-item span { display: inline; }
+    html[data-navigation="eingeklappt"] .huelle-mehr .huelle-nav-stern { display: inline-flex; }
     html[data-navigation="eingeklappt"] .huelle-fuss { padding: 0; align-items: center; }
     html[data-navigation="eingeklappt"] .person-text,
     html[data-navigation="eingeklappt"] .person-pfeil,

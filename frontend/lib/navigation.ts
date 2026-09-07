@@ -1,11 +1,12 @@
 /**
  * Die Navigation als Daten — ohne React, damit sie sich prüfen lässt.
  *
- * Vier Gruppen mit Überschrift statt einer Liste von dreizehn: Verkauf,
- * Bestand, Post, Wissen. Kein Aufklappen — bei dreizehn Einträgen
- * versteckt es mehr, als es ordnet. Favoriten stehen darüber, in der
- * Reihenfolge, in der jemand sie gemerkt hat. Die Symbole hängen in der
- * Hülle an den Schlüsseln; hier steht nur, was wohin gehört.
+ * Die Leiste zeigt, was jemand sich gemerkt hat — in der Reihenfolge der
+ * Sterne; solange niemand etwas gemerkt hat, sechs Vorgaben. Alles andere
+ * steht hinter „Mehr“: die vier Gruppen Verkauf, Bestand, Post, Wissen
+ * nebeneinander, je Eintrag der Stern. So macht es HubSpot, und bei
+ * vierzehn Zielen braucht es dafür kein Untermenü je Gruppe. Die Symbole
+ * hängen in der Hülle an den Schlüsseln; hier steht nur, was wohin gehört.
  */
 
 export type NavZeichen =
@@ -65,6 +66,9 @@ export const NACHRANGIG: NavZiel[] = [{ pfad: "/einstellungen", text: "Einstellu
 
 export const ALLE_ZIELE: NavZiel[] = GRUPPEN.flatMap((g) => g.ziele);
 
+/** Was die Leiste zeigt, solange niemand Favoriten hat. */
+export const LEISTE_STANDARD = ["/", "/deals", "/aufgaben", "/firmen", "/kontakte", "/eingang"];
+
 /** Was die schmale Leiste unten zeigt, wenn niemand Favoriten hat. */
 export const MOBIL_STANDARD = ["/", "/deals", "/firmen", "/kontakte"];
 export const MOBIL_MAX = 4;
@@ -84,6 +88,16 @@ export function favoritenZiele(favoriten: string[]): NavZiel[] {
     if (ziel && !ergebnis.includes(ziel)) ergebnis.push(ziel);
   }
   return ergebnis;
+}
+
+/**
+ * Die Leiste links: die Favoriten — oder, solange es keine gibt, die
+ * Vorgabe. Der erste Stern ersetzt die Vorgabe ganz: Wer wählt, will
+ * seine Auswahl sehen, nicht seine Auswahl plus unsere.
+ */
+export function leisteZiele(favoriten: string[]): NavZiel[] {
+  const meine = favoritenZiele(favoriten);
+  return meine.length > 0 ? meine : favoritenZiele(LEISTE_STANDARD);
 }
 
 export function favoritUmschalten(favoriten: string[], pfad: string): string[] {

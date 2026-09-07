@@ -21,7 +21,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Assistent } from "@/components/assistent";
 import { Darstellungsschalter } from "@/components/darstellung";
 import { Marke } from "@/components/marke";
@@ -31,8 +31,8 @@ import { Suchfeld } from "@/components/suche";
 import {
   GRUPPEN,
   NACHRANGIG,
-  favoritenZiele,
   istAktiv,
+  leisteZiele,
   mobilRest,
   mobilZiele,
   type NavZeichen,
@@ -67,12 +67,18 @@ export function Huelle({ children }: { children: React.ReactNode }) {
   const aktuell = usePathname();
   const { favoriten, umschalten } = useFavoriten();
   const [eingeklappt, klappen] = useNavigationKlapp();
-  const [mehrOffen, setMehrOffen] = useState(false);
+  const [mobilMehr, setMobilMehr] = useState(false);
+  const [feldOffen, setFeldOffen] = useState(false);
+  const mehrKnopf = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    setMehrOffen(false);
+    setMobilMehr(false);
+    setFeldOffen(false);
   }, [aktuell]);
 
-  const meine = favoritenZiele(favoriten);
+  function feldSchliessen(fokus = true) {
+    setFeldOffen(false);
+    if (fokus) mehrKnopf.current?.focus();
+  }
 
   return (
     <div className="huelle">
@@ -89,12 +95,27 @@ export function Huelle({ children }: { children: React.ReactNode }) {
           <Suchfeld />
         </div>
 
-        {meine.length > 0 && (
-          <NavGruppe titel="Favoriten" ziele={meine} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={eingeklappt === true} />
+        {/* Die Leiste: Favoriten — oder die Vorgabe, solange es keine gibt.
+            Alles andere steht hinter „Mehr“, wie bei HubSpot. */}
+        <NavGruppe ziele={leisteZiele(favoriten)} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={eingeklappt === true} />
+        <div className="huelle-nav-gruppe">
+          <button
+            ref={mehrKnopf}
+            type="button"
+            className={`huelle-nav-item huelle-mehr-knopf${feldOffen ? " aktiv" : ""}`}
+            aria-expanded={feldOffen}
+            aria-controls="huelle-mehr"
+            aria-haspopup="dialog"
+            title={eingeklappt === true ? "Mehr" : undefined}
+            onClick={() => setFeldOffen((o) => !o)}
+          >
+            <Ellipsis size={18} strokeWidth={1.75} aria-hidden="true" />
+            <span>Mehr</span>
+          </button>
+        </div>
+        {feldOffen && (
+          <MehrFeld aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} schliessen={feldSchliessen} knopf={mehrKnopf} />
         )}
-        {GRUPPEN.map((g) => (
-          <NavGruppe key={g.titel} titel={g.titel} ziele={g.ziele} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={eingeklappt === true} />
-        ))}
 
         <div className="huelle-nav-spacer" />
 
@@ -107,16 +128,16 @@ export function Huelle({ children }: { children: React.ReactNode }) {
           ))}
           <button
             type="button"
-            className={`huelle-nav-item${mehrOffen ? " aktiv" : ""}`}
-            aria-expanded={mehrOffen}
+            className={`huelle-nav-item${mobilMehr ? " aktiv" : ""}`}
+            aria-expanded={mobilMehr}
             aria-controls="huelle-nav-mehr"
-            onClick={() => setMehrOffen((o) => !o)}
+            onClick={() => setMobilMehr((o) => !o)}
           >
             <Ellipsis size={18} strokeWidth={1.75} aria-hidden="true" />
             <span>Mehr</span>
           </button>
         </div>
-        {mehrOffen && (
+        {mobilMehr && (
           <div className="huelle-nav-mehr" id="huelle-nav-mehr" role="group" aria-label="Weitere Bereiche">
             {mobilRest(favoriten).map((z) => (
               <NavLink key={z.pfad} ziel={z} aktuell={aktuell} />
@@ -135,6 +156,59 @@ export function Huelle({ children }: { children: React.ReactNode }) {
 
       <main className="huelle-inhalt">{children}</main>
       <Assistent />
+    </div>
+  );
+}
+
+/**
+ * „Mehr“: alle Bereiche in vier Gruppen nebeneinander, je Eintrag der
+ * Stern. Ein Feld, kein Untermenü — bei vierzehn Zielen ist alles auf
+ * einen Blick da. Escape, ein Klick außerhalb oder ein Seitenwechsel
+ * schließen es; der Fokus kehrt zum Knopf zurück.
+ */
+function MehrFeld({
+  aktuell,
+  favoriten,
+  umschalten,
+  schliessen,
+  knopf,
+}: {
+  aktuell: string;
+  favoriten: string[];
+  umschalten: (pfad: string) => void;
+  schliessen: (fokus?: boolean) => void;
+  knopf: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const wurzel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    wurzel.current?.querySelector<HTMLElement>("a, button")?.focus();
+    function taste(e: KeyboardEvent) {
+      if (e.key === "Escape") schliessen(true);
+    }
+    function klick(e: MouseEvent) {
+      const ziel = e.target as Node;
+      if (wurzel.current?.contains(ziel) || knopf.current?.contains(ziel)) return;
+      schliessen(false);
+    }
+    document.addEventListener("keydown", taste);
+    document.addEventListener("mousedown", klick);
+    return () => {
+      document.removeEventListener("keydown", taste);
+      document.removeEventListener("mousedown", klick);
+    };
+  }, [schliessen, knopf]);
+
+  const spalten = GRUPPEN.map((g, i) => (i === GRUPPEN.length - 1 ? { ...g, ziele: [...g.ziele, ...NACHRANGIG] } : g));
+
+  return (
+    <div className="huelle-mehr" id="huelle-mehr" role="dialog" aria-label="Alle Bereiche" ref={wurzel}>
+      <p className="huelle-mehr-hinweis">Der Stern merkt einen Bereich in der Leiste.</p>
+      <div className="huelle-mehr-spalten">
+        {spalten.map((g) => (
+          <NavGruppe key={g.titel} titel={g.titel} ziele={g.ziele} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={false} />
+        ))}
+      </div>
     </div>
   );
 }

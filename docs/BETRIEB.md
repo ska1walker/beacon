@@ -549,19 +549,26 @@ die Seite fragt alle drei Sekunden nach. Jedes Thema zeigt die
 Gespräche dahinter mit Zitat, Firma und Datum — niemand muss dem Modell
 glauben. Die drei Tabellen stehen im Abzug.
 
-## Navigation — Gruppen, Favoriten, Einklappen
+## Navigation — kurze Leiste, „Mehr“, Favoriten, Einklappen
 
-Seit 0.3.8 ist die linke Leiste gegliedert statt flach (`frontend/lib/navigation.ts`
-trägt die Daten, `components/huelle.tsx` die Symbole): **Verkauf** (Start,
-Leads, Angebote, Prognose, Aufgaben), **Bestand** (Firmen, Kontakte, Listen),
-**Post** (Eingang, Tickets, Kampagnen), **Wissen** (Fragen, Erkenntnisse),
-Einstellungen unten. Kein Aufklappen — bei dreizehn Einträgen versteckt es
-mehr, als es ordnet. HubSpot, Linear und Attio machen es genauso: Suche
-oben, Favoriten, benannte Abschnitte, einklappbar.
+Seit 0.5.3 macht es die Leiste wie HubSpot (`frontend/lib/navigation.ts`
+trägt die Daten, `components/huelle.tsx` die Symbole): Sie zeigt nur, was
+die Person sich gemerkt hat — in der Reihenfolge der Sterne. Solange
+niemand einen Stern gesetzt hat, stehen sechs Vorgaben da (Start, Leads,
+Aufgaben, Firmen, Kontakte, Eingang, `LEISTE_STANDARD`); der erste Stern
+ersetzt sie ganz. Darunter **„Mehr“**: ein Feld rechts neben der Leiste
+mit allen vierzehn Bereichen in den vier Gruppen **Verkauf** (Start,
+Leads, Angebote, Prognose, Aufgaben), **Bestand** (Firmen, Kontakte,
+Listen), **Post** (Eingang, Tickets, Kampagnen), **Wissen** (Fragen,
+Erkenntnisse, Einstellungen) nebeneinander, je Eintrag der Stern. Ein
+Feld statt HubSpots zwei Stufen: Bei vierzehn Zielen ist alles auf einen
+Blick da. Escape, Klick außerhalb oder ein Seitenwechsel schließen es.
+Von 0.3.8 bis 0.5.2 standen alle Gruppen mit Überschrift in der Leiste —
+mit Favoriten darüber wurden das neunzehn Zeilen.
 
 **Favoriten** hängen an der Person, nicht am Browser: Stern am Eintrag
-(bei Hover oder Tastaturfokus), gemerkte Einträge stehen oben unter
-„Favoriten“. Gespeichert in `users.einstellungen` (jsonb, Migration 0024)
+(in der Leiste bei Hover oder Tastaturfokus, in „Mehr“ immer sichtbar),
+gemerkte Einträge bilden die Leiste. Gespeichert in `users.einstellungen` (jsonb, Migration 0024)
 über `PATCH /api/mitglieder/wer/einstellungen {"favoriten": [...]}`; `null`
 löscht den Schlüssel, unbekannte Schlüssel werden abgewiesen. `user_id` ist
 die handelnde Person — Marc am Sitzplatz hat seine eigenen. Die Oberfläche
@@ -574,7 +581,7 @@ Wiederanlauf nur gefüllt, wo es leer ist.
 je Browser im Cookie `beacon-navigation`, vor dem ersten Anstrich per
 Inline-Script als `html[data-navigation="eingeklappt"]` gesetzt
 (`components/navigation.tsx`, wie die Darstellung). Eingeklappt zeigt jeder
-Eintrag seinen Namen als Tooltip, Gruppen trennt eine Linie.
+Eintrag seinen Namen als Tooltip; „Mehr“ öffnet auch dann das volle Feld.
 
 **Mobil** (unter 1024 px) bleibt die Leiste unten: die ersten Favoriten,
 aufgefüllt aus Start, Leads, Firmen, Kontakte bis vier, dazu „Mehr“ mit
