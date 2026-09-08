@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, KeyRound, Pencil, UserMinus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { lage, passwortAendern } from "@/lib/anmeldung";
 import { datumZeit } from "@/lib/format";
@@ -54,12 +54,16 @@ export function Mitgliederblock() {
   // absichtlich in keiner Liste und in keiner Mail: Wer ihn hat, setzt das
   // Passwort, und ein Zugang, der am Mailversand hängt, wäre genau dann
   // nicht da, wenn eine frische Box noch kein SMTP kennt.
-  const [link, setLink] = useState<{ id: string; adresse: string; tage: number } | null>(null);
+  const [kopiert, setKopiert] = useState(false);
+  const feld = useRef<HTMLInputElement>(null);
+  const [link, setLink] = useState<{ fuer: string; adresse: string; tage: number } | null>(null);
   const einladen = useMutation({
     mutationFn: (id: string) =>
       api.post<{ pfad: string; name: string; gilt_tage: number }>(`/api/mitglieder/${id}/einladung`),
-    onSuccess: (a, id) =>
-      setLink({ id, adresse: `${window.location.origin}${a.pfad}`, tage: a.gilt_tage }),
+    onSuccess: (a) => {
+      setKopiert(false);
+      setLink({ fuer: a.name, adresse: `${window.location.origin}${a.pfad}`, tage: a.gilt_tage });
+    },
   });
 
   if (mitglieder.isPending) return <Laedt />;
@@ -187,20 +191,45 @@ export function Mitgliederblock() {
 
         {link && (
           <div className="einladung-ausgabe">
-            <p className="feld-hinweis" style={{ margin: 0 }}>
-              Geben Sie diesen Link persönlich weiter. Er gilt {link.tage} Tage und
-              <strong> genau einmal</strong>. Ein neuer Link entwertet diesen.
-            </p>
+            <p className="einladung-fuer">Einladung für {link.fuer}</p>
             <div className="einladungslink">
-              <input className="input" readOnly value={link.adresse} onFocus={(e) => e.target.select()} aria-label="Einladungslink" />
+              <input
+                ref={feld}
+                className="input"
+                readOnly
+                value={link.adresse}
+                onFocus={(e) => e.target.select()}
+                aria-label={`Einladungslink für ${link.fuer}`}
+              />
               <button
                 type="button"
-                className="btn btn-sekundaer btn-klein"
-                onClick={() => navigator.clipboard?.writeText(link.adresse)}
+                className="btn btn-sekundaer btn-klein einladung-kopieren"
+                onClick={async () => {
+                  // „Kopiert" erst sagen, wenn es wirklich geklappt hat. Die
+                  // Zwischenablage darf verweigern (fehlender Fokus, fehlende
+                  // Berechtigung); dann bleibt der Text markiert und Strg-C hilft.
+                  try {
+                    await navigator.clipboard.writeText(link.adresse);
+                    setKopiert(true);
+                  } catch {
+                    setKopiert(false);
+                    feld.current?.select();
+                  }
+                }}
               >
-                <Copy size={14} aria-hidden="true" /> Kopieren
+                <Copy size={14} aria-hidden="true" /> {kopiert ? "Kopiert" : "Kopieren"}
               </button>
             </div>
+            {/* Der Klartext des Tokens existiert genau einmal, hier. Gespeichert
+                wird nur sein SHA-256 — sonst könnte sich jeder mit Zugriff auf
+                die Datenbank damit anmelden. Wer die Seite neu lädt, bekommt
+                ihn deshalb nicht zurück, sondern muss einen neuen erzeugen. */}
+            <p className="feld-hinweis" style={{ margin: "var(--am-raum-2) 0 0" }}>
+              <strong>Jetzt kopieren.</strong> Dieser Link steht nur hier und ist nach
+              einem Neuladen der Seite verloren — gespeichert wird nur seine Prüfsumme.
+              Er gilt {link.tage} Tage und <strong>genau einmal</strong>; ein neuer Link
+              entwertet diesen.
+            </p>
           </div>
         )}
 

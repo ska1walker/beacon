@@ -3819,3 +3819,19 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   color: var(--am-text-gedaempft);
   overflow-wrap: anywhere;
 }
+
+.einladung-fuer {
+  margin: 0 0 var(--am-raum-2);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--am-text-primaer);
+}
+
+/* Der Knopf schrumpft nie weg — auf schmalen Fenstern nähme ihm das
+   Eingabefeld sonst den ganzen Platz, und der Link wäre nicht zu holen. */
+.einladung-kopieren { flex: 0 0 auto; }
+
+@media (max-width: 30rem) {
+  .einladungslink { flex-wrap: wrap; }
+  .einladungslink .input { flex: 1 1 100%; }
+}
