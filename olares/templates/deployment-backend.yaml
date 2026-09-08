@@ -79,13 +79,23 @@ spec:
               value: "{{ (.Values.domain).beacon | default "" }}"
             # Wer die Identität liefert. `olares`: der Envoy-Sidecar prüft,
             # und `X-Bfl-User` gilt. `eigen`: Beacons eigene Anmeldung prüft,
-            # und der Kopf gilt **nicht mehr** — nötig, sobald der Entrance
-            # `public` ist. Der Wert steht hier als Literal und nicht in
-            # `values.yaml`: Ein Upgrade spielt die Werte der Installation
-            # zurück (siehe HANDOFF, „Ein Upgrade friert die Werte ein"),
-            # eine Umstellung käme dort also nie auf einer laufenden Box an.
+            # und der Kopf gilt **nicht mehr** und legt auch niemanden an.
+            #
+            # **Die Reihenfolge ist die Sicherheit.** Erst `eigen`, dann den
+            # Entrance öffnen — nie umgekehrt. Ein offener Entrance bei
+            # `olares` wäre die vollständige Preisgabe: Der Kopf käme
+            # ungeprüft durch den Next-Proxy bis hierher, und ein
+            # `curl -H 'X-Bfl-User: kaivostudio'` aus dem Internet wäre der
+            # Eigentümer. Deshalb steht `eigen` hier schon, während der
+            # Entrance noch `internal` ist; das kostet nur einen zusätzlichen
+            # Anmeldeschritt und schließt genau dieses Fenster.
+            #
+            # Der Wert steht als Literal und nicht in `values.yaml`: Ein
+            # Upgrade spielt die Werte der Installation zurück (siehe
+            # HANDOFF, „Ein Upgrade friert die Werte ein"), eine Umstellung
+            # käme dort also nie auf einer laufenden Box an.
             - name: ANMELDUNG_MODUS
-              value: "olares"
+              value: "eigen"
           command:
             - python3
             - -c
@@ -179,13 +189,23 @@ spec:
               value: "{{ (.Values.domain).beacon | default "" }}"
             # Wer die Identität liefert. `olares`: der Envoy-Sidecar prüft,
             # und `X-Bfl-User` gilt. `eigen`: Beacons eigene Anmeldung prüft,
-            # und der Kopf gilt **nicht mehr** — nötig, sobald der Entrance
-            # `public` ist. Der Wert steht hier als Literal und nicht in
-            # `values.yaml`: Ein Upgrade spielt die Werte der Installation
-            # zurück (siehe HANDOFF, „Ein Upgrade friert die Werte ein"),
-            # eine Umstellung käme dort also nie auf einer laufenden Box an.
+            # und der Kopf gilt **nicht mehr** und legt auch niemanden an.
+            #
+            # **Die Reihenfolge ist die Sicherheit.** Erst `eigen`, dann den
+            # Entrance öffnen — nie umgekehrt. Ein offener Entrance bei
+            # `olares` wäre die vollständige Preisgabe: Der Kopf käme
+            # ungeprüft durch den Next-Proxy bis hierher, und ein
+            # `curl -H 'X-Bfl-User: kaivostudio'` aus dem Internet wäre der
+            # Eigentümer. Deshalb steht `eigen` hier schon, während der
+            # Entrance noch `internal` ist; das kostet nur einen zusätzlichen
+            # Anmeldeschritt und schließt genau dieses Fenster.
+            #
+            # Der Wert steht als Literal und nicht in `values.yaml`: Ein
+            # Upgrade spielt die Werte der Installation zurück (siehe
+            # HANDOFF, „Ein Upgrade friert die Werte ein"), eine Umstellung
+            # käme dort also nie auf einer laufenden Box an.
             - name: ANMELDUNG_MODUS
-              value: "olares"
+              value: "eigen"
 
             # Kein Punktzugriff auf .Values.llm.baseUrl, und das ist keine
             # Stilfrage: Ein Upgrade spielt die bei der Installation

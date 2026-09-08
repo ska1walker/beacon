@@ -762,6 +762,29 @@ Die Sitzplätze waren die bisherige Antwort auf genau diese Lücke. Sie
 schreiben Arbeit einer Person zu, sind aber **keine Anmeldung**: Wer den
 geteilten Zugang hat, kann jeden Platz einnehmen.
 
+### Die Reihenfolge ist die Sicherheit
+
+**Erst `ANMELDUNG_MODUS=eigen`, dann den Entrance öffnen. Nie umgekehrt.**
+
+Ein offener Entrance bei `olares` ist die vollständige Preisgabe: Der Kopf
+`X-Bfl-User` kommt ungeprüft durch den Next-Proxy bis ins Backend, und ein
+`curl -H 'X-Bfl-User: kaivostudio'` aus dem Internet ist der Eigentümer —
+mit Lesezugriff auf den ganzen Bestand und offener Sicherung daneben.
+
+Der `authLevel` lässt sich **auch in den Olares-Einstellungen** umstellen
+(Settings › Applications › beacon › Authentication level), nicht nur über
+das Manifest. Das ist ein Klick und wirkt sofort. Wer ihn drückt, bevor
+der Modus steht, öffnet genau dieses Fenster. Deshalb steht `eigen` seit
+0.6.2 im Deployment, während das Manifest den Entrance noch auf `internal`
+lässt: Das kostet einen zusätzlichen Anmeldeschritt und schließt die Lücke.
+
+Prüfen lässt sich der wirksame Stand nur an der Box, nicht am Bildschirm:
+
+```bash
+kubectl get applications.app.bytetrade.io beacon-kaivostudio-beacon \
+  -o jsonpath='{range .spec.entrances[*]}{.name}{"  "}{.authLevel}{"\n"}{end}'
+```
+
 ### Zwei Modi, und was der Unterschied bedeutet
 
 `ANMELDUNG_MODUS` steht als Literal im Deployment (nicht in `values.yaml`
