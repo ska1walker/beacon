@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, KeyRound, Pencil } from "lucide-react";
+import { Copy, KeyRound, Pencil, UserMinus } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { lage, passwortAendern } from "@/lib/anmeldung";
@@ -87,13 +87,12 @@ export function Mitgliederblock() {
           </span>
         </div>
 
-        <table className="tabelle" style={{ marginBottom: "var(--am-raum-4)" }}>
+        <table className="tabelle mitgliedertabelle" style={{ marginBottom: "var(--am-raum-4)" }}>
           <thead>
             <tr>
               <th>Person</th>
-              <th>Kennung</th>
               <th>Art</th>
-              <th>Zuletzt gesehen</th>
+              <th>Zuletzt</th>
               <th />
             </tr>
           </thead>
@@ -124,8 +123,9 @@ export function Mitgliederblock() {
                       </button>
                     </form>
                   ) : (
-                    <span style={{ display: "inline-flex", gap: "var(--am-raum-2)", alignItems: "center", whiteSpace: "nowrap" }}>
-                      {m.display_name ?? m.olares_username}
+                    <span className="mitglied-name">
+                      <span className="mitglied-name-zeile">
+                        {m.display_name ?? m.olares_username}
                       <button
                         type="button"
                         className="btn btn-still btn-klein"
@@ -138,11 +138,13 @@ export function Mitgliederblock() {
                       >
                         <Pencil size={14} aria-hidden="true" />
                       </button>
+                      </span>
+                      {/* Die Kennung ist der Name, mit dem sich diese Person
+                          anmeldet — sie gehört unter den Anzeigenamen, nicht
+                          in eine eigene Spalte. */}
+                      <span className="mitglied-kennung">{m.olares_username}</span>
                     </span>
                   )}
-                </td>
-                <td className="mono" style={{ fontSize: "0.8125rem" }}>
-                  {m.olares_username}
                 </td>
                 <td>
                   <span className="stufe" data-art={m.zugang === "olares" ? "won" : undefined}>
@@ -151,9 +153,11 @@ export function Mitgliederblock() {
                 </td>
                 <td>{m.last_seen_at ? datumZeit(m.last_seen_at) : "—"}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  {/* Als Zeichen, nicht als Wort: Die Spalte trägt schon
-                      „Entfernen", und ein zweites Wort schöbe die Tabelle
-                      über ihren Rahmen hinaus. */}
+                  {/* Beide Handlungen als Zeichen.
+                      Gemessen auf der Box: Mit dem Wort „Entfernen" war die
+                      Tabelle 744 px breit, ihr Rahmen 638 — der Schlüssel der
+                      ersten Zeile stand bei 697 und war damit unsichtbar,
+                      ausgerechnet für die Person, die ihn zuerst braucht. */}
                   <button
                     type="button"
                     className="btn btn-still btn-klein"
@@ -168,9 +172,11 @@ export function Mitgliederblock() {
                     <button
                       type="button"
                       className="btn btn-still btn-klein"
+                      title="Aus der Organisation entfernen"
+                      aria-label={`${m.display_name ?? m.olares_username} aus der Organisation entfernen`}
                       onClick={() => entfernen.mutate(m.id)}
                     >
-                      Entfernen
+                      <UserMinus size={14} aria-hidden="true" />
                     </button>
                   )}
                 </td>

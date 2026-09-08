@@ -3779,3 +3779,43 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   border-radius: var(--am-radius-mittel);
   background: var(--am-flaeche-2);
 }
+
+/* Die Mitgliedertabelle rechnet mit festen Spalten.
+   Gemessen auf der Box: Mit freier Breite lief sie 106 px über ihren
+   Rahmen hinaus, und der Einladungsschlüssel der ersten Zeile stand
+   vollständig außerhalb — unsichtbar ausgerechnet für die Person, die ihn
+   zuerst braucht. Enger rechnen hilft nur bis zum nächsten langen Namen;
+   feste Spalten können gar nicht erst überlaufen, der Name bricht um. */
+.mitgliedertabelle {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Vier Spalten: Person (der Rest), Art, Zuletzt, Handlungen. Plakette und
+   Datum brechen nicht um — eine Plakette mit Zeilenumbruch ist keine
+   Plakette mehr, und „08.09.202 / 6, 14:09" liest niemand als Datum. */
+.mitgliedertabelle th:nth-child(2),
+.mitgliedertabelle td:nth-child(2) { width: 8.5rem; white-space: nowrap; }
+.mitgliedertabelle th:nth-child(3),
+.mitgliedertabelle td:nth-child(3) { width: 8rem; white-space: nowrap; }
+/* Zwei Zeichenknöpfe zu je 51 px plus Innenabstand — gemessen, nicht geschätzt. */
+.mitgliedertabelle th:last-child,
+.mitgliedertabelle td:last-child { width: 7.5rem; text-align: right; white-space: nowrap; }
+
+.mitglied-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.mitglied-name-zeile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--am-raum-1);
+  min-width: 0;
+}
+
+/* Der Anmeldename gehört unter den Anzeigenamen. Er darf an jeder Stelle
+   brechen — er ist eine Kennung, kein Satz. */
+.mitglied-kennung {
+  font-family: var(--am-schrift-mono);
+  font-size: 0.75rem;
+  color: var(--am-text-gedaempft);
+  overflow-wrap: anywhere;
+}

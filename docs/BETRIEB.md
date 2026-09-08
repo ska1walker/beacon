@@ -837,9 +837,9 @@ Und dort, wo er weiter greift, hängen die Rechte an der **angemeldeten**
 Person, nicht am gewählten Platz. Sonst verlöre der Eigentümer den Zugriff
 auf die Einstellungen, sobald er den Platz eines Mitglieds einnimmt.
 
-### Zwei Dinge, die nur der Browser zeigte
+### Drei Dinge, die nur der Browser zeigte
 
-Beide standen in keinem Test und hätten in Betrieb wehgetan:
+Alle drei standen in keinem Test und hätten in Betrieb wehgetan:
 
 - **Die Herkunftsprüfung wies jede echte Anmeldung ab.** Der Browser
   spricht mit dem Frontend, das Frontend leitet ans Backend weiter — im
@@ -848,6 +848,15 @@ Beide standen in keinem Test und hätten in Betrieb wehgetan:
 - **`Secure` hing am Modus statt an der Verbindung.** So trüge der Keks im
   Betrieb `olares` auf der Box kein `Secure`, obwohl dort alles über TLS
   läuft. Jetzt entscheidet `X-Forwarded-Proto`.
+- **Der Einladungsschlüssel war für den Eigentümer unsichtbar** (behoben in
+  0.6.1). Auf der Box gemessen: Die Mitgliedertabelle war 744 px breit, ihr
+  Rahmen 638. Der Knopf der ersten Zeile stand bei 697 bis 748 und damit
+  vollständig außerhalb; bei den übrigen Zeilen schob ihn das zusätzliche
+  „Entfernen" weit genug nach links, um sichtbar zu bleiben. Ausgerechnet
+  die Person, die als erste ein Passwort setzen muss, kam nicht an ihren
+  Knopf. Die Tabelle rechnet jetzt mit festen Spalten und kann nicht mehr
+  überlaufen; Name und Kennung stehen in einer Spalte übereinander, beide
+  Handlungen sind Zeichen mit Beschriftung für Vorleseprogramme.
 
 ### Nach einer Neuinstallation
 
