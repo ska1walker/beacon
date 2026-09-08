@@ -396,9 +396,38 @@ async def test_einladung_verraet_nur_den_namen(datenbank):
         _, token = await _sitzplatz(k, "Auskunft Knapp")
         daten = (await k.get(f"/api/einladung/{token}")).json()
         assert daten["name"] == "Auskunft Knapp"
-        assert set(daten) == {"name", "kennung"}
+        assert daten["kennung"] == "auskunft-knapp"
+        assert daten["uebernahme"] is False
+        assert set(daten) == {"name", "kennung", "uebernahme"}
         # Ein erfundener Token sagt nichts anderes als „gilt nicht".
         assert (await k.get("/api/einladung/erfunden")).status_code == 404
+
+
+async def test_eine_einladung_auf_ein_konto_mit_passwort_meldet_die_uebernahme(datenbank):
+    """Der Fall, der Marc fast seine eigene Box gekostet hätte.
+
+    Wer eine Einladung für jemanden erzeugt, der schon ein Passwort hat,
+    **setzt dessen Zugang zurück** — er richtet keinen ein. Für den
+    Eigentümer ist das der Rettungsweg; wer den Link versehentlich bekommt,
+    sperrt damit den bisherigen Inhaber aus. Die Seite muss das sagen
+    können, bevor jemand ein Passwort eintippt.
+    """
+    async with klient_fuer("anm-uebernahme") as k:
+        await _konto(k, "Hat Schon Eins")
+
+    # Frischer Klient: Das Einlösen oben hat `k` zum Mitglied gemacht, und
+    # ein Mitglied darf nicht einladen.
+    async with klient_fuer("anm-uebernahme") as eigner:
+        person = next(
+            x for x in (await eigner.get("/api/mitglieder")).json()
+            if x["olares_username"] == "hat-schon-eins"
+        )
+        antwort = await eigner.post(f"/api/mitglieder/{person['id']}/einladung")
+        assert antwort.status_code == 201, antwort.text
+        token = antwort.json()["pfad"].rsplit("/", 1)[-1]
+        daten = (await eigner.get(f"/api/einladung/{token}")).json()
+        assert daten["uebernahme"] is True, "Die Übernahme eines Kontos muss erkennbar sein"
+        assert daten["kennung"] == "hat-schon-eins"
 
 
 async def test_kurzes_passwort_wird_beim_einloesen_abgewiesen(datenbank):

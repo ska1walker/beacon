@@ -56,13 +56,26 @@ export function Mitgliederblock() {
   // nicht da, wenn eine frische Box noch kein SMTP kennt.
   const [kopiert, setKopiert] = useState(false);
   const feld = useRef<HTMLInputElement>(null);
-  const [link, setLink] = useState<{ fuer: string; adresse: string; tage: number } | null>(null);
+  const [link, setLink] = useState<
+    { fuer: string; kennung: string; adresse: string; tage: number; uebernahme: boolean } | null
+  >(null);
   const einladen = useMutation({
-    mutationFn: (id: string) =>
-      api.post<{ pfad: string; name: string; gilt_tage: number }>(`/api/mitglieder/${id}/einladung`),
+    mutationFn: async (id: string) => {
+      const a = await api.post<{ pfad: string; name: string; gilt_tage: number }>(
+        `/api/mitglieder/${id}/einladung`,
+      );
+      const person = mitglieder.data?.find((m) => m.id === id);
+      return { ...a, kennung: person?.olares_username ?? "", uebernahme: person?.passwort_gesetzt ?? false };
+    },
     onSuccess: (a) => {
       setKopiert(false);
-      setLink({ fuer: a.name, adresse: `${window.location.origin}${a.pfad}`, tage: a.gilt_tage });
+      setLink({
+        fuer: a.name,
+        kennung: a.kennung,
+        adresse: `${window.location.origin}${a.pfad}`,
+        tage: a.gilt_tage,
+        uebernahme: a.uebernahme,
+      });
     },
   });
 
@@ -191,7 +204,19 @@ export function Mitgliederblock() {
 
         {link && (
           <div className="einladung-ausgabe">
-            <p className="einladung-fuer">Einladung für {link.fuer}</p>
+            <p className="einladung-fuer">
+              Einladung für <span className="mono">{link.kennung}</span>
+              {link.fuer && link.fuer !== link.kennung ? <> ({link.fuer})</> : null}
+            </p>
+            {/* Wer schon ein Passwort hat, bekommt keinen Zugang, sondern
+                einen neuen — der alte gilt danach nicht mehr. Das ist der
+                Rettungsweg des Eigentümers, und es ist ein Eingriff. */}
+            {link.uebernahme && (
+              <p className="feld-hinweis" style={{ margin: "0 0 var(--am-raum-2)" }}>
+                <strong>Achtung:</strong> Diese Person hat bereits ein Passwort. Wer den Link
+                einlöst, <strong>ersetzt</strong> es — der bisherige Zugang gilt dann nicht mehr.
+              </p>
+            )}
             <div className="einladungslink">
               <input
                 ref={feld}

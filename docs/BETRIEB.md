@@ -848,6 +848,28 @@ zu haben, sperrt sich aus: Der Olares-Kopf zählt dann nicht mehr, und es
 gibt kein Konto, das durch die Maske käme. Zurück hilft dann nur, den
 Modus im Deployment vorübergehend wieder auf `olares` zu setzen.
 
+### Die Einladungsseite nennt Kennung und Box
+
+Am 8. September schickte ein zweiter Nutzer von **seiner** Box eine
+Einladung. Auf dem Handy stand groß „Willkommen, Kai", darunter klein die
+Kennung `marc-bayer`, und die Adresszeile war abgeschnitten. Drei Dinge
+gingen dabei schief, und alle drei lagen an der Seite, nicht am Menschen:
+
+- **Der Anzeigename führte.** Er ist nur ein Etikett und kann auf jemand
+  anderen zeigen. Entscheidend ist die Kennung; sie steht jetzt oben, in
+  der Schrift, in der sich `l` und `1` unterscheiden.
+- **Die Seite sagte nicht, zu welchem Beacon der Link gehört.** Jetzt nennt
+  sie den Ursprung im Text, nicht nur in der Adresszeile.
+- **Eine Einladung auf ein Konto mit Passwort sah aus wie eine Erstanlage.**
+  Sie ist aber ein **Zurücksetzen**: Der bisherige Inhaber ist danach
+  ausgesperrt. Für einen Eigentümer ist das der Rettungsweg, für einen
+  falsch zugestellten Link ein Unfall. Die Seite heißt in diesem Fall
+  „Zugang zurücksetzen", der Knopf „Passwort ersetzen", und die
+  Einstellungsseite warnt schon beim Erzeugen.
+
+Der Endpunkt `GET /api/einladung/{token}` liefert dafür `uebernahme`.
+Verraten wird dadurch nichts, was der Linkinhaber nicht ohnehin erführe.
+
 ### Was gespeichert wird — und was nicht
 
 - Vom Passwort bleibt ein **argon2id-Hash**, nie das Passwort.

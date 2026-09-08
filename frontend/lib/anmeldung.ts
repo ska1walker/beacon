@@ -18,7 +18,12 @@ export type Lage = {
   modus: string;
 };
 
-export type Einladung = { name: string; kennung: string };
+export type Einladung = {
+  name: string;
+  kennung: string;
+  /** Das Konto hat schon ein Passwort — Einlösen **ersetzt** es. */
+  uebernahme: boolean;
+};
 
 export function anmelden(name: string, passwort: string) {
   return api.post<Lage>("/api/anmeldung", { name, passwort });

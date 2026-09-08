@@ -586,6 +586,8 @@ export interface Mitglied {
   role: string;
   created_at: string;
   last_seen_at: string | null;
+  /** Hat diese Person ein eigenes Passwort? Nur ob, nie was. */
+  passwort_gesetzt: boolean;
 }
 
 export interface Wer {

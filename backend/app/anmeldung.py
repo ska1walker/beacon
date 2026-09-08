@@ -297,7 +297,8 @@ async def einladung_lesen(conn: asyncpg.Connection, token: str) -> asyncpg.Recor
         await _pinnen(conn, token_hash(token))
         return await conn.fetchrow(
             """
-            select e.id, e.user_id, e.org_id, u.display_name, u.olares_username
+            select e.id, e.user_id, e.org_id, u.display_name, u.olares_username,
+                   u.passwort_hash is not null as hat_passwort
               from public.einladungen e
               join public.users u on u.id = e.user_id
              where e.token_hash = $1 and e.benutzt_am is null and e.laeuft_ab > now()

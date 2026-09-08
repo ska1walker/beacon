@@ -3835,3 +3835,13 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .einladungslink { flex-wrap: wrap; }
   .einladungslink .input { flex: 1 1 100%; }
 }
+
+/* Die Kennung entscheidet, wessen Zugang eingerichtet wird — der
+   Anzeigename ist nur ein Etikett und kann auf jemand anderen zeigen.
+   Deshalb steht sie in der Schrift, in der sich l und 1 unterscheiden. */
+.tor-kennung { font-family: var(--am-schrift-mono); }
+
+/* Welches Beacon. Auf dem Handy ist die Adresszeile abgeschnitten. */
+.tor-wo { font-family: var(--am-schrift-mono); overflow-wrap: anywhere; }
+
+.einladung-fuer .mono { font-family: var(--am-schrift-mono); }

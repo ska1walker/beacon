@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { ApiFehler } from "@/lib/api";
 import { einladungEinloesen, einladungLesen } from "@/lib/anmeldung";
 import { Tor } from "@/components/tor";
@@ -14,6 +14,13 @@ export default function EinladungsSeite({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
+  // Welches Beacon? Auf dem Handy ist die Adresszeile abgeschnitten, und
+  // ein Einladungslink von einer fremden Box sieht sonst aus wie einer von
+  // der eigenen. Der Ursprung steht deshalb im Text.
+  const [wo, setWo] = useState("");
+  useEffect(() => {
+    setWo(window.location.host);
+  }, []);
   const [passwort, setPasswort] = useState("");
   const [wiederholung, setWiederholung] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
@@ -68,18 +75,35 @@ export default function EinladungsSeite({
     );
   }
 
+  const { name, kennung, uebernahme } = einladung.data;
+
   return (
     <Tor
-      titel={`Willkommen, ${einladung.data.name}`}
+      // Die **Kennung** steht oben, nicht der Anzeigename. Sie entscheidet,
+      // wessen Zugang hier eingerichtet wird; der Anzeigename ist nur ein
+      // Etikett und kann auf eine ganz andere Person zeigen. Genau das ist
+      // am 8. September passiert: „Willkommen, Kai" über der Kennung
+      // `marc-bayer`, auf einer fremden Box.
+      titel={uebernahme ? "Zugang zurücksetzen" : "Zugang einrichten"}
       unter={
         <>
-          Setzen Sie ein Passwort für die Kennung <strong>{einladung.data.kennung}</strong>.
-          Danach sind Sie angemeldet.
+          Für die Kennung <strong className="tor-kennung">{kennung}</strong>
+          {name && name !== kennung ? <> ({name})</> : null} bei{" "}
+          <strong className="tor-wo">{wo}</strong>.
+          {uebernahme ? (
+            <>
+              {" "}Dieses Konto <strong>hat bereits ein Passwort</strong>. Wenn Sie
+              fortfahren, wird es ersetzt und der bisherige Zugang gilt nicht mehr.
+              Fahren Sie nur fort, wenn dieses Konto Ihres ist.
+            </>
+          ) : (
+            <> Danach sind Sie angemeldet.</>
+          )}
         </>
       }
       fehler={fehler}
       laeuft={laeuft}
-      knopf="Zugang einrichten"
+      knopf={uebernahme ? "Passwort ersetzen" : "Zugang einrichten"}
       onSenden={senden}
       fuss={`Mindestens ${MINDESTENS} Zeichen. Eine lange Wortfolge ist besser als kurze Sonderzeichen.`}
     >

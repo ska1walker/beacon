@@ -197,12 +197,24 @@ async def passwort_aendern(
 
 @router.get("/einladung/{token}")
 async def einladung_ansehen(token: str) -> dict:
-    """Zeigt nur, für wen die Einladung gilt — und ob sie noch gilt."""
+    """Zeigt nur, für wen die Einladung gilt — und ob sie noch gilt.
+
+    `uebernahme` ist der Fall, der eine Warnung verdient: Das Konto hat
+    schon ein Passwort, und Einlösen **ersetzt** es. Für einen Eigentümer,
+    der jemandem den Zugang zurücksetzt, ist das richtig. Wer den Link
+    versehentlich bekommt, sperrt damit aber den bisherigen Inhaber aus —
+    genau daran wäre am 8. September fast jemand hängengeblieben, weil der
+    Anzeigename und die Kennung auf verschiedene Menschen zeigten.
+    """
     async with acquire() as conn:
         row = await kern.einladung_lesen(conn, token)
     if row is None:
         raise HTTPException(404, "Diese Einladung gilt nicht mehr.")
-    return {"name": row["display_name"] or row["olares_username"], "kennung": row["olares_username"]}
+    return {
+        "name": row["display_name"] or row["olares_username"],
+        "kennung": row["olares_username"],
+        "uebernahme": bool(row["hat_passwort"]),
+    }
 
 
 @router.post("/einladung/{token}", response_model=Lage)
