@@ -7,10 +7,21 @@
 // Richtung wie Insilos egress.py, lieber einmal zu viel warnen als einmal
 // zu wenig.
 //
-// „Auf dieser Box" heißt: Kubernetes-Dienstname, localhost oder ein
-// privates Netz. Kais LiteLLM und Speaches sprechen genau so an und zählen
-// deshalb richtig als intern — eine Adresse über die Olares-Zone verließe
-// dagegen das Haus und wird benannt.
+// „Auf dieser Box" heißt: Kubernetes-Dienstname, localhost, ein privates
+// Netz — **oder die eigene Olares-Zone**. Letzteres ist gemessen, nicht
+// vermutet: Aus Beacons Backend-Pod löst `llm.kaivostudio.olares.de` auf
+// 192.168.1.17 auf, die Box selbst (8.9.2026). Olares führt seine Zone
+// intern auf den eigenen Knoten; ein Aufruf dorthin verlässt das Haus
+// nicht. Ohne diese Regel hätte die Zeile „außerhalb" behauptet, wo nichts
+// hinausgeht — und ein falscher Alarm zerstört das Vertrauen in den
+// Nachweis genauso zuverlässig wie eine falsche Beruhigung.
+//
+// Nötig ist die Ausnahme, weil ein Dienst im eigenen Namensraum (etwa
+// LiteLLM unter `litellm-kaivostudio`) von Beacon aus **nicht** direkt
+// erreichbar ist: Dort steht nur `app-np`, und Olares riegelt Namensräume
+// gegeneinander ab. Nur als *shared* installierte Apps (Speaches) tragen
+// die Regeln, die andere hereinlassen. Für alles andere ist die
+// Zonen-Adresse der einzige Weg — und der bleibt auf der Box.
 
 import type { OrgSettings } from "@/lib/typen";
 
@@ -29,12 +40,23 @@ export function host(adresse: string | null | undefined): string {
   return ohneSchema.split(/[/?#]/)[0].split("@").pop()!.replace(/:\d+$/, "").toLowerCase();
 }
 
+/**
+ * Die Zone dieser Box — abgeleitet aus der Adresse der öffentlichen Links
+ * (`41b89d101.kaivostudio.olares.de` → `kaivostudio.olares.de`). Sie ist
+ * die einzige Stelle, an der Beacon den eigenen Namen kennt.
+ */
+export function zone(e: OrgSettings | undefined): string {
+  const teile = host(e?.links_basis_wirksam).split(".");
+  return teile.length > 2 ? teile.slice(1).join(".") : "";
+}
+
 /** Liegt diese Adresse nachweislich auf dieser Box? */
-export function istIntern(adresse: string | null | undefined): boolean {
+export function istIntern(adresse: string | null | undefined, eigeneZone = ""): boolean {
   const h = host(adresse);
   if (!h) return true; // nichts eingetragen heißt: es geht nichts hinaus
   if (h === "localhost" || h.endsWith(".localhost")) return true;
   if (h.endsWith(".svc.cluster.local") || h.endsWith(".svc") || !h.includes(".")) return true;
+  if (eigeneZone && (h === eigeneZone || h.endsWith(`.${eigeneZone}`))) return true;
   return PRIVAT.test(h);
 }
 
@@ -48,9 +70,10 @@ export function datenziele(e: OrgSettings | undefined): Datenziel[] {
     ["E-Mail", e.smtp_ready ? e.smtp_host : null],
     ["Postausgang", e.mail_endpoint_url],
   ];
+  const eigeneZone = zone(e);
   const ziele: Datenziel[] = [];
   for (const [was, adresse] of kandidaten) {
-    if (!adresse || istIntern(adresse)) continue;
+    if (!adresse || istIntern(adresse, eigeneZone)) continue;
     ziele.push({ was, host: host(adresse) });
   }
   // Brevo ist ein Dienst, keine Adresse — er steht als Name für sich.

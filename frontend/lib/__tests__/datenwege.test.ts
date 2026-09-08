@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { datenziele, host, istIntern, nachweis } from "@/lib/datenwege";
+import { datenziele, host, istIntern, nachweis, zone } from "@/lib/datenwege";
 import type { OrgSettings } from "@/lib/typen";
 
 const LEER = {
@@ -13,6 +13,7 @@ const LEER = {
   mail_endpoint_url: null,
   marketing_versand: "smtp",
   brevo_api_key_set: false,
+  links_basis_wirksam: "https://41b89d101.kaivostudio.olares.de",
 } as unknown as OrgSettings;
 
 function mit(mehr: Partial<OrgSettings>): OrgSettings {
@@ -40,11 +41,28 @@ describe("istIntern", () => {
     expect(istIntern(null)).toBe(true); // nichts eingetragen, nichts geht hinaus
   });
 
-  it("hält alles andere für außerhalb — auch die eigene Zone", () => {
+  it("hält alles andere für außerhalb", () => {
     expect(istIntern("https://api.search.brave.com")).toBe(false);
-    expect(istIntern("https://litellm.kaivostudio.olares.de/v1")).toBe(false);
     expect(istIntern("smtp.strato.de")).toBe(false);
     expect(istIntern("http://172.15.0.1")).toBe(false); // knapp außerhalb des privaten Blocks
+  });
+
+  it("zählt die eigene Zone als Box — gemessen, nicht vermutet", () => {
+    // Aus Beacons Pod löst llm.kaivostudio.olares.de auf 192.168.1.17 auf.
+    expect(istIntern("https://llm.kaivostudio.olares.de/v1", "kaivostudio.olares.de")).toBe(true);
+    expect(istIntern("https://kaivostudio.olares.de", "kaivostudio.olares.de")).toBe(true);
+    // Eine fremde Zone bleibt fremd — auch wenn sie ähnlich endet.
+    expect(istIntern("https://llm.fremd.olares.de/v1", "kaivostudio.olares.de")).toBe(false);
+    expect(istIntern("https://boesekaivostudio.olares.de", "kaivostudio.olares.de")).toBe(false);
+  });
+});
+
+describe("zone", () => {
+  it("leitet die eigene Zone aus der Link-Adresse ab", () => {
+    expect(zone(LEER)).toBe("kaivostudio.olares.de");
+    expect(zone(undefined)).toBe("");
+    expect(zone({ ...LEER, links_basis_wirksam: null } as OrgSettings)).toBe("");
+    expect(zone({ ...LEER, links_basis_wirksam: "https://beispiel.de" } as OrgSettings)).toBe("");
   });
 });
 
@@ -54,10 +72,10 @@ describe("datenziele und nachweis", () => {
     expect(datenziele(undefined)).toEqual([]);
   });
 
-  it("zählt Endpunkte auf der Box nicht mit", () => {
+  it("zählt Endpunkte auf der Box nicht mit — Dienstname wie Zone", () => {
     const e = mit({
       llm_ready: true,
-      llm_base_url: "http://litellm.litellm-kaivostudio.svc.cluster.local:4000/v1",
+      llm_base_url: "https://llm.kaivostudio.olares.de/v1",
       tts_ready: true,
       tts_endpoint_url: "http://speaches.speachesv3-shared.svc.cluster.local:8000",
     });

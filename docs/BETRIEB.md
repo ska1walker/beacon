@@ -608,12 +608,33 @@ ein Sitzplatz gewählt ist — dann sagt sie etwas.
 *Die Nachweiszeile* nennt den **gemessenen** Stand und führt auf
 *Einstellungen › Daten › Wohin Daten gehen*. `lib/datenwege.ts` prüft
 jeden eingetragenen Endpunkt (Sprachmodell, Sprachausgabe, Suchdienst,
-SMTP, Postausgang, Brevo): Kubernetes-Dienstname, `localhost` oder
-privates Netz gilt als **auf dieser Box**, alles andere wird gezählt und
-im Tooltip beim Namen genannt — dieselbe Richtung wie Insilos
-`egress.py`, lieber einmal zu viel warnen. Also „Alles auf dieser Box“
-oder „2 Ziele außerhalb“; ohne geladene Einstellungen steht dort
-**nichts**.
+SMTP, Postausgang, Brevo). Als **auf dieser Box** gelten Kubernetes-
+Dienstname, `localhost`, privates Netz — und die **eigene Olares-Zone**,
+abgeleitet aus der Adresse der öffentlichen Links
+(`41b89d101.kaivostudio.olares.de` → `kaivostudio.olares.de`). Alles
+andere wird gezählt und im Tooltip beim Namen genannt. Also „Alles auf
+dieser Box“ oder „2 Ziele außerhalb“; ohne geladene Einstellungen steht
+dort **nichts**.
+
+Die Zonen-Regel ist gemessen, nicht vermutet (8.9.2026, aus dem
+Backend-Pod): `llm.kaivostudio.olares.de` löst auf `192.168.1.17` auf —
+die Box selbst. Olares führt seine Zone intern auf den eigenen Knoten,
+ein Aufruf dorthin verlässt das Haus nicht. Ohne die Regel meldete die
+Zeile „2 Ziele außerhalb“, wo nur eines hinausgeht (0.5.8); ein falscher
+Alarm zerstört das Vertrauen in den Nachweis so zuverlässig wie eine
+falsche Beruhigung.
+
+**Warum die Zonen-Adresse und nicht der Dienstname?** Weil ein Dienst im
+eigenen Namensraum von Beacon aus nicht erreichbar ist. Gemessen: der
+Aufruf von `litellm-svc.litellm-kaivostudio.svc.cluster.local` aus
+`beacon-kaivostudio` läuft in eine Zeitüberschreitung. Im LiteLLM-
+Namensraum steht nur `app-np`; Olares riegelt Namensräume gegeneinander
+ab (Constraint 4). Nur als **shared** installierte Apps tragen die
+Regeln, die andere hereinlassen — Speaches (`speachesv3-shared`) hat
+`shared-np`, `shared-entrance-np` und `app-gateway-shared-ingress-np`
+und ist deshalb direkt ansprechbar. Für eine App im eigenen Namensraum
+ist die Zonen-Adresse also nicht Bequemlichkeit, sondern der einzige
+Weg.
 
 Der alte Satz musste weg, weil `docs/DESIGN.md §5` es verlangt: Der
 Nachweis trägt „gemessene Werte — oder gar nicht“, denn „eine Zusage ohne
