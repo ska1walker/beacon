@@ -762,6 +762,15 @@ Die Sitzplätze waren die bisherige Antwort auf genau diese Lücke. Sie
 schreiben Arbeit einer Person zu, sind aber **keine Anmeldung**: Wer den
 geteilten Zugang hat, kann jeden Platz einnehmen.
 
+### Stand: offen seit dem 8. September 2026
+
+Der Entrance `beacon` steht auf `public`, der Modus auf `eigen`. Von außen
+ohne jede Box-Sitzung gemessen: Startseite 200, Anmeldemaske 200, und mit
+gefälschtem `X-Bfl-User` überall 401 — Firmen, Einstellungen, Mitglieder,
+Sicherung anlegen, Sicherung zurückspielen, Einstellungen ändern, Person
+anlegen. Falscher Name und falsches Passwort antworten wortgleich. Elf
+Fehlversuche ergeben 429 mit `Retry-After: 900`.
+
 ### Die Reihenfolge ist die Sicherheit
 
 **Erst `ANMELDUNG_MODUS=eigen`, dann den Entrance öffnen. Nie umgekehrt.**
@@ -890,6 +899,58 @@ auch der Eigentümer nicht. Offene Einladungen kommen ebenfalls zurück.
 `sitzungen` und `anmeldeversuche` bewusst nicht: Eine zurückgespielte
 Sitzung wäre ein Wiedereinspielen von Zugängen, eine zurückgespielte
 Bremse sperrte Menschen für Tippfehler aus, die lange her sind.
+
+### Wenn niemand mehr hereinkommt
+
+Das Passwort gehört **nicht** in die Olares-Umgebungsvariablen. Dort stünde
+es im Klartext, sichtbar für jeden, der den Einstellungsbildschirm öffnet,
+und es sind laut Beschriftung „shared settings for your apps" — also für
+jede App auf der Box lesbar. Der ganze Aufbau speichert bewusst nur einen
+argon2id-Hash, damit selbst ein Datenbankleser sich nicht anmelden kann;
+ein Klartextpasswort daneben hebt das auf. Ein Konto, das aus einer
+Variablen käme, wäre außerdem eine dauerhafte Hintertür — genau das, was
+ein offener Eingang nicht haben darf.
+
+Der Rettungsweg hängt stattdessen am **Zugang zur Box**, und das ist die
+richtige Hürde: Wer an der Box sitzt, kommt ohnehin an alles heran.
+
+```bash
+ssh olares@192.168.1.17
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+POD=$(kubectl get pods -n beacon-kaivostudio --no-headers | grep beacon-backend | awk '{print $1}')
+kubectl exec -it -n beacon-kaivostudio $POD -c backend -- python3 -c "
+import asyncio, getpass, os, asyncpg
+from app.anmeldung import hash_passwort, passwort_pruefen
+neu = getpass.getpass('Neues Passwort: ')
+passwort_pruefen(neu)
+async def m():
+    c = await asyncpg.connect(host=os.environ['DB_HOST'], port=int(os.environ['DB_PORT']),
+        user=os.environ['DB_USER'], password=os.environ['DB_PASSWORD'], database=os.environ['DB_NAME'])
+    await c.execute('update public.users set passwort_hash = \$1, passwort_am = now(), gesperrt_bis = null where olares_username = \$2', hash_passwort(neu), 'kaivostudio')
+    await c.execute('delete from public.anmeldeversuche')
+    print('gesetzt')
+    await c.close()
+asyncio.run(m())
+"
+```
+
+`getpass` liest das Passwort, ohne es in die Befehlszeile oder in die
+Shell-Historie zu schreiben. Die Bremse wird gleich mit geleert, sonst
+sperrt die eigene Rateserie den frisch gesetzten Zugang aus.
+
+**Zwei billigere Vorkehrungen**, die den Rettungsweg meist überflüssig machen:
+
+- **Ein zweiter Mensch mit `admin`.** Ein vergessenes Passwort ist dann
+  kein Notfall, sondern ein Einladungslink von der anderen Person. Neue
+  Personen bekommen `member`; die Rolle lässt sich in der Datenbank auf
+  `admin` heben (`user_org_roles.role`).
+- **Der Abzug trägt die Hashes.** Eine Neuinstallation sperrt niemanden
+  aus, siehe oben.
+
+Notfalls hilft auch der Rückweg: `ANMELDUNG_MODUS` im Deployment
+vorübergehend wieder auf `olares`, dann zählt der Olares-Zugang erneut.
+Das braucht eine neue Version über den Markt und öffnet währenddessen
+nichts, solange der Entrance dabei zurück auf `internal` geht.
 
 ### Noch offen
 
