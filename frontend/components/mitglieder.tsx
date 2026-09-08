@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { Copy, KeyRound, Pencil } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { lage, passwortAendern } from "@/lib/anmeldung";
 import { datumZeit } from "@/lib/format";
 import type { Mitglied, Wer } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
@@ -47,6 +48,18 @@ export function Mitgliederblock() {
   const entfernen = useMutation({
     mutationFn: (id: string) => api.del(`/api/mitglieder/${id}`),
     onSuccess: () => client.invalidateQueries({ queryKey: ["mitglieder"] }),
+  });
+
+  // Der Link kommt zurück und wird **einmal** angezeigt. Er landet
+  // absichtlich in keiner Liste und in keiner Mail: Wer ihn hat, setzt das
+  // Passwort, und ein Zugang, der am Mailversand hängt, wäre genau dann
+  // nicht da, wenn eine frische Box noch kein SMTP kennt.
+  const [link, setLink] = useState<{ id: string; adresse: string; tage: number } | null>(null);
+  const einladen = useMutation({
+    mutationFn: (id: string) =>
+      api.post<{ pfad: string; name: string; gilt_tage: number }>(`/api/mitglieder/${id}/einladung`),
+    onSuccess: (a, id) =>
+      setLink({ id, adresse: `${window.location.origin}${a.pfad}`, tage: a.gilt_tage }),
   });
 
   if (mitglieder.isPending) return <Laedt />;
@@ -137,7 +150,20 @@ export function Mitgliederblock() {
                   </span>
                 </td>
                 <td>{m.last_seen_at ? datumZeit(m.last_seen_at) : "—"}</td>
-                <td style={{ textAlign: "right" }}>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  {/* Als Zeichen, nicht als Wort: Die Spalte trägt schon
+                      „Entfernen", und ein zweites Wort schöbe die Tabelle
+                      über ihren Rahmen hinaus. */}
+                  <button
+                    type="button"
+                    className="btn btn-still btn-klein"
+                    title="Einladungslink erzeugen — damit setzt diese Person ihr Passwort"
+                    aria-label={`Einladungslink für ${m.display_name ?? m.olares_username} erzeugen`}
+                    onClick={() => einladen.mutate(m.id)}
+                    disabled={einladen.isPending}
+                  >
+                    <KeyRound size={14} aria-hidden="true" />
+                  </button>
                   {m.zugang === "sitzplatz" && m.id !== wer.data?.user_id && (
                     <button
                       type="button"
@@ -153,7 +179,27 @@ export function Mitgliederblock() {
           </tbody>
         </table>
 
+        {link && (
+          <div className="einladung-ausgabe">
+            <p className="feld-hinweis" style={{ margin: 0 }}>
+              Geben Sie diesen Link persönlich weiter. Er gilt {link.tage} Tage und
+              <strong> genau einmal</strong>. Ein neuer Link entwertet diesen.
+            </p>
+            <div className="einladungslink">
+              <input className="input" readOnly value={link.adresse} onFocus={(e) => e.target.select()} aria-label="Einladungslink" />
+              <button
+                type="button"
+                className="btn btn-sekundaer btn-klein"
+                onClick={() => navigator.clipboard?.writeText(link.adresse)}
+              >
+                <Copy size={14} aria-hidden="true" /> Kopieren
+              </button>
+            </div>
+          </div>
+        )}
+
         {entfernen.isError && <Fehler text={(entfernen.error as Error).message} />}
+        {einladen.isError && <Fehler text={(einladen.error as Error).message} />}
         {umbenennen.isError && <Fehler text={(umbenennen.error as Error).message} />}
 
         <form
@@ -192,6 +238,75 @@ export function Mitgliederblock() {
           lässt sich für jede Person ändern, auch für den Olares-Zugang selbst — die Kennung
           bleibt.
         </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Das eigene Passwort ändern.
+ *
+ * Steht nur da, wenn es ein Passwort gibt — im Modus `olares` prüft der
+ * Sidecar, und Beacon hätte nichts zu ändern. Das alte wird verlangt:
+ * Sonst genügte ein fremder, offener Browser, um jemanden auszusperren.
+ */
+export function Passwortblock() {
+  const [alt, setAlt] = useState("");
+  const [neu, setNeu] = useState("");
+  const [wieder, setWieder] = useState("");
+  const [meldung, setMeldung] = useState<string | null>(null);
+
+  const stand = useQuery({ queryKey: ["anmeldelage"], queryFn: lage, staleTime: 60_000 });
+
+  const aendern = useMutation({
+    mutationFn: () => passwortAendern(alt, neu),
+    onSuccess: () => {
+      setAlt("");
+      setNeu("");
+      setWieder("");
+      setMeldung("Geändert. Andere Geräte wurden abgemeldet.");
+    },
+  });
+
+  if (!stand.data?.angemeldet) return null;
+
+  const bereit = alt.length > 0 && neu.length >= 12 && neu === wieder;
+
+  return (
+    <section className="block">
+      <div className="block-kopf">
+        <h2>Ihr Passwort</h2>
+      </div>
+      <div className="block-inhalt">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setMeldung(null);
+            if (bereit) aendern.mutate();
+          }}
+        >
+          <div className="feld">
+            <label htmlFor="pw-alt">Bisheriges Passwort</label>
+            <input id="pw-alt" className="input" type="password" autoComplete="current-password" value={alt} onChange={(e) => setAlt(e.target.value)} />
+          </div>
+          <div className="feld">
+            <label htmlFor="pw-neu">Neues Passwort</label>
+            <input id="pw-neu" className="input" type="password" autoComplete="new-password" value={neu} onChange={(e) => setNeu(e.target.value)} />
+            <p className="feld-hinweis">
+              Mindestens zwölf Zeichen. Eine lange Wortfolge trägt weiter als kurze
+              Sonderzeichen — und ein Wechsel meldet alle anderen Geräte ab.
+            </p>
+          </div>
+          <div className="feld">
+            <label htmlFor="pw-wieder">Noch einmal</label>
+            <input id="pw-wieder" className="input" type="password" autoComplete="new-password" value={wieder} onChange={(e) => setWieder(e.target.value)} />
+          </div>
+          <button type="submit" className="btn btn-primaer" disabled={!bereit || aendern.isPending}>
+            {aendern.isPending ? "Ändert …" : "Passwort ändern"}
+          </button>
+        </form>
+        {aendern.isError && <Fehler text={(aendern.error as Error).message} />}
+        {meldung && <p className="feld-hinweis">{meldung}</p>}
       </div>
     </section>
   );

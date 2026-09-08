@@ -77,6 +77,15 @@ spec:
             # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
             - name: APP_DOMAIN
               value: "{{ (.Values.domain).beacon | default "" }}"
+            # Wer die Identität liefert. `olares`: der Envoy-Sidecar prüft,
+            # und `X-Bfl-User` gilt. `eigen`: Beacons eigene Anmeldung prüft,
+            # und der Kopf gilt **nicht mehr** — nötig, sobald der Entrance
+            # `public` ist. Der Wert steht hier als Literal und nicht in
+            # `values.yaml`: Ein Upgrade spielt die Werte der Installation
+            # zurück (siehe HANDOFF, „Ein Upgrade friert die Werte ein"),
+            # eine Umstellung käme dort also nie auf einer laufenden Box an.
+            - name: ANMELDUNG_MODUS
+              value: "olares"
           command:
             - python3
             - -c
@@ -168,6 +177,15 @@ spec:
             # Entrance ab, unter der Bestätigen und Abmelden erreichbar sind.
             - name: APP_DOMAIN
               value: "{{ (.Values.domain).beacon | default "" }}"
+            # Wer die Identität liefert. `olares`: der Envoy-Sidecar prüft,
+            # und `X-Bfl-User` gilt. `eigen`: Beacons eigene Anmeldung prüft,
+            # und der Kopf gilt **nicht mehr** — nötig, sobald der Entrance
+            # `public` ist. Der Wert steht hier als Literal und nicht in
+            # `values.yaml`: Ein Upgrade spielt die Werte der Installation
+            # zurück (siehe HANDOFF, „Ein Upgrade friert die Werte ein"),
+            # eine Umstellung käme dort also nie auf einer laufenden Box an.
+            - name: ANMELDUNG_MODUS
+              value: "olares"
 
             # Kein Punktzugriff auf .Values.llm.baseUrl, und das ist keine
             # Stilfrage: Ein Upgrade spielt die bei der Installation

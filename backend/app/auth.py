@@ -8,9 +8,10 @@ auf unsere interne Kennung.
 from uuid import UUID
 
 import asyncpg
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
+from app import anmeldung as anmeldung_kern
 from app import sicherung
 from app.config import settings
 from app.db import acquire, acquire_as
@@ -103,6 +104,15 @@ class CurrentUser(BaseModel):
     # kein Sitzplatz gewählt ist.
     login_username: str = ""
     sitzplatz: bool = False
+    # Die Person, die sich **angemeldet** hat. Gleich `user_id`, solange
+    # kein Sitzplatz gewählt ist. Rechte hängen hieran und nicht am Platz:
+    # Der Platz ist Zuschreibung, keine Anmeldung — wer ihn wechselt,
+    # verliert dadurch weder Rechte noch gewinnt er welche.
+    zugang_user_id: UUID | None = None
+
+    @property
+    def handelnder(self) -> UUID:
+        return self.zugang_user_id or self.user_id
 
 
 async def _seed_pipeline(conn: asyncpg.Connection, org_id: UUID) -> None:
@@ -396,25 +406,74 @@ async def _sitzplatz_einnehmen(angemeldet: CurrentUser, sitzplatz_id: UUID) -> C
         display_name=person["display_name"],
         login_username=angemeldet.login_username,
         sitzplatz=person["id"] != angemeldet.user_id,
+        zugang_user_id=angemeldet.user_id,
+    )
+
+
+async def _aus_sitzung(keks: str) -> CurrentUser | None:
+    """Wer steckt hinter diesem Sitzungskeks? Nichts, wenn er nicht (mehr) gilt."""
+    async with acquire() as conn:
+        sitzung = await anmeldung_kern.sitzung_lesen(conn, keks)
+        if sitzung is None:
+            return None
+        person = await conn.fetchrow(
+            "select id, olares_username, display_name from public.users "
+            "where id = $1 and deleted_at is null",
+            sitzung.user_id,
+        )
+    if person is None:
+        return None
+    return CurrentUser(
+        olares_username=person["olares_username"],
+        user_id=person["id"],
+        org_id=sitzung.org_id,
+        display_name=person["display_name"],
+        login_username=person["olares_username"],
     )
 
 
 async def get_current_user(
+    request: Request,
     x_bfl_user: str | None = Header(None, alias="X-Bfl-User"),
     x_beacon_sitzplatz: str | None = Header(None, alias="X-Beacon-Sitzplatz"),
 ) -> CurrentUser:
-    name = (x_bfl_user or "").strip() or settings.dev_user.strip()
-    if not name:
-        # Auf der Box kommt hier nie etwas an: Envoy setzt den Header oder
-        # lässt den Request gar nicht durch. Fehlt er trotzdem, ist etwas
-        # an der Kette kaputt — und dann ist Verweigern richtig.
-        raise HTTPException(status_code=401, detail="Keine Identität im Request (X-Bfl-User fehlt)")
+    """Wer handelt — aus der eigenen Sitzung, sonst aus dem Olares-Kopf.
 
-    angemeldet = await _ensure_user_and_org(name)
-    angemeldet = angemeldet.model_copy(update={"login_username": name})
+    Die Reihenfolge ist die Sicherheit: Ein gültiger Sitzungskeks gewinnt
+    immer. Der Kopf `X-Bfl-User` gilt **nur** im Modus `olares`, in dem der
+    Envoy-Sidecar davorsteht und ihn setzt. Im Modus `eigen` ist der Kopf
+    wertlos — sonst genügte `curl -H 'X-Bfl-User: kaivostudio'`, um bei
+    offenem Entrance der Eigentümer zu sein.
+    """
+    angemeldet: CurrentUser | None = None
+
+    keks = request.cookies.get(anmeldung_kern.KEKS)
+    if keks:
+        angemeldet = await _aus_sitzung(keks)
+    aus_sitzung = angemeldet is not None
+
+    if angemeldet is None and settings.anmeldung_modus != "eigen":
+        name = (x_bfl_user or "").strip() or settings.dev_user.strip()
+        if name:
+            angemeldet = await _ensure_user_and_org(name)
+            angemeldet = angemeldet.model_copy(update={"login_username": name})
+
+    if angemeldet is None:
+        raise HTTPException(status_code=401, detail="Nicht angemeldet.")
 
     gewaehlt = (x_beacon_sitzplatz or "").strip()
     if not gewaehlt:
+        return angemeldet
+
+    # Wer sich selbst angemeldet hat, ist bereits er selbst.
+    #
+    # Der Sitzplatz entstand für den Fall, dass **ein** Olares-Zugang von
+    # mehreren Menschen benutzt wird: Er schreibt Arbeit der richtigen
+    # Person zu. Mit eigener Anmeldung gibt es nichts mehr zuzuschreiben —
+    # und er wäre dann das Gegenteil eines Schutzes: Ein `member` nähme
+    # den Platz des Eigentümers ein und erbte über `verwaltet` dessen
+    # Rechte. Deshalb greift der Kopf nur beim geteilten Zugang.
+    if aus_sitzung:
         return angemeldet
 
     try:
@@ -426,3 +485,27 @@ async def get_current_user(
         return angemeldet
 
     return await _sitzplatz_einnehmen(angemeldet, sitzplatz_id)
+
+
+# Rollen, die verwalten dürfen. `member` und `viewer` arbeiten im Bestand,
+# aber sie ändern keine Schlüssel, laden niemanden ein und spielen keine
+# Sicherung zurück — mit offenem Eingang ist das nicht mehr verhandelbar.
+VERWALTET = ("owner", "admin")
+
+
+async def verwaltet(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    """Abhängigkeit für die Endpunkte mit der größten Sprengkraft.
+
+    Geprüft wird die Rolle der **angemeldeten** Person, nicht die des
+    gewählten Sitzplatzes. Sonst verlöre ein Eigentümer seine Rechte,
+    sobald er den Platz eines Mitglieds einnimmt — und umgekehrt wäre der
+    Platz ein Weg, sich welche zu holen.
+    """
+    async with acquire() as conn:
+        rolle = await conn.fetchval(
+            "select role::text from public.user_org_roles where user_id = $1 and org_id = $2",
+            user.handelnder, user.org_id,
+        )
+    if rolle not in VERWALTET:
+        raise HTTPException(403, "Dafür fehlt Ihnen die Berechtigung. Fragen Sie den Eigentümer.")
+    return user

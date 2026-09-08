@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app import sicherung
-from app.auth import CurrentUser, get_current_user
+from app.auth import CurrentUser, get_current_user, verwaltet
 from app.db import acquire_as
 
 router = APIRouter(prefix="/api/sicherung", tags=["sicherung"])
@@ -76,7 +76,7 @@ async def ausfuhr(user: CurrentUser = Depends(get_current_user)) -> JSONResponse
 @router.post("/wiederherstellen", response_model=Wiederherstellung)
 async def wiederherstellen(
     name: str,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(verwaltet),
 ) -> Wiederherstellung:
     """Spielt einen Stand von der Box zurück.
 
@@ -100,7 +100,7 @@ async def wiederherstellen(
 @router.post("/einlesen", response_model=Wiederherstellung)
 async def einlesen(
     datei: UploadFile,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(verwaltet),
 ) -> Wiederherstellung:
     """Spielt eine hochgeladene Ausfuhr zurück — etwa auf eine neue Box."""
     import json

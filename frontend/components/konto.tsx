@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Globe, Server } from "lucide-react";
+import { Check, ChevronsUpDown, Globe, KeyRound, LogOut, Server } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { abmelden, lage } from "@/lib/anmeldung";
 import { nachweis } from "@/lib/datenwege";
 import { initialenAusName } from "@/lib/format";
 import { setzeSitzplatz } from "@/lib/sitzplatz";
@@ -122,7 +123,11 @@ function Kontomenue({
   knopf: React.RefObject<HTMLButtonElement | null>;
 }) {
   const wurzel = useRef<HTMLDivElement>(null);
-  const mehrere = mitglieder.length > 1;
+  const stand = useQuery({ queryKey: ["anmeldelage"], queryFn: lage, staleTime: 60_000 });
+  // Wer sich selbst angemeldet hat, ist bereits er selbst — der Sitzplatz
+  // ist dann sinnlos und wird vom Server ohnehin übergangen. Ihn trotzdem
+  // anzubieten wäre ein Knopf, der nichts tut.
+  const mehrere = mitglieder.length > 1 && !stand.data?.angemeldet;
 
   useEffect(() => {
     wurzel.current?.querySelector<HTMLElement>("button")?.focus();
@@ -176,6 +181,44 @@ function Kontomenue({
         <p className="konto-abschnitt">Darstellung</p>
         <Darstellungsschalter />
       </div>
+
+      <Abmeldeteil />
+    </div>
+  );
+}
+
+/**
+ * Abmelden — nur, wenn es etwas abzumelden gibt.
+ *
+ * Im Modus `olares` prüft der Sidecar, und ein „Abmelden" in Beacon wäre
+ * eine Attrappe: Der nächste Aufruf käme mit demselben geprüften Kopf
+ * zurück und wäre wieder drin. Deshalb fragt diese Zeile erst, wie die
+ * Lage ist, und zeigt sich nur dann, wenn die Antwort eine eigene
+ * Sitzung nennt.
+ */
+function Abmeldeteil() {
+  const stand = useQuery({ queryKey: ["anmeldelage"], queryFn: lage, staleTime: 60_000 });
+  if (!stand.data?.angemeldet) return null;
+
+  return (
+    <div className="konto-teil">
+      <p className="konto-abschnitt">Zugang</p>
+      <Link href="/einstellungen?bereich=firma" className="person-eintrag">
+        <KeyRound size={14} aria-hidden="true" />
+        <span className="person-eintrag-text">Passwort ändern</span>
+      </Link>
+      <button
+        type="button"
+        className="person-eintrag"
+        onClick={async () => {
+          await abmelden();
+          // Harter Wechsel: Alles im Speicher gehörte der abgemeldeten Person.
+          window.location.assign("/anmelden");
+        }}
+      >
+        <LogOut size={14} aria-hidden="true" />
+        <span className="person-eintrag-text">Abmelden</span>
+      </button>
     </div>
   );
 }

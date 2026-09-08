@@ -67,6 +67,22 @@ class Settings(BaseSettings):
     # heißt: nicht bekannt — dann muss sie in den Einstellungen stehen.
     app_domain: str = ""
 
+    # --- Anmeldung ---
+    # "olares": Die Identität kommt aus dem Kopf X-Bfl-User, den der
+    # Envoy-Sidecar setzt — der Weg, solange der Entrance `internal` ist.
+    # "eigen": Beacon meldet selbst an, der Kopf wird **vollständig
+    # ignoriert**. Ohne das wäre er bei offenem Entrance eine
+    # Selbstbedienung: Jeder erfundene Name legte Nutzer, Organisation und
+    # Owner-Rolle an.
+    anmeldung_modus: str = "olares"
+
+    # Wie lange eine Sitzung höchstens gilt und wie lange sie still sein
+    # darf. Dreißig Tage sind bequem, sieben Tage Stille sind die Grenze —
+    # ein vergessener Browser im Zug soll nicht einen Monat offen stehen.
+    sitzung_tage: int = 30
+    sitzung_leerlauf_tage: int = 7
+    einladung_tage: int = 7
+
     # --- Entwicklung ---
     # Auf der Box steht der Envoy-Sidecar davor und setzt X-Bfl-User. Lokal
     # gibt es ihn nicht; dann tut dieser Name so, als wäre jemand angemeldet.

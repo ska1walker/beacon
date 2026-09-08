@@ -3701,3 +3701,81 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .podcast-heute + .podcast-heute { margin-top: var(--am-raum-4); }
 .podcast-heute .podcast-meta { margin-bottom: var(--am-raum-1); }
 .podcast-einrichtung { margin-top: var(--am-raum-4); padding-top: var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); }
+
+/* ── Das Tor ────────────────────────────────────────────────────────────
+   Die Anmelde- und die Einladungsseite. Eine Karte, mittig, sonst nichts:
+   Wer hier steht, hat genau eine Aufgabe, und jedes weitere Element wäre
+   eine Ablenkung davon — oder eine Auskunft an jemanden, der keine
+   bekommen soll. */
+.tor {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--am-raum-6);
+  background: var(--am-seite);
+}
+
+.tor-karte {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--am-flaeche-1);
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-gross);
+  padding: var(--am-raum-8);
+}
+
+.tor-marke {
+  display: flex;
+  align-items: center;
+  gap: var(--am-raum-2);
+  margin-bottom: var(--am-raum-6);
+}
+
+.tor-titel {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0 0 var(--am-raum-2);
+  color: var(--am-text-primaer);
+}
+
+.tor-unter {
+  font-size: 0.875rem;
+  color: var(--am-text-sekundaer);
+  margin: 0 0 var(--am-raum-6);
+  line-height: 1.5;
+}
+
+.tor-knopf {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--am-raum-2);
+}
+
+.tor-fuss {
+  font-size: 0.8125rem;
+  color: var(--am-text-sekundaer);
+  margin: var(--am-raum-6) 0 0;
+  line-height: 1.5;
+}
+
+/* Der Einladungslink zum Weitergeben: sichtbar, ganz, und in einer
+   Schrift, in der sich l und 1 unterscheiden. */
+.einladungslink {
+  display: flex;
+  gap: var(--am-raum-2);
+  align-items: center;
+  margin-top: var(--am-raum-3);
+}
+
+.einladungslink input {
+  font-family: var(--am-schrift-mono);
+  font-size: 0.8125rem;
+}
+
+.einladung-ausgabe {
+  margin-bottom: var(--am-raum-4);
+  padding: var(--am-raum-3);
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-mittel);
+  background: var(--am-flaeche-2);
+}

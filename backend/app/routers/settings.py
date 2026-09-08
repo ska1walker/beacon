@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import postfach, versand
-from app.auth import CurrentUser, get_current_user
+from app.auth import CurrentUser, get_current_user, verwaltet
 from app.db import acquire_as
 from app.llm import load_llm_config
 from app.schemas import Absender, OrgSettings, OrgSettingsIn
@@ -83,7 +83,9 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
 @router.put("", response_model=OrgSettings)
 async def update_settings(
     payload: OrgSettingsIn,
-    user: CurrentUser = Depends(get_current_user),
+    # Schlüssel für Sprachmodell, SMTP und Suche stehen hier. Wer sie
+    # ändern darf, ist eine andere Frage als wer sie sehen darf.
+    user: CurrentUser = Depends(verwaltet),
 ) -> OrgSettings:
     felder = payload.model_dump(exclude_unset=True)
     async with acquire_as(user.user_id) as conn:

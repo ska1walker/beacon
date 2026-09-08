@@ -594,6 +594,8 @@ export interface Wer {
   org_id: string;
   login_username: string;
   sitzplatz_gewaehlt: boolean;
+  /** `owner` | `admin` | `member` | `viewer`. */
+  rolle: string;
   /** Was diese Person für sich eingestellt hat. */
   einstellungen: NutzerEinstellungen;
 }

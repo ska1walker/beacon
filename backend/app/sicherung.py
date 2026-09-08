@@ -67,12 +67,25 @@ TABELLEN: list[str] = [
     "oeffentliche_links",
     "mails",
     "audit_log",
+    # Offene Einladungen überleben eine Neuinstallation, damit ein Link,
+    # den jemand schon in der Hand hat, weiter trägt. `sitzungen` und
+    # `anmeldeversuche` bewusst nicht: Eine zurückgespielte Sitzung wäre
+    # ein Wiedereinspielen von Zugängen, und eine zurückgespielte Bremse
+    # sperrte Menschen für etwas aus, das lange her ist.
+    "einladungen",
 ]
 
 # Tabellen, die bewusst nicht im Abzug stehen: Identität und Zugehörigkeit
 # legt Olares beim Anmelden neu an (die Nutzer gehen gesondert mit, siehe
 # `nutzer`), und die Einstellungen gehen als eigener Block.
-AUSGENOMMEN = {"orgs", "users", "user_org_roles", "org_settings"}
+# Absichtlich nicht im Abzug. `sitzungen`: Eine zurückgespielte Sitzung
+# wäre ein Wiedereinspielen von Zugängen — wer sich vor Wochen abgemeldet
+# hat, wäre wieder drin. `anmeldeversuche`: Eine zurückgespielte Bremse
+# sperrte Menschen für Tippfehler aus, die lange her sind.
+AUSGENOMMEN = {
+    "orgs", "users", "user_org_roles", "org_settings",
+    "sitzungen", "anmeldeversuche",
+}
 
 # Tabellen ohne eigene org_id — sie hängen an einer Elterntabelle.
 UEBER_ELTERN: dict[str, str] = {
@@ -91,6 +104,18 @@ def ablage() -> pathlib.Path:
     ordner = pathlib.Path(settings.app_data_dir) / "sicherungen"
     ordner.mkdir(parents=True, exist_ok=True)
     return ordner
+
+
+def _zeit(wert: Any) -> datetime | None:
+    """Ein Zeitstempel aus dem Abzug — dort steht er als ISO-Text."""
+    if isinstance(wert, datetime):
+        return wert
+    if isinstance(wert, str) and wert:
+        try:
+            return datetime.fromisoformat(wert)
+        except ValueError:
+            return None
+    return None
 
 
 def _wandelbar(wert: Any) -> Any:
@@ -123,7 +148,8 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     # Neuinstallation nicht ins Leere zeigt.
     nutzer = await conn.fetch(
         """
-        select u.id, u.olares_username, u.display_name, u.email, u.zugang, u.einstellungen, r.role
+        select u.id, u.olares_username, u.display_name, u.email, u.zugang, u.einstellungen,
+               u.passwort_hash, u.passwort_am, r.role
         from public.users u
         join public.user_org_roles r on r.user_id = u.id
         where r.org_id = $1
@@ -265,8 +291,10 @@ async def _nutzerzuordnung(
         if heutige is None and eintrag.get("zugang") == "sitzplatz":
             heutige = await conn.fetchval(
                 """
-                insert into public.users (olares_username, display_name, email, zugang, einstellungen)
-                values ($1, $2, $3, 'sitzplatz', $4::jsonb)
+                insert into public.users
+                  (olares_username, display_name, email, zugang, einstellungen,
+                   passwort_hash, passwort_am)
+                values ($1, $2, $3, 'sitzplatz', $4::jsonb, $5, $6)
                 on conflict (olares_username) do update set display_name = excluded.display_name
                 returning id
                 """,
@@ -274,6 +302,8 @@ async def _nutzerzuordnung(
                 eintrag.get("display_name"),
                 eintrag.get("email"),
                 einst,
+                eintrag.get("passwort_hash"),
+                _zeit(eintrag.get("passwort_am")),
             )
         elif heutige is not None:
             # Wer schon da ist und schon etwas eingestellt hat, behält es —
@@ -283,6 +313,16 @@ async def _nutzerzuordnung(
                 "where id = $1 and einstellungen = '{}'::jsonb",
                 heutige, einst,
             )
+            # Der Passwort-Hash kommt mit — sonst stünde nach einer
+            # Neuinstallation im Modus `eigen` niemand mehr vor der Tür,
+            # der hineinkäme: Der Olares-Kopf zählt dort nicht mehr. Nur
+            # füllen, nie überschreiben; ein neu gesetztes Passwort gewinnt.
+            if eintrag.get("passwort_hash"):
+                await conn.execute(
+                    "update public.users set passwort_hash = $2, passwort_am = $3 "
+                    "where id = $1 and passwort_hash is null",
+                    heutige, eintrag["passwort_hash"], _zeit(eintrag.get("passwort_am")),
+                )
 
         if heutige is not None:
             # Die Mitgliedschaft gehört dazu: Ohne sie könnte der Sitzplatz

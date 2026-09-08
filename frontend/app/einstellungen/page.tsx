@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { OrgSettings } from "@/lib/typen";
+import type { OrgSettings, Wer } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
@@ -13,7 +13,7 @@ import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
 import { Postfachblock } from "@/components/postfach";
-import { Mitgliederblock } from "@/components/mitglieder";
+import { Mitgliederblock, Passwortblock } from "@/components/mitglieder";
 import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
 import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
@@ -169,11 +169,14 @@ function Inhalt() {
         ))}
       </nav>
 
+      <Rollenhinweis />
+
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 640px)" }}>
         {bereich === "firma" && (
           <>
             <Absenderblock />
             <Mitgliederblock />
+            <Passwortblock />
           </>
         )}
         {bereich === "vertrieb" && (
@@ -216,5 +219,32 @@ export default function EinstellungenSeite() {
     <Suspense fallback={<Laedt />}>
       <Inhalt />
     </Suspense>
+  );
+}
+
+/**
+ * Sagt vorher, was nicht geht.
+ *
+ * Schlüssel, Sicherung und Team ändert nur, wer verwaltet — das setzt der
+ * Server durch. Ohne diesen Satz drückt ein Mitglied auf „Speichern" und
+ * bekommt eine Absage, deren Grund es nicht kennt. Die Knöpfe bleiben
+ * stehen: Sie zu verstecken hieße, dass niemand mehr sieht, was hier
+ * überhaupt einstellbar ist.
+ */
+function Rollenhinweis() {
+  const wer = useQuery({
+    queryKey: ["wer"],
+    queryFn: () => api.get<Wer>("/api/mitglieder/wer"),
+  });
+  const rolle = wer.data?.rolle;
+  if (!rolle || rolle === "owner" || rolle === "admin") return null;
+
+  return (
+    <div className="hinweis" data-art="achtung" style={{ maxWidth: 640, marginBottom: "var(--am-raum-4)" }}>
+      <span>
+        Sie können hier alles <strong>ansehen</strong>. Ändern lassen sich Einstellungen,
+        Zugangsdaten, Team und Sicherung nur von der Person, der diese Organisation gehört.
+      </span>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app import anmeldung as anmeldung_kern
 from app import anreicherung as anreicherung_kern
 from app import erkenntnisse as erkenntnisse_kern
 from app import podcast as podcast_kern
@@ -41,6 +42,7 @@ from app.routers import (
     tasks,
     tickets,
 )
+from app.routers import anmeldung as anmeldung_router
 from app.routers import assistent as assistent_router
 from app.routers import erkenntnisse as erkenntnisse_router
 from app.routers import fehler as fehler_router
@@ -314,6 +316,26 @@ async def _podcastschleife() -> None:
         await asyncio.sleep(3600)
 
 
+async def _sitzungsschleife() -> None:
+    """Räumt abgelaufene Sitzungen weg — einmal am Tag genügt.
+
+    Eine abgelaufene Zeile gibt keinen Zugang mehr; sie ist nur noch
+    Ballast. Sie stehen zu lassen wäre auch ein stilles Protokoll darüber,
+    wer wann an welchem Gerät saß — und das gehört ins Audit-Log, wenn
+    überhaupt, nicht in eine Tabelle, die niemand pflegt.
+    """
+    while True:
+        await asyncio.sleep(3600)
+        try:
+            async with acquire() as conn:
+                weg = await anmeldung_kern.sitzungen_aufraeumen(conn)
+            if weg:
+                print(f"Sitzungen aufgeräumt: {weg}", flush=True)
+        except Exception as exc:
+            print(f"Sitzungen aufräumen fehlgeschlagen: {exc}", flush=True)
+        await asyncio.sleep(86400)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
@@ -322,8 +344,9 @@ async def lifespan(app: FastAPI):
     post = asyncio.create_task(_postschleife())
     ausgang = asyncio.create_task(_versandschleife())
     podcasts = asyncio.create_task(_podcastschleife())
+    sitzungen = asyncio.create_task(_sitzungsschleife())
     yield
-    for aufgabe in (schleife, post, ausgang, podcasts):
+    for aufgabe in (schleife, post, ausgang, podcasts, sitzungen):
         aufgabe.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await aufgabe
@@ -372,6 +395,7 @@ app.include_router(erfassen.router)
 app.include_router(finden_router.router)
 app.include_router(erkenntnisse_router.router)
 app.include_router(assistent_router.router)
+app.include_router(anmeldung_router.router)
 app.include_router(fehler_router.router)
 app.include_router(podcast_router.router)
 app.include_router(listen.router)

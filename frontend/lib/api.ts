@@ -13,6 +13,29 @@ export class ApiFehler extends Error {
   }
 }
 
+/**
+ * Bei 401 einmal zur Anmeldemaske, mit dem Weg zurück im Gepäck.
+ *
+ * Einmal, nicht je Kachel: Eine Seite stellt mehrere Abfragen gleichzeitig,
+ * und ohne diese Sperre lösten fünf gleichzeitige 401 fünf Weiterleitungen
+ * aus — der Browser käme mit einem Verlauf zurück, in dem der Zurück-Knopf
+ * nichts mehr tut.
+ *
+ * Die Anmeldewege selbst sind ausgenommen: Ein falsches Passwort ist auch
+ * ein 401, und es soll als Meldung im Formular stehen, nicht als Sprung.
+ */
+let leitetUm = false;
+
+function zurZurAnmeldung(pfad: string): void {
+  if (typeof window === "undefined" || leitetUm) return;
+  if (pfad.startsWith("/api/anmeldung") || pfad.startsWith("/api/einladung")) return;
+  const hier = window.location.pathname;
+  if (hier === "/anmelden" || hier.startsWith("/einladung/")) return;
+  leitetUm = true;
+  const weiter = hier + window.location.search;
+  window.location.assign(`/anmelden?weiter=${encodeURIComponent(weiter)}`);
+}
+
 async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
   // Der Sitzplatz geht bei jedem Aufruf mit. Ihn nur beim Anlegen
   // mitzuschicken wäre nicht genug: Auch das Protokoll einer Änderung
@@ -28,6 +51,8 @@ async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
   for (const [name, wert] of Object.entries(koepfe)) if (!wert) delete koepfe[name];
 
   const antwort = await fetch(pfad, { ...init, headers: koepfe });
+
+  if (antwort.status === 401) zurZurAnmeldung(pfad);
 
   if (!antwort.ok) {
     // FastAPI legt den Grund unter `detail` ab. Steht dort nichts

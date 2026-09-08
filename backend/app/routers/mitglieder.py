@@ -20,8 +20,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import audit
-from app.auth import CurrentUser, get_current_user
+from app import anmeldung, audit
+from app.auth import CurrentUser, get_current_user, verwaltet
+from app.config import settings
 from app.db import acquire_as
 
 router = APIRouter(prefix="/api/mitglieder", tags=["mitglieder"])
@@ -56,6 +57,9 @@ class Wer(BaseModel):
     org_id: UUID
     # Der Olares-Zugang, über den der Request hereinkam.
     login_username: str
+    # `owner` | `admin` | `member` | `viewer`. Die Oberfläche sagt damit
+    # vorher, was nicht geht, statt es den Server abweisen zu lassen.
+    rolle: str = "member"
     # Wahr, wenn ein anderer Sitzplatz als der des Zugangs gewählt ist.
     sitzplatz_gewaehlt: bool
     # Was diese Person für sich eingestellt hat — Favoriten in der Navigation.
@@ -113,7 +117,7 @@ def _kennung(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", ersetzt).strip("-") or "person"
 
 
-def _wer(user: CurrentUser, einstellungen: dict[str, Any]) -> Wer:
+def _wer(user: CurrentUser, einstellungen: dict[str, Any], rolle: str = "member") -> Wer:
     return Wer(
         user_id=user.user_id,
         display_name=user.display_name,
@@ -121,14 +125,23 @@ def _wer(user: CurrentUser, einstellungen: dict[str, Any]) -> Wer:
         login_username=user.login_username or user.olares_username,
         sitzplatz_gewaehlt=user.sitzplatz,
         einstellungen=einstellungen,
+        rolle=rolle,
     )
+
+
+async def _rolle(conn, user: CurrentUser) -> str:
+    return await conn.fetchval(
+        "select role::text from public.user_org_roles where user_id = $1 and org_id = $2",
+        user.user_id, user.org_id,
+    ) or "member"
 
 
 @router.get("/wer", response_model=Wer)
 async def wer(user: CurrentUser = Depends(get_current_user)) -> Wer:
     async with acquire_as(user.user_id) as conn:
         einst = await _einstellungen(conn, user.user_id)
-    return _wer(user, einst)
+        rolle = await _rolle(conn, user)
+    return _wer(user, einst, rolle)
 
 
 @router.patch("/wer/einstellungen", response_model=Wer)
@@ -156,8 +169,10 @@ async def einstellungen_aendern(
         )
     if roh is None:
         raise HTTPException(404, "Person nicht gefunden")
+    async with acquire_as(user.user_id) as conn:
+        rolle = await _rolle(conn, user)
     daten = json.loads(roh) if isinstance(roh, str | bytes) else roh
-    return _wer(user, daten if isinstance(daten, dict) else {})
+    return _wer(user, daten if isinstance(daten, dict) else {}, rolle)
 
 
 @router.get("", response_model=list[Mitglied])
@@ -180,7 +195,7 @@ async def liste(user: CurrentUser = Depends(get_current_user)) -> list[Mitglied]
 @router.post("", response_model=Mitglied, status_code=201)
 async def anlegen(
     payload: MitgliedIn,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(verwaltet),
 ) -> Mitglied:
     """Legt eine Person ohne eigenen Olares-Zugang an.
 
@@ -243,7 +258,7 @@ async def anlegen(
 async def umbenennen(
     mitglied_id: UUID,
     payload: MitgliedPatch,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(verwaltet),
 ) -> Mitglied:
     """Gibt einer Person einen Namen — auch der mit eigenem Zugang.
 
@@ -284,7 +299,7 @@ async def umbenennen(
 
 
 @router.delete("/{mitglied_id}", status_code=204)
-async def entfernen(mitglied_id: UUID, user: CurrentUser = Depends(get_current_user)) -> None:
+async def entfernen(mitglied_id: UUID, user: CurrentUser = Depends(verwaltet)) -> None:
     """Nimmt eine Person aus der Organisation.
 
     Der Nutzer selbst kann sich nicht entfernen, und eine Person mit
@@ -323,3 +338,38 @@ async def entfernen(mitglied_id: UUID, user: CurrentUser = Depends(get_current_u
         await audit.log_fuer(
             conn, user, action="delete", entity="users", entity_id=mitglied_id
         )
+
+
+@router.post("/{mitglied_id}/einladung", status_code=201)
+async def einladen(mitglied_id: UUID, user: CurrentUser = Depends(verwaltet)) -> dict[str, Any]:
+    """Erzeugt einen Einladungslink für eine Person der Organisation.
+
+    Zurück kommt ein **Link zum Weitergeben**, keine Mail: SMTP ist auf
+    einer frischen Box nicht eingerichtet, und ein Zugang, der am
+    Mailversand hängt, wäre genau dann nicht da, wenn man ihn braucht.
+    Wer den Link hat, setzt das Passwort — er gilt einmal und läuft ab.
+
+    Ältere Einladungen derselben Person werden dabei entwertet.
+    """
+    async with acquire_as(user.user_id) as conn:
+        person = await conn.fetchrow(
+            """
+            select u.id, u.display_name, u.olares_username
+              from public.users u
+              join public.user_org_roles r on r.user_id = u.id
+             where u.id = $1 and r.org_id = $2 and u.deleted_at is null
+            """,
+            mitglied_id, user.org_id,
+        )
+        if person is None:
+            raise HTTPException(404, "Diese Person gehört nicht zu Ihrer Organisation.")
+        token = await anmeldung.einladung_anlegen(conn, mitglied_id, user.org_id, user.user_id)
+        await audit.log_fuer(
+            conn, user, action="update", entity="users", entity_id=mitglied_id,
+            diff={"einladung": "erzeugt"},
+        )
+    return {
+        "pfad": f"/einladung/{token}",
+        "name": person["display_name"] or person["olares_username"],
+        "gilt_tage": settings.einladung_tage,
+    }

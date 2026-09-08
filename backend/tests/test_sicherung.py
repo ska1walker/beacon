@@ -6,6 +6,7 @@ nicht vollständig zurückbringt, ist er wertlos — und das merkt man sonst
 genau einmal, nämlich zu spät.
 """
 
+import json
 import pathlib
 
 import pytest
@@ -448,3 +449,41 @@ async def test_nutzereinstellungen_ueberleben_die_wiederherstellung(datenbank, e
         async with mit_sitzplatz("ziel-einst", neu["id"]) as als_marc:
             assert (await als_marc.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/kampagnen", "/listen"]}
         assert (await ziel.get("/api/mitglieder/wer")).json()["einstellungen"] == {"favoriten": ["/tickets"]}
+
+
+async def test_passwoerter_ueberleben_eine_neuinstallation(datenbank, eigene_ablage):
+    """Ohne diesen Weg wäre eine Neuinstallation im Modus `eigen` eine
+    Aussperrung: Der Olares-Kopf zählt dort nicht mehr, und ohne Hash
+    käme niemand mehr an der Anmeldemaske vorbei — auch der Eigentümer nicht.
+    """
+    from app import anmeldung
+    from app.db import acquire
+
+    async with klient_fuer("pw-abzug") as c:
+        m = (await c.post("/api/mitglieder", json={"display_name": "Hash Traeger"})).json()
+        token = (await c.post(f"/api/mitglieder/{m['id']}/einladung")).json()["pfad"].rsplit("/", 1)[-1]
+        await c.post(f"/api/einladung/{token}", json={"passwort": "ein langes gutes Passwort"})
+        async with acquire_as(await _kennung(c)) as conn:
+            org_id, _ = await _org_und_nutzer(conn)
+            abzug = await sicherung.abzug_erstellen(conn, org_id)
+
+    eintrag = next(n for n in abzug["nutzer"] if n["olares_username"] == m["olares_username"])
+    assert eintrag["passwort_hash"].startswith("$argon2id$")
+
+    # Der Hash geht mit, das Passwort nie: Im Abzug steht es nirgends.
+    assert "ein langes gutes Passwort" not in json.dumps(abzug)
+
+    # Nach dem Zurückspielen in eine Datenbank ohne Hash steht er wieder da.
+    async with acquire() as conn:
+        await conn.execute(
+            "update public.users set passwort_hash = null where id = $1", m["id"]
+        )
+    async with klient_fuer("pw-abzug") as c:
+        ich = await _kennung(c)
+        async with acquire_as(ich) as conn:
+            await sicherung.zurueckspielen(conn, abzug, org_id, ich)
+    async with acquire() as conn:
+        wieder = await conn.fetchval(
+            "select passwort_hash from public.users where id = $1", m["id"]
+        )
+    assert anmeldung.passwort_stimmt(wieder, "ein langes gutes Passwort")

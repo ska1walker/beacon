@@ -743,6 +743,125 @@ Prompt, Sprecherwechsel, je Stimme ihr Modell, Verkettung ohne doppelte
 Köpfe, 0600, Range, Löschen, Automatik einmal je Termin, fremde
 Organisation sieht nichts.
 
+## Anmeldung — warum Beacon das doch selbst macht
+
+Die Hausregel lautet „keine eigene Authentifizierung, das macht Olares".
+Sie gilt weiter für den Normalfall, und der Bruch hier hat einen
+gemessenen Grund.
+
+**Olares kann es für ein Team nicht.** Eine Olares-App wird je Nutzer
+installiert — auf der Box liegt Beacon im Namensraum `beacon-kaivostudio`
+mit `owner: kaivostudio`. Ein zweites Olares-Konto bekäme ein eigenes,
+leeres Beacon mit eigener Datenbank; Marc sähe Kais Bestand nicht. Der
+einzige geteilte Modus ist die *shared app*, und die hat laut Olares'
+Plattformdokumentation ausdrücklich **keinen Entrance und keine URL** —
+sie ist für Hintergrunddienste wie Speaches gedacht. Für mehrere Menschen
+in **einem** Bestand gibt es also keinen Olares-Weg.
+
+Die Sitzplätze waren die bisherige Antwort auf genau diese Lücke. Sie
+schreiben Arbeit einer Person zu, sind aber **keine Anmeldung**: Wer den
+geteilten Zugang hat, kann jeden Platz einnehmen.
+
+### Zwei Modi, und was der Unterschied bedeutet
+
+`ANMELDUNG_MODUS` steht als Literal im Deployment (nicht in `values.yaml`
+— ein Upgrade spielt die Werte der Installation zurück, eine Umstellung
+käme dort nie an):
+
+| Modus | Wer prüft | `X-Bfl-User` | Entrance |
+|---|---|---|---|
+| `olares` (heute) | Envoy-Sidecar mit Authelia | gilt, legt beim ersten Aufruf Nutzer und Organisation an | `internal` |
+| `eigen` | Beacons Sitzung | **gilt nicht** und legt **nichts** an | `public` möglich |
+
+Der zweite Modus ist die Voraussetzung dafür, den Eingang zu öffnen. Ohne
+ihn genügte ein `curl -H 'X-Bfl-User: kaivostudio'`, um Eigentümer zu
+sein und den ganzen Bestand zu lesen.
+
+### Wie ein Zugang entsteht
+
+Es gibt **keine Registrierung**. Der Eigentümer legt unter *Einstellungen ›
+Firma und Team* eine Person an und drückt in ihrer Zeile auf das
+Schlüsselsymbol. Zurück kommt ein Link zum Weitergeben — keine Mail: SMTP
+ist auf einer frischen Box nicht eingerichtet, und ein Zugang, der am
+Mailversand hängt, wäre genau dann nicht da, wenn man ihn braucht.
+
+Der Link gilt sieben Tage und **genau einmal**. Ein neuer Link entwertet
+den alten. Wer ihn öffnet, setzt sein Passwort (mindestens zwölf Zeichen)
+und ist danach angemeldet.
+
+### Was gespeichert wird — und was nicht
+
+- Vom Passwort bleibt ein **argon2id-Hash**, nie das Passwort.
+- Vom Sitzungstoken bleibt ein **SHA-256**. Wer die Datenbank liest, kann
+  sich damit nicht anmelden.
+- Die Sitzung lebt auf dem Server. Ein selbstsigniertes Token im Keks wäre
+  nach „Abmelden" weiter gültig, bis es abläuft; eine Zeile in `sitzungen`
+  lässt sich wirklich beenden.
+- Der Keks `beacon_sitzung` trägt `HttpOnly` (kein JavaScript sieht ihn),
+  `SameSite=Lax` und `Secure`, sobald die Verbindung über TLS kam.
+- Absolut 30 Tage, im Leerlauf 7. Eine Schleife räumt Abgelaufenes weg.
+
+### Was die Anmeldemaske nicht verrät
+
+Falsches Passwort und unbekannter Name antworten **wortgleich** und
+rechnen gleich lang — auch ein Konto ohne hinterlegtes Passwort. Sonst
+wäre die Maske eine Auskunft darüber, wer im Haus arbeitet.
+
+Zehn Fehlversuche je Name in einer Viertelstunde ergeben 429 mit
+`Retry-After`. Je Adresse liegt die Grenze bei fünfzig: Hinter einer
+Adresse sitzt oft ein ganzes Büro, und der Tippfehler des Kollegen darf
+niemanden sonst aussperren. Beide Grenzen zählen **getrennt** —
+zusammengezählt spränge die Bremse schon nach fünf Versuchen.
+
+### Rollen gelten jetzt wirklich
+
+`owner` und `admin` ändern Einstellungen, spielen Sicherungen zurück und
+laden ein. `member` und `viewer` arbeiten im Bestand und bekommen dort
+403. Solange der Eingang `internal` war, durfte jedes Mitglied alles; mit
+offenem Eingang ist das nicht mehr tragbar. Die Einstellungsseite sagt es
+vorher, statt es den Server abweisen zu lassen.
+
+**Der Sitzplatz greift bei eigener Anmeldung nicht mehr.** Er existierte
+für **einen** geteilten Olares-Zugang. Wer sich selbst anmeldet, ist
+bereits er selbst — und mit Sitzplatz nähme ein `member` den Platz des
+Eigentümers ein und erbte dessen Rechte.
+
+Und dort, wo er weiter greift, hängen die Rechte an der **angemeldeten**
+Person, nicht am gewählten Platz. Sonst verlöre der Eigentümer den Zugriff
+auf die Einstellungen, sobald er den Platz eines Mitglieds einnimmt.
+
+### Zwei Dinge, die nur der Browser zeigte
+
+Beide standen in keinem Test und hätten in Betrieb wehgetan:
+
+- **Die Herkunftsprüfung wies jede echte Anmeldung ab.** Der Browser
+  spricht mit dem Frontend, das Frontend leitet ans Backend weiter — im
+  `Host` steht der interne Dienst, nicht die Adresse aus der Adresszeile.
+  Was der Browser sah, steht in `X-Forwarded-Host`.
+- **`Secure` hing am Modus statt an der Verbindung.** So trüge der Keks im
+  Betrieb `olares` auf der Box kein `Secure`, obwohl dort alles über TLS
+  läuft. Jetzt entscheidet `X-Forwarded-Proto`.
+
+### Nach einer Neuinstallation
+
+Der Abzug nimmt die Passwort-Hashes mit — ohne sie wäre eine
+Neuinstallation im Modus `eigen` eine Aussperrung: Der Olares-Kopf zählt
+dort nicht mehr, und ohne Hash käme niemand mehr an der Maske vorbei,
+auch der Eigentümer nicht. Offene Einladungen kommen ebenfalls zurück.
+`sitzungen` und `anmeldeversuche` bewusst nicht: Eine zurückgespielte
+Sitzung wäre ein Wiedereinspielen von Zugängen, eine zurückgespielte
+Bremse sperrte Menschen für Tippfehler aus, die lange her sind.
+
+### Noch offen
+
+Zweiter Faktor (`users.totp_geheimnis` steht bereit, die Migration dafür
+ist getan), Passwort zurücksetzen per Mail (braucht SMTP), „alle Geräte
+abmelden" als Knopf, und die Anmeldungen im Audit-Log.
+
+Tests: `backend/tests/test_anmeldung.py` — 29 Fälle, darunter der
+entscheidende, dass ein gefälschter `X-Bfl-User` im Modus `eigen` weder
+Zugang bringt noch einen Nutzer anlegt.
+
 ## Oberflächenfehler stehen im Pod-Log
 
 Zerbricht die Oberfläche („Application error: a client-side exception“),
