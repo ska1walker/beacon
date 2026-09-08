@@ -23,10 +23,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Assistent } from "@/components/assistent";
-import { Darstellungsschalter } from "@/components/darstellung";
 import { Marke } from "@/components/marke";
 import { Klappschalter, useNavigationKlapp } from "@/components/navigation";
-import { Personenanzeige } from "@/components/person";
+import { Kontozeile, Nachweiszeile } from "@/components/konto";
 import { Suchfeld } from "@/components/suche";
 import {
   GRUPPEN,
@@ -146,11 +145,8 @@ export function Huelle({ children }: { children: React.ReactNode }) {
         )}
 
         <div className="huelle-fuss">
-          <Personenanzeige />
-          <div className="huelle-herkunft">
-            <Darstellungsschalter />
-            <span className="huelle-herkunft-recht">läuft auf dieser Box</span>
-          </div>
+          <Kontozeile />
+          <Nachweiszeile />
         </div>
       </nav>
 

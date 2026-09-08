@@ -722,14 +722,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      schmalen Leiste unten am Bildschirm ist dafür kein Platz — dort ist
      beides ausgeblendet, wie schon vorher der Nachweis. */
   .huelle-fuss,
-  .huelle-herkunft {
+  .nachweis {
     display: none;
-  }
-
-  .huelle-herkunft-recht {
-    font-family: var(--am-schrift-mono);
-    font-size: 0.625rem;
-    color: var(--am-text-deaktiviert);
   }
 
 
@@ -959,7 +953,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     html[data-navigation="eingeklappt"] .huelle-fuss { padding: 0; align-items: center; }
     html[data-navigation="eingeklappt"] .person-text,
     html[data-navigation="eingeklappt"] .person-pfeil,
-    html[data-navigation="eingeklappt"] .huelle-herkunft { display: none; }
+    html[data-navigation="eingeklappt"] .nachweis { display: none; }
+    html[data-navigation="eingeklappt"] .person-knopf { justify-content: center; padding-inline: 0; }
 
     .huelle-fuss {
       display: flex;
@@ -969,13 +964,20 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       padding: 0 var(--am-raum-3);
     }
 
-    .huelle-herkunft {
+    .nachweis {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: var(--am-raum-2);
+      padding: var(--am-raum-1) var(--am-raum-2);
+      border-radius: var(--am-radius-klein);
       font-size: 0.6875rem;
       line-height: 1.4;
+      color: var(--am-text-gedaempft);
     }
+    .nachweis svg { flex: none; }
+    .nachweis:hover { color: var(--am-text-primaer); background: var(--am-flaeche-2); }
+    .nachweis:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+    .nachweis[data-extern="true"] svg { color: var(--am-gold-beschriftung); }
 
     .huelle-inhalt {
       grid-row: 1;
@@ -1720,31 +1722,26 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      angemeldet ist immer derselbe Olares-Zugang. */
   .person { position: relative; }
 
+  /* Eine Zeile, kein Kasten: Wer hier steht, ist eine Auskunft, keine
+     Handlung — der Rahmen wog früher schwerer als jeder Eintrag darüber.
+     Bedienbar bleibt sie trotzdem, sie öffnet Sitzplatz und Darstellung. */
   .person-knopf {
     display: flex;
     align-items: center;
     gap: var(--am-raum-2);
     width: 100%;
+    min-height: var(--am-ziel-zeiger);
     padding: var(--am-raum-2);
-    border: 1px solid var(--am-rand);
+    border: 0;
     border-radius: var(--am-radius-mittel);
-    background: var(--am-seite);
+    background: transparent;
     color: var(--am-text-primaer);
     font-family: var(--am-schrift-sans);
     text-align: left;
     cursor: pointer;
   }
 
-  /* Ohne zweite Person gibt es nichts zu wählen — dann ist es eine
-     Anzeige und darf sich nicht wie eine Schaltfläche anfühlen. */
-  .person-knopf[data-still="true"] {
-    cursor: default;
-    background: transparent;
-    border-color: transparent;
-    padding-inline: 0;
-  }
-
-  .person-knopf:not([data-still="true"]):hover { background: var(--am-flaeche-2); }
+  .person-knopf:hover { background: var(--am-flaeche-2); }
 
   .person-knopf:focus-visible {
     outline: 2px solid var(--am-fokus-ring);
@@ -1756,8 +1753,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: var(--am-radius-voll);
     background: var(--am-blau-600);
     color: #fff;
@@ -1808,6 +1805,26 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     border-radius: var(--am-radius-mittel);
     background: var(--am-flaeche-3);
   }
+
+  /* Beschriftung eines Abschnitts im Menü — wie die Gruppentitel der
+     Navigation: klein, versal, gedämpft. */
+  .konto-abschnitt {
+    margin: 0 0 var(--am-raum-1);
+    padding: var(--am-raum-1) var(--am-raum-2);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--am-text-gedaempft);
+  }
+
+  .konto-teil {
+    margin-top: var(--am-raum-2);
+    padding-top: var(--am-raum-2);
+    border-top: 1px solid var(--am-trennlinie);
+  }
+
+  .person-liste .darstellung-schalter { margin: 0 var(--am-raum-2) var(--am-raum-1); }
 
   .person-erklaerung {
     font-size: 0.6875rem;

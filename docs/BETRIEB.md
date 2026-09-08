@@ -583,9 +583,39 @@ Inline-Script als `html[data-navigation="eingeklappt"]` gesetzt
 (`components/navigation.tsx`, wie die Darstellung). Eingeklappt zeigt jeder
 Eintrag seinen Namen als Tooltip; „Mehr“ öffnet auch dann das volle Feld.
 
+**Der Fuß** trug bis 0.5.5 drei Dinge nebeneinander, die nichts
+miteinander zu tun haben: eine Personenkarte mit Rahmen (schwerer als
+jeder Eintrag darüber, mit der Unterzeile „angemeldet“ — was man ohnehin
+sieht), den Dreifach-Schalter für die Darstellung und den Satz „läuft auf
+dieser Box“ in 10-px-Monoschrift. Seit 0.5.6 sind es zwei Zeilen mit
+Aussage (`components/konto.tsx`):
+
+*Die Kontozeile* ist ruhig — Kreis, Name, kein Kasten — und öffnet ein
+Menü nach oben mit **Sitzplatz** (nur bei mehr als einer Person) und
+**Darstellung**. Das Menü schließt bei Escape, Klick außerhalb und
+Seitenwechsel und gibt den Fokus zurück; die alte Personenliste schloss
+nur durch Auswahl. Die zweite Zeile unter dem Namen erscheint nur, wenn
+ein Sitzplatz gewählt ist — dann sagt sie etwas.
+
+*Die Nachweiszeile* nennt den **gemessenen** Stand und führt auf
+*Einstellungen › Daten › Wohin Daten gehen*. `lib/datenwege.ts` prüft
+jeden eingetragenen Endpunkt (Sprachmodell, Sprachausgabe, Suchdienst,
+SMTP, Postausgang, Brevo): Kubernetes-Dienstname, `localhost` oder
+privates Netz gilt als **auf dieser Box**, alles andere wird gezählt und
+im Tooltip beim Namen genannt — dieselbe Richtung wie Insilos
+`egress.py`, lieber einmal zu viel warnen. Also „Alles auf dieser Box“
+oder „2 Ziele außerhalb“; ohne geladene Einstellungen steht dort
+**nichts**.
+
+Der alte Satz musste weg, weil `docs/DESIGN.md §5` es verlangt: Der
+Nachweis trägt „gemessene Werte — oder gar nicht“, denn „eine Zusage ohne
+Beleg ist schlechter als keine“. Er war zudem falsch geworden: Mit
+eingetragenem Brave-Suchdienst verlässt sehr wohl etwas die Box, und die
+Einstellungen sagten das daneben schon ehrlich.
+
 **Mobil** (unter 1024 px) bleibt die Leiste unten: die ersten Favoriten,
 aufgefüllt aus Start, Leads, Firmen, Kontakte bis vier, dazu „Mehr“ mit
-allen übrigen Bereichen samt Einstellungen.
+allen übrigen Bereichen samt Einstellungen. Der Fuß ist dort ausgeblendet.
 
 ## Assistent — Aufträge in Worten, Handlungen mit Karte
 
