@@ -17,7 +17,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app import anmeldung
+from app import anmeldung, auth
 from app.config import settings
 from app.db import acquire
 from app.main import app
@@ -275,6 +275,85 @@ async def test_eine_sitzung_sieht_nur_die_eigene_organisation(datenbank, monkeyp
         antwort = (await b.get("/api/companies")).json()
         firmen = antwort["items"] if isinstance(antwort, dict) else antwort
         assert "Nur fuer A" not in [f["name"] for f in firmen]
+
+
+# ── Erstinstallation ─────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def eigene_ablage(tmp_path_factory, monkeypatch):
+    """Ein eigener Sicherungsordner. Ohne ihn stellte sich die erste
+    Organisation einer leeren Datenbank aus einem fremden Abzug wieder her
+    — der Wiederanlauf funktionierte zu gut und machte den Test unsauber."""
+    from app import sicherung
+
+    monkeypatch.setattr(sicherung.settings, "app_data_dir", str(tmp_path_factory.mktemp("anm")))
+
+
+async def _leerraeumen():
+    """Eine Datenbank wie nach einer Installation aus dem Markt."""
+    async with acquire() as conn, conn.transaction():
+        await conn.execute("set local app.current_user_id = ''")
+        for tab in ("sitzungen", "einladungen", "anmeldeversuche", "user_org_roles",
+                    "org_settings", "orgs", "users"):
+            await conn.execute(f"alter table public.{tab} disable row level security")
+            await conn.execute(f"delete from public.{tab}")
+            await conn.execute(f"alter table public.{tab} enable row level security")
+    auth._bewohnt = False
+
+
+async def test_eine_frische_installation_laesst_den_ersten_herein(datenbank, monkeypatch, eigene_ablage):
+    """Der Fehler, der Marcs eigene Box unbenutzbar machte.
+
+    Aus dem Markt installiert steht `ANMELDUNG_MODUS=eigen` von Anfang an.
+    Die Datenbank ist leer: kein Nutzer, kein Passwort, keine Einladung —
+    und ohne Ausnahme auch kein Weg, das zu ändern. Es gab 401 auf alles.
+    """
+    await _leerraeumen()
+    eigen_an(monkeypatch)
+    async with klient_fuer("ersterbewohner") as k:
+        wer = await k.get("/api/mitglieder/wer")
+        assert wer.status_code == 200, "Die Erstinstallation war eine Sackgasse"
+        assert wer.json()["rolle"] == "owner"
+        # Und der Bestand steht bereit, nicht nur die Kennung.
+        assert (await k.get("/api/companies")).status_code == 200
+
+
+async def test_mit_dem_ersten_passwort_ist_der_kopf_endgueltig_tot(datenbank, monkeypatch, eigene_ablage):
+    """Die Tür schließt sich selbst — und bleibt zu."""
+    await _leerraeumen()
+    eigen_an(monkeypatch)
+    async with klient_fuer("hausherr") as k:
+        assert (await k.get("/api/companies")).status_code == 200
+        await _konto(k, "Erste Person")
+    # Ein frischer Klient: derselbe Kopf, aber ohne den Sitzungskeks, den
+    # das Einlösen der Einladung gesetzt hat. Sobald irgendwer ein Passwort
+    # hat, trägt der Kopf nichts mehr — auch nicht der des Eigentümers,
+    # der eben noch hereinkam.
+    async with klient_fuer("hausherr") as k:
+        assert (await k.get("/api/companies")).status_code == 401
+        assert (await k.get("/api/settings")).status_code == 401
+    # Ein fremder Kopf legt jetzt auch niemanden mehr an.
+    async with klient_fuer("spaeter-gast") as k:
+        assert (await k.get("/api/companies")).status_code == 401
+    async with acquire() as conn:
+        assert await conn.fetchval(
+            "select count(*) from public.users where olares_username = $1", "spaeter-gast"
+        ) == 0
+
+
+async def test_auf_einer_bewohnten_box_gilt_die_ausnahme_nie(datenbank, monkeypatch):
+    """Kais Box: Dort steht ein Passwort, also greift die Ausnahme nicht —
+    weder für ihn noch für einen erfundenen Namen."""
+    await _leerraeumen()
+    async with klient_fuer("bewohner") as k:
+        await _konto(k, "Wohnt Hier")
+    eigen_an(monkeypatch)
+    auth._bewohnt = False  # als hätte die Anwendung gerade neu gestartet
+    async with klient_fuer("bewohner") as k:
+        assert (await k.get("/api/companies")).status_code == 401
+    async with klient_fuer("frei-erfunden") as k:
+        assert (await k.get("/api/companies")).status_code == 401
 
 
 # ── Einladungen ──────────────────────────────────────────────────────────

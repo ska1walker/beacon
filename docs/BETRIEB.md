@@ -809,6 +809,26 @@ Der zweite Modus ist die Voraussetzung dafür, den Eingang zu öffnen. Ohne
 ihn genügte ein `curl -H 'X-Bfl-User: kaivostudio'`, um Eigentümer zu
 sein und den ganzen Bestand zu lesen.
 
+### Die Erstinstallation braucht eine Ausnahme
+
+Aus dem Markt installiert steht `ANMELDUNG_MODUS=eigen` von Anfang an. Eine
+frische Datenbank hat aber keinen Nutzer, kein Passwort und keine
+Einladung — und ohne Ausnahme auch keinen Weg, das zu ändern. Genau das ist
+am 8. September einem zweiten Nutzer passiert, der Beacon auf seiner
+eigenen Box installierte: 401 auf alles, Sackgasse, App unbrauchbar.
+
+Deshalb gilt seit 0.6.3: **Solange in dieser Datenbank niemand ein Passwort
+hat, zählt der Olares-Kopf weiter.** Mit dem ersten gesetzten Passwort ist
+er endgültig tot, auch für den, der eben noch hereinkam. Die Bedingung ist
+bewusst nicht „gibt es Nutzer?" — der Kopf legt beim ersten Aufruf ja
+selbst einen an, und die Tür fiele zu, bevor jemand ein Passwort setzen
+konnte.
+
+Das ist vertretbar, weil eine frische Installation hinter
+`authLevel: internal` steht: Es kommt ohnehin nur herein, wer an der Box
+angemeldet ist. Die Einstellungsseite sagt es außerdem deutlich, solange
+kein Passwort gesetzt ist.
+
 ### Wie ein Zugang entsteht
 
 Es gibt **keine Registrierung**. Der Eigentümer legt unter *Einstellungen ›

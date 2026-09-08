@@ -169,6 +169,7 @@ function Inhalt() {
         ))}
       </nav>
 
+      <Passworthinweis />
       <Rollenhinweis />
 
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 640px)" }}>
@@ -244,6 +245,34 @@ function Rollenhinweis() {
       <span>
         Sie können hier alles <strong>ansehen</strong>. Ändern lassen sich Einstellungen,
         Zugangsdaten, Team und Sicherung nur von der Person, der diese Organisation gehört.
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Sagt es, statt es zu verschweigen.
+ *
+ * Solange in dieser Installation **niemand** ein Passwort hat, lässt der
+ * Olares-Kopf den ersten noch herein — sonst wäre eine frisch installierte
+ * App eine Sackgasse, 401 auf alles und niemand, der einen Zugang anlegen
+ * könnte. Diese Ausnahme schließt sich mit dem ersten Passwort endgültig.
+ * Bis dahin schützt allein Olares, und das gehört auf den Bildschirm.
+ */
+function Passworthinweis() {
+  const wer = useQuery({
+    queryKey: ["wer"],
+    queryFn: () => api.get<Wer>("/api/mitglieder/wer"),
+  });
+  if (!wer.data || wer.data.passwort_gesetzt) return null;
+
+  return (
+    <div className="hinweis" data-art="achtung" style={{ maxWidth: 640, marginBottom: "var(--am-raum-4)" }}>
+      <span>
+        <strong>Sie haben noch kein Passwort.</strong> Solange niemand hier eines hat, kommt
+        herein, wer an dieser Box angemeldet ist. Setzen Sie eines über das Schlüsselsymbol
+        in Ihrer eigenen Zeile unter „Wer hier arbeitet" — damit gilt der Olares-Zugang für
+        Beacon nicht mehr.
       </span>
     </div>
   );

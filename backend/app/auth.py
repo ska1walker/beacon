@@ -432,6 +432,31 @@ async def _aus_sitzung(keks: str) -> CurrentUser | None:
     )
 
 
+# Sobald einmal ein Passwort existierte, muss nie wieder gefragt werden:
+# Der Weg führt nur in eine Richtung. Ein Neustart setzt den Merker zurück
+# und fragt einmal nach — das kostet eine Abfrage, keine Sicherheit.
+_bewohnt = False
+
+
+async def _noch_unbewohnt() -> bool:
+    """Hat in dieser Datenbank noch **niemand** ein Passwort?
+
+    Das ist die Bedingung der Erstinstallation. Sie ist bewusst nicht „gibt
+    es Nutzer?": Der Kopf legt beim ersten Aufruf ja selbst einen an, und
+    danach stünde die Tür wieder zu, bevor jemand ein Passwort setzen
+    konnte. Erst das erste Passwort schließt sie — endgültig.
+    """
+    global _bewohnt
+    if _bewohnt:
+        return False
+    async with acquire() as conn:
+        vorhanden = await conn.fetchval(
+            "select exists(select 1 from public.users where passwort_hash is not null)"
+        )
+    _bewohnt = bool(vorhanden)
+    return not _bewohnt
+
+
 async def get_current_user(
     request: Request,
     x_bfl_user: str | None = Header(None, alias="X-Bfl-User"),
@@ -444,6 +469,19 @@ async def get_current_user(
     Envoy-Sidecar davorsteht und ihn setzt. Im Modus `eigen` ist der Kopf
     wertlos — sonst genügte `curl -H 'X-Bfl-User: kaivostudio'`, um bei
     offenem Entrance der Eigentümer zu sein.
+
+    Die eine Ausnahme ist die **Erstinstallation**, und sie ist keine
+    Bequemlichkeit, sondern die Rettung: Eine frische Datenbank hat keinen
+    Nutzer, kein Passwort und keine Einladung. Ohne Ausnahme wäre eine aus
+    dem Markt installierte App unbenutzbar — 401 auf alles, und niemand,
+    der einen Zugang anlegen könnte. Genau das ist am 8. September einem
+    zweiten Nutzer passiert, der Beacon frisch auf seiner eigenen Box
+    installierte.
+
+    Solange **niemand** ein Passwort hat, zählt der Kopf deshalb weiter;
+    mit dem ersten Passwort ist er endgültig tot. Eine frische Installation
+    steht dabei hinter `authLevel: internal`, es kommt also ohnehin nur
+    herein, wer an der Box angemeldet ist.
     """
     angemeldet: CurrentUser | None = None
 
@@ -452,7 +490,7 @@ async def get_current_user(
         angemeldet = await _aus_sitzung(keks)
     aus_sitzung = angemeldet is not None
 
-    if angemeldet is None and settings.anmeldung_modus != "eigen":
+    if angemeldet is None and (settings.anmeldung_modus != "eigen" or await _noch_unbewohnt()):
         name = (x_bfl_user or "").strip() or settings.dev_user.strip()
         if name:
             angemeldet = await _ensure_user_and_org(name)

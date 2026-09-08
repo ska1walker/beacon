@@ -596,6 +596,8 @@ export interface Wer {
   sitzplatz_gewaehlt: boolean;
   /** `owner` | `admin` | `member` | `viewer`. */
   rolle: string;
+  /** Hat diese Person ein eigenes Passwort? */
+  passwort_gesetzt: boolean;
   /** Was diese Person für sich eingestellt hat. */
   einstellungen: NutzerEinstellungen;
 }

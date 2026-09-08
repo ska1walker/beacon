@@ -60,6 +60,10 @@ class Wer(BaseModel):
     # `owner` | `admin` | `member` | `viewer`. Die Oberfläche sagt damit
     # vorher, was nicht geht, statt es den Server abweisen zu lassen.
     rolle: str = "member"
+    # Hat diese Person schon ein eigenes Passwort? Solange niemand eines
+    # hat, lässt der Olares-Kopf den ersten noch herein (siehe auth.py) —
+    # und das soll die Oberfläche sagen, nicht verschweigen.
+    passwort_gesetzt: bool = False
     # Wahr, wenn ein anderer Sitzplatz als der des Zugangs gewählt ist.
     sitzplatz_gewaehlt: bool
     # Was diese Person für sich eingestellt hat — Favoriten in der Navigation.
@@ -117,7 +121,12 @@ def _kennung(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", ersetzt).strip("-") or "person"
 
 
-def _wer(user: CurrentUser, einstellungen: dict[str, Any], rolle: str = "member") -> Wer:
+def _wer(
+    user: CurrentUser,
+    einstellungen: dict[str, Any],
+    rolle: str = "member",
+    passwort_gesetzt: bool = False,
+) -> Wer:
     return Wer(
         user_id=user.user_id,
         display_name=user.display_name,
@@ -126,6 +135,7 @@ def _wer(user: CurrentUser, einstellungen: dict[str, Any], rolle: str = "member"
         sitzplatz_gewaehlt=user.sitzplatz,
         einstellungen=einstellungen,
         rolle=rolle,
+        passwort_gesetzt=passwort_gesetzt,
     )
 
 
@@ -136,12 +146,19 @@ async def _rolle(conn, user: CurrentUser) -> str:
     ) or "member"
 
 
+async def _hat_passwort(conn, user: CurrentUser) -> bool:
+    return bool(await conn.fetchval(
+        "select passwort_hash is not null from public.users where id = $1", user.handelnder
+    ))
+
+
 @router.get("/wer", response_model=Wer)
 async def wer(user: CurrentUser = Depends(get_current_user)) -> Wer:
     async with acquire_as(user.user_id) as conn:
         einst = await _einstellungen(conn, user.user_id)
         rolle = await _rolle(conn, user)
-    return _wer(user, einst, rolle)
+        hat = await _hat_passwort(conn, user)
+    return _wer(user, einst, rolle, hat)
 
 
 @router.patch("/wer/einstellungen", response_model=Wer)
@@ -171,8 +188,9 @@ async def einstellungen_aendern(
         raise HTTPException(404, "Person nicht gefunden")
     async with acquire_as(user.user_id) as conn:
         rolle = await _rolle(conn, user)
+        hat = await _hat_passwort(conn, user)
     daten = json.loads(roh) if isinstance(roh, str | bytes) else roh
-    return _wer(user, daten if isinstance(daten, dict) else {}, rolle)
+    return _wer(user, daten if isinstance(daten, dict) else {}, rolle, hat)
 
 
 @router.get("", response_model=list[Mitglied])
