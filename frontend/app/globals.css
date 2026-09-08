@@ -744,7 +744,11 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   @media (min-width: 1024px) {
     .huelle {
-      --huelle-nav-breite: 220px;
+      /* 240 statt 220: Wappen, Wortmarke, „Beacon" und der Klappschalter
+         brauchen zusammen 227 px. Bei 220 lief die Beschriftung aus ihrem
+         Kasten heraus und der Fokusring des Knopfes legte sich über das
+         letzte Zeichen. */
+      --huelle-nav-breite: 240px;
       grid-template-columns: var(--huelle-nav-breite) minmax(0, 1fr);
       grid-template-rows: 1fr;
     }
@@ -785,6 +789,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       display: flex;
       align-items: center;
       gap: var(--am-raum-3);
+      /* Der Schalter behält seinen Platz, die Marke gibt notfalls nach —
+         sonst schiebt sich der Text unter den Knopf statt zu kürzen. */
       height: var(--am-kopfhoehe);
       box-sizing: border-box;
       margin-bottom: var(--am-raum-4);
@@ -912,10 +918,14 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { color: var(--am-gold-beschriftung); }
     .huelle-nav-stern:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
 
+    .huelle-kopfecke .marke { min-width: 0; }
+    .huelle-kopfecke .marke-produkt { overflow: hidden; text-overflow: ellipsis; }
+
     .huelle-klapp {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      flex: none;
       margin-left: auto;
       width: var(--am-ziel-zeiger);
       height: var(--am-ziel-zeiger);
@@ -1070,6 +1080,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   /* Welche der AImighty-Anwendungen das hier ist. Gedämpft: Die Marke
      trägt, das Produktwort ordnet nur ein. */
   .marke-produkt {
+    white-space: nowrap;
     font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.06em;

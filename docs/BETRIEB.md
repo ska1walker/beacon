@@ -577,6 +577,14 @@ Kein Protokolleintrag: eine Vorliebe ist kein Geschäftsdatum. In der
 Sicherung reist `einstellungen` im `nutzer`-Block mit und wird beim
 Wiederanlauf nur gefüllt, wo es leer ist.
 
+**Die Kopfecke** braucht 227 px für Wappen, Wortmarke, „Beacon“ und den
+Klappschalter; die Leiste war 220 px breit. Die Beschriftung lief deshalb
+elf Pixel aus ihrem Kasten und endete zwei Pixel vor dem Knopf, dessen
+Fokusring drei braucht — sichtbar als Rahmen über dem letzten Zeichen
+(0.5.7). Die Leiste ist jetzt 240 px breit (`--huelle-nav-breite`), und
+die Marke darf notfalls kürzen statt überzulaufen. Der Knopf bleibt bei
+40 px, der Zielgröße am Zeiger.
+
 **Einklappen** auf Symbole: Knopf in der Kopfecke oder ⌘B / Strg+B. Zustand
 je Browser im Cookie `beacon-navigation`, vor dem ersten Anstrich per
 Inline-Script als `html[data-navigation="eingeklappt"]` gesetzt
