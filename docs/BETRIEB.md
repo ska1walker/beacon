@@ -789,6 +789,13 @@ Der Link gilt sieben Tage und **genau einmal**. Ein neuer Link entwertet
 den alten. Wer ihn öffnet, setzt sein Passwort (mindestens zwölf Zeichen)
 und ist danach angemeldet.
 
+**Der Eigentümer macht das für sich selbst genauso** — und zwar *bevor*
+der Eingang öffnet. Das Schlüsselsymbol steht auch in seiner eigenen
+Zeile. Wer den Schalter auf `eigen` legt, ohne vorher ein Passwort gesetzt
+zu haben, sperrt sich aus: Der Olares-Kopf zählt dann nicht mehr, und es
+gibt kein Konto, das durch die Maske käme. Zurück hilft dann nur, den
+Modus im Deployment vorübergehend wieder auf `olares` zu setzen.
+
 ### Was gespeichert wird — und was nicht
 
 - Vom Passwort bleibt ein **argon2id-Hash**, nie das Passwort.
