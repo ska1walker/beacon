@@ -3106,23 +3106,32 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      Unten rechts, wie in Relay: ein Knopf mit dem Schild, darüber das
      Panel. Karten sind Vorschläge — Ausführen drückt ein Mensch. */
 
+  /* Kein Kreis mehr: Das Schild steht für sich, in der Höhe, die der
+     Kreis hatte (3,25 rem). Die Breite folgt der viewBox 168 × 210 —
+     `width: auto` hält das Verhältnis, egal wie hoch es steht. Der
+     Schatten hängt am Zeichen statt an einer Fläche, sonst verschwindet
+     das Gold über hellem Inhalt. */
   .assistent-knopf {
     position: fixed;
     right: var(--am-raum-6);
     bottom: calc(var(--am-raum-6) + env(safe-area-inset-bottom));
     z-index: 90;
-    width: 3.25rem;
+    width: auto;
     height: 3.25rem;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: var(--am-radius-voll);
-    background: var(--am-blau-900);
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(5, 23, 41, 0.28);
+    background: transparent;
+    box-shadow: none;
     cursor: pointer;
-    transition: transform var(--am-dauer-kurz) ease, box-shadow var(--am-dauer-kurz) ease;
+    transition: transform var(--am-dauer-kurz) ease;
+  }
+  .assistent-knopf svg {
+    height: 3.25rem;
+    width: auto;
+    filter: drop-shadow(0 6px 16px rgba(5, 23, 41, 0.28));
   }
   .assistent-knopf:hover { transform: translateY(-1px); }
   .assistent-knopf:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 2px; }
@@ -3276,7 +3285,6 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .assistent-panel { bottom: calc(5rem + 3.25rem + var(--am-raum-3) + env(safe-area-inset-bottom)); height: min(30rem, calc(100dvh - 12rem)); }
   }
 
-  .dunkel .assistent-knopf,
   .dunkel .assistent-senden,
   .dunkel .assistent-nachricht.nutzer { border: 1px solid var(--am-rand); }
   .dunkel .assistent-nachricht { background: var(--am-flaeche-2); }

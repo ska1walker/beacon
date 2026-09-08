@@ -78,7 +78,7 @@ export function Assistent() {
         aria-expanded={offen}
         aria-controls="assistent-panel"
       >
-        <Schild size={22} zwinkert={!offen && !senden.isPending} />
+        <Schild size={42} zwinkert={!offen && !senden.isPending} />
       </button>
 
       {offen && (
