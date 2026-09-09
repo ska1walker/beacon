@@ -14,6 +14,7 @@ import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
 import { Postfachblock } from "@/components/postfach";
 import { Mitgliederblock, Passwortblock } from "@/components/mitglieder";
+import { Geraeteblock } from "@/components/geraete";
 import { Eigenschaftenblock } from "@/components/eigenschaften-verwalten";
 import { Pipelinesblock } from "@/components/pipelines-verwalten";
 import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
@@ -179,6 +180,7 @@ function Inhalt() {
             <Absenderblock />
             <Mitgliederblock />
             <Passwortblock />
+            <Geraeteblock />
           </>
         )}
         {bereich === "vertrieb" && (

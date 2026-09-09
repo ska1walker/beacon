@@ -32,7 +32,7 @@ import orjson
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import audit, versand
+from app import audit, tresor, versand
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire, acquire_als_quelle, acquire_as
 from app.routers.eingang import _zeitpunkt, signatur_stimmt
@@ -162,7 +162,10 @@ async def senden(payload: SendenIn, user: CurrentUser = Depends(get_current_user
         "Content-Type": "application/json",
         "X-Post-Event": "mail.send",
         "X-Post-Delivery-ID": delivery_id,
-        "X-Post-Signature": "sha256=" + hmac.new((einst["mail_endpoint_secret"] or "").encode(), roh, hashlib.sha256).hexdigest(),
+        "X-Post-Signature": "sha256=" + hmac.new(
+            (tresor.entschluesseln(einst["mail_endpoint_secret"]) or "").encode(),
+            roh, hashlib.sha256,
+        ).hexdigest(),
     }
     antwort = await _relay_senden(url, roh, kopf)
     # Was der Dienst zurückgibt, ist die Grundlage für jede spätere Antwort

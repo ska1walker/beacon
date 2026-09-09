@@ -28,6 +28,8 @@ from email.utils import parseaddr, parsedate_to_datetime
 from typing import Any
 from uuid import UUID
 
+from app import tresor
+
 # Mehr als das ist keine Anfrage mehr, sondern ein Anhang mit Text daneben.
 MAX_TEXT = 20000
 # Wie viele Nachrichten ein Lauf höchstens mitnimmt. Ein Postfach, das
@@ -220,7 +222,7 @@ async def konfiguration(conn, org_id: UUID) -> Postfach:
         host=z["imap_host"] or "",
         port=z["imap_port"] or 993,
         benutzer=z["imap_benutzer"] or "",
-        passwort=z["imap_passwort"] or "",
+        passwort=tresor.entschluesseln(z["imap_passwort"]) or "",
         ordner=z["imap_ordner"] or "INBOX",
         letzte_uid=z["imap_letzte_uid"],
         uid_gueltigkeit=z["imap_uid_gueltigkeit"],

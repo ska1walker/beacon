@@ -2,11 +2,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app import postfach, versand
+from app import postfach, tresor, versand
 from app.auth import CurrentUser, get_current_user, verwaltet
 from app.db import acquire_as
 from app.llm import load_llm_config
 from app.schemas import Absender, OrgSettings, OrgSettingsIn
+
+# Was nie im Klartext gespeichert und nie zurückgegeben wird.
+GEHEIM = tresor.SPALTEN["org_settings"][1]
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -98,11 +101,13 @@ async def update_settings(
             # versehentlich: Die Oberfläche zeigt ihn nie an, also käme er
             # bei jedem Speichern leer zurück und wäre nach dem ersten
             # Feldwechsel weg. Wer ihn entfernen will, sendet null.
-            if name in (
-                "llm_api_key", "mail_endpoint_secret", "suche_api_key", "imap_passwort",
-                "smtp_passwort", "brevo_api_key", "tts_api_key",
-            ) and wert == "":
+            if name in GEHEIM and wert == "":
                 continue
+            # Geheimnisse gehen verschlüsselt in die Datenbank (app/tresor.py).
+            # Der Schlüssel liegt als Datei neben den Daten, nicht in der
+            # Datenbank — ein Abzug allein gibt damit nichts her.
+            if name in GEHEIM:
+                wert = tresor.verschluesseln(wert)
             await conn.execute(
                 f"update public.org_settings set {name} = $1, updated_at = now(), updated_by = $2 "
                 f"where org_id = $3",

@@ -37,7 +37,7 @@ import asyncpg
 import httpx
 import orjson
 
-from app import audit
+from app import audit, tresor
 from app.llm import LLMConfig, LLMNichtEingerichtet, chat, json_aus_antwort, load_llm_config
 
 if TYPE_CHECKING:
@@ -138,7 +138,7 @@ async def load_einrichtung(conn: asyncpg.Connection, org_id: UUID) -> Einrichtun
     return Einrichtung(
         suche=Suchdienst(
             endpoint_url=((row["suche_endpoint_url"] if row else None) or "").strip(),
-            api_key=((row["suche_api_key"] if row else None) or "").strip(),
+            api_key=(tresor.entschluesseln(row["suche_api_key"] if row else None) or "").strip(),
             region=((row["suche_region"] if row else None) or "").strip().upper(),
         ),
         automatisch=bool(row["anreicherung_automatisch"]) if row else True,

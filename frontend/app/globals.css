@@ -3845,3 +3845,56 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .tor-wo { font-family: var(--am-schrift-mono); overflow-wrap: anywhere; }
 
 .einladung-fuer .mono { font-family: var(--am-schrift-mono); }
+
+/* Wo bin ich überall angemeldet. Eine Liste, keine Kartensammlung — die
+   Zeilen unterscheiden sich nur durch Gerät und Zeit. */
+.geraeteliste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.geraet {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  gap: var(--am-raum-3);
+  align-items: center;
+  padding: var(--am-raum-3) 0;
+  border-bottom: 1px solid var(--am-trennlinie);
+}
+.geraet:last-child { border-bottom: none; }
+
+.geraet-zeichen { color: var(--am-text-gedaempft); display: flex; }
+.geraet[data-aktuell] .geraet-zeichen { color: var(--am-gold-beschriftung); }
+
+.geraet-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.geraet-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+  gap: var(--am-raum-2);
+  flex-wrap: wrap;
+}
+
+/* „dieses Gerät“ ist eine Auszeichnung, kein Zustand — deshalb Gold und
+   kein Ampelton. */
+.geraet-jetzt {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--am-gold-beschriftung);
+  border: 1px solid var(--am-gold-beschriftung);
+  border-radius: 999px;
+  padding: 0 var(--am-raum-2);
+}
+
+.geraet-zeiten {
+  font-size: 0.8125rem;
+  color: var(--am-text-gedaempft);
+  overflow-wrap: anywhere;
+}

@@ -1057,3 +1057,14 @@ export interface Absenderkonto {
   /** Liest Beacon ein Postfach? Nur dann trägt eine Mail `Reply-To` zurück. */
   postfach_aktiv: boolean;
 }
+
+/** Eine offene Sitzung. Kein Token, keine Adresse. */
+export interface Geraet {
+  id: string;
+  erstellt_am: string;
+  zuletzt_am: string;
+  laeuft_ab: string;
+  agent: string | null;
+  /** Das Gerät, von dem diese Anfrage kommt. */
+  aktuell: boolean;
+}

@@ -16,7 +16,7 @@ from app import anmeldung as anmeldung_kern
 from app import anreicherung as anreicherung_kern
 from app import erkenntnisse as erkenntnisse_kern
 from app import podcast as podcast_kern
-from app import sicherung
+from app import sicherung, tresor
 from app.config import settings
 from app.db import acquire, acquire_as, close_pool, init_pool
 from app.routers import (
@@ -339,6 +339,16 @@ async def _sitzungsschleife() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
+    # Was vor dem Tresor angelegt wurde, wird einmal beim Start
+    # verschlüsselt. Ein Fehler hier darf den Start nicht verhindern —
+    # dann liegt eben noch Klartext, und die Anwendung läuft.
+    try:
+        async with acquire() as conn:
+            gezogen = await tresor.nachziehen(conn)
+        if gezogen:
+            print(f"Tresor: {gezogen} Zugangsdaten verschlüsselt", flush=True)
+    except Exception as exc:
+        print(f"Tresor-Nachlauf fehlgeschlagen: {exc}", flush=True)
     await _stammdaten_nachziehen()
     schleife = asyncio.create_task(_sicherungsschleife())
     post = asyncio.create_task(_postschleife())

@@ -9,7 +9,9 @@ darf den Keks bei einem POST nicht mitschicken. Zusätzlich wird der
 `Origin` geprüft, wo er ankommt — Gürtel und Hosenträger, beides billig.
 """
 
+from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -244,3 +246,87 @@ async def einladung_einloesen(
     return Lage(angemeldet=True, name=zeile["display_name"] or zeile["olares_username"], modus=settings.anmeldung_modus)
 
 
+
+
+class Geraet(BaseModel):
+    """Eine offene Sitzung. Kein Token, keine Adresse — nur, was hilft,
+    ein fremdes Gerät zu erkennen."""
+
+    id: UUID
+    erstellt_am: datetime
+    zuletzt_am: datetime
+    laeuft_ab: datetime
+    agent: str | None = None
+    # Das Gerät, von dem diese Anfrage kommt. Es lässt sich nicht beenden,
+    # ohne sich abzumelden — dafür gibt es „Abmelden“.
+    aktuell: bool = False
+
+
+@router.get("/anmeldung/geraete", response_model=list[Geraet])
+async def geraete(request: Request, user: CurrentUser = Depends(get_current_user)) -> list[Geraet]:
+    """Wo bin ich überall angemeldet?
+
+    Sichtbar sind ausschließlich die eigenen Sitzungen — dafür sorgt die
+    Zeilensicherheit über `sitzungen_selbst` und nicht erst diese Abfrage.
+    """
+    keks = request.cookies.get(kern.KEKS)
+    hier = kern.token_hash(keks) if keks else ""
+    async with acquire_as(user.user_id) as conn:
+        zeilen = await conn.fetch(
+            "select id, token_hash, erstellt_am, zuletzt_am, laeuft_ab, agent "
+            "from public.sitzungen "
+            "where user_id = $1 and beendet_am is null and laeuft_ab > now() "
+            "order by zuletzt_am desc",
+            user.user_id,
+        )
+    return [
+        Geraet(
+            id=z["id"], erstellt_am=z["erstellt_am"], zuletzt_am=z["zuletzt_am"],
+            laeuft_ab=z["laeuft_ab"], agent=z["agent"], aktuell=z["token_hash"] == hier,
+        )
+        for z in zeilen
+    ]
+
+
+@router.delete("/anmeldung/geraete/{geraet_id}", status_code=204)
+async def geraet_beenden(
+    geraet_id: UUID, request: Request, user: CurrentUser = Depends(get_current_user)
+) -> Response:
+    """Beendet **eine** Sitzung, serverseitig.
+
+    Die Bedingung `user_id = $2` ist nicht überflüssig neben der
+    Zeilensicherheit: Sie ist die zweite Wand, falls jemand die Policy
+    einmal lockert. Ein fremdes Gerät zu beenden bleibt damit unmöglich,
+    auch wenn man seine Kennung errät.
+    """
+    _herkunft_pruefen(request)
+    async with acquire_as(user.user_id) as conn:
+        getroffen = await conn.fetchval(
+            "update public.sitzungen set beendet_am = now() "
+            "where id = $1 and user_id = $2 and beendet_am is null returning id",
+            geraet_id, user.user_id,
+        )
+    if getroffen is None:
+        raise HTTPException(404, "Dieses Gerät ist nicht (mehr) angemeldet.")
+    return Response(status_code=204)
+
+
+@router.post("/anmeldung/geraete/andere-beenden", status_code=200)
+async def andere_beenden(
+    request: Request, user: CurrentUser = Depends(get_current_user)
+) -> dict[str, int]:
+    """Meldet alle Geräte ab außer diesem.
+
+    Der Knopf, den man drückt, wenn ein Rechner abhandenkommt. Das eigene
+    bleibt: Wer sich beim Aufräumen selbst aussperrt, muss sich neu
+    anmelden und traut sich beim nächsten Mal nicht mehr.
+    """
+    _herkunft_pruefen(request)
+    keks = request.cookies.get(kern.KEKS)
+    async with acquire_as(user.user_id) as conn:
+        ergebnis = await conn.execute(
+            "update public.sitzungen set beendet_am = now() "
+            "where user_id = $1 and beendet_am is null and token_hash <> $2",
+            user.user_id, kern.token_hash(keks) if keks else "",
+        )
+    return {"beendet": int(ergebnis.split()[-1])}

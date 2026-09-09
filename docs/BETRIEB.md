@@ -1000,6 +1000,52 @@ auch der Eigentümer nicht. Offene Einladungen kommen ebenfalls zurück.
 Sitzung wäre ein Wiedereinspielen von Zugängen, eine zurückgespielte
 Bremse sperrte Menschen für Tippfehler aus, die lange her sind.
 
+### Zugangsdaten liegen im Tresor
+
+Seit 0.6.6 stehen SMTP- und IMAP-Passwörter, die API-Schlüssel für
+Sprachmodell, Suche, Sprachausgabe und Brevo, das Webhook-Geheimnis und
+das Relay-Geheimnis **verschlüsselt** in der Datenbank (AES-GCM,
+`app/tresor.py`). Sie müssen im Original wieder herauskommen — ein Dienst
+meldet sich damit an —, ein Hash wie beim Anmeldepasswort ginge also
+nicht.
+
+**Der Schlüssel liegt nicht in der Datenbank**, sondern als Datei
+`tresor.key` unter `/app/data` mit Rechten 0600, erzeugt beim ersten
+Bedarf. Damit schützt der Tresor genau eine, aber wirkliche Sache: einen
+Abzug der Datenbank. Ein Postgres-Dump, ein kopiertes Laufwerk, eine
+Sicherung, die irgendwo landet — daraus ist nichts mehr zu benutzen.
+
+**Wogegen er nicht schützt, und das gehört dazugesagt:** Wer im Pod ist,
+liest die Schlüsseldatei genauso wie die Datenbank. Ein Tresor, dessen
+Schlüssel danebenliegt, trennt zwei Dinge, die sonst zusammen wegkommen —
+mehr verspricht er nicht.
+
+`tresor.SPALTEN` ist der Vertrag: Wer eine Spalte mit einem Geheimnis
+ergänzt und sie dort vergisst, speichert weiter im Klartext, und niemand
+merkt es. Ein Test hält die Liste fest.
+
+Zwei Eigenschaften machen die Umstellung ausfallfrei. `entschluesseln`
+gibt zurück, was es nicht kennt — eine Datenbank aus der Zeit davor
+funktioniert weiter. Und ein Lauf beim Start holt vorhandenen Klartext
+einmal nach; scheitert er, startet die Anwendung trotzdem.
+
+**Geht `tresor.key` verloren**, sind die Zugangsdaten unlesbar und müssen
+neu eingetragen werden. Der Abzug enthält sie ohnehin nicht.
+
+### Wo bin ich überall angemeldet
+
+*Einstellungen › Firma und Team › Ihre Geräte* listet die eigenen offenen
+Sitzungen mit Gerät und Zeitpunkt und beendet einzelne davon — oder alle
+außer dem gerade benutzten. Ohne diese Liste stünde ein vergessener
+Browser dreißig Tage offen, ohne dass es jemand sehen könnte.
+
+Beendet wird **serverseitig**: Der Keks auf dem anderen Gerät ist danach
+wertlos, nicht bloß versteckt. Sichtbar sind ausschließlich die eigenen
+Sitzungen; dafür sorgt die Policy `sitzungen_selbst`, und die Abfrage
+prüft zusätzlich auf `user_id` — eine zweite Wand, falls die Policy einmal
+gelockert wird. Angezeigt werden weder Token noch Adresse, nur die
+Browserkennung, aus der die Oberfläche „Chrome auf Mac" macht.
+
 ### Wenn niemand mehr hereinkommt
 
 Das Passwort gehört **nicht** in die Olares-Umgebungsvariablen. Dort stünde

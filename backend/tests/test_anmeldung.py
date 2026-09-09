@@ -613,3 +613,72 @@ async def test_die_eigene_seite_darf_es_auch_hinter_dem_proxy(datenbank):
             },
         )
         assert fremd.status_code == 403
+
+
+# ── Meine Geräte ─────────────────────────────────────────────────────────
+
+
+async def test_geraete_zeigt_nur_die_eigenen_und_markiert_das_aktuelle(datenbank, monkeypatch):
+    async with klient_fuer("anm-geraete") as k, klient_fuer("anm-geraete") as zweites:
+        name, _ = await _konto(k, "Geraete Person")
+        eigen_an(monkeypatch)
+        assert (await zweites.post("/api/anmeldung", json={"name": name, "passwort": GUT})).status_code == 200
+        assert (await k.post("/api/anmeldung", json={"name": name, "passwort": GUT})).status_code == 200
+
+        liste = (await k.get("/api/anmeldung/geraete")).json()
+        # Drei, nicht zwei: Das Einlösen der Einladung hat oben schon
+        # angemeldet. Genau eines davon ist das Gerät, das gerade fragt.
+        assert len(liste) == 3
+        assert [g["aktuell"] for g in liste].count(True) == 1
+        # Kein Token, keine Adresse — nur, was beim Wiedererkennen hilft.
+        assert set(liste[0]) == {"id", "erstellt_am", "zuletzt_am", "laeuft_ab", "agent", "aktuell"}
+
+
+async def test_ein_fremdes_geraet_laesst_sich_nicht_beenden(datenbank, monkeypatch):
+    """Die Kennung einer fremden Sitzung zu erraten darf nichts nützen."""
+    async with klient_fuer("anm-fremd-geraet-a") as a, klient_fuer("anm-fremd-geraet-b") as b:
+        name_a, _ = await _konto(a, "Geraet Eins")
+        name_b, _ = await _konto(b, "Geraet Zwei")
+        eigen_an(monkeypatch)
+        await a.post("/api/anmeldung", json={"name": name_a, "passwort": GUT})
+        await b.post("/api/anmeldung", json={"name": name_b, "passwort": GUT})
+
+        fremd = (await b.get("/api/anmeldung/geraete")).json()[0]["id"]
+        assert (await a.delete(f"/api/anmeldung/geraete/{fremd}")).status_code == 404
+        # Und die fremde Sitzung lebt weiter.
+        assert (await b.get("/api/companies")).status_code == 200
+
+
+async def test_ein_geraet_beenden_sperrt_genau_dieses_aus(datenbank, monkeypatch):
+    async with klient_fuer("anm-eins-weg") as k, klient_fuer("anm-eins-weg") as verloren:
+        name, _ = await _konto(k, "Verlorenes Geraet")
+        eigen_an(monkeypatch)
+        await verloren.post("/api/anmeldung", json={"name": name, "passwort": GUT})
+        await k.post("/api/anmeldung", json={"name": name, "passwort": GUT})
+
+        das_andere = next(g for g in (await k.get("/api/anmeldung/geraete")).json() if not g["aktuell"])
+        assert (await k.delete(f"/api/anmeldung/geraete/{das_andere['id']}")).status_code == 204
+        assert (await verloren.get("/api/companies")).status_code == 401
+        assert (await k.get("/api/companies")).status_code == 200
+        # Das beendete ist aus der Liste; die übrigen bleiben.
+        uebrig = (await k.get("/api/anmeldung/geraete")).json()
+        assert das_andere["id"] not in [g["id"] for g in uebrig]
+        assert any(g["aktuell"] for g in uebrig)
+
+
+async def test_andere_beenden_laesst_das_eigene_stehen(datenbank, monkeypatch):
+    """Wer beim Aufräumen sich selbst aussperrt, traut sich nie wieder."""
+    async with klient_fuer("anm-alle-weg") as k, klient_fuer("anm-alle-weg") as x, klient_fuer("anm-alle-weg") as y:
+        name, _ = await _konto(k, "Viele Geraete")
+        eigen_an(monkeypatch)
+        for c in (x, y, k):
+            assert (await c.post("/api/anmeldung", json={"name": name, "passwort": GUT})).status_code == 200
+
+        vorher = (await k.get("/api/anmeldung/geraete")).json()
+        antwort = await k.post("/api/anmeldung/geraete/andere-beenden")
+        assert antwort.status_code == 200
+        assert antwort.json()["beendet"] == len(vorher) - 1
+        assert (await k.get("/api/companies")).status_code == 200
+        assert (await x.get("/api/companies")).status_code == 401
+        assert (await y.get("/api/companies")).status_code == 401
+        assert len((await k.get("/api/anmeldung/geraete")).json()) == 1

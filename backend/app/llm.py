@@ -15,6 +15,7 @@ from uuid import UUID
 import asyncpg
 import httpx
 
+from app import tresor
 from app.config import settings
 
 
@@ -56,7 +57,7 @@ async def load_llm_config(conn: asyncpg.Connection, org_id: UUID) -> LLMConfig:
         org_id,
     )
     base = (row["llm_base_url"] if row else None) or settings.llm_base_url
-    key = (row["llm_api_key"] if row else None) or settings.llm_api_key
+    key = tresor.entschluesseln(row["llm_api_key"] if row else None) or settings.llm_api_key
     model = (row["llm_model"] if row else None) or settings.llm_model
     return LLMConfig(base_url=(base or "").strip(), api_key=(key or "").strip(), model=(model or "").strip())
 

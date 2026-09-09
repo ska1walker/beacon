@@ -38,6 +38,7 @@ import asyncpg
 import httpx
 import orjson
 
+from app import tresor
 from app.config import settings
 from app.llm import LLMConfig, chat, json_aus_antwort, load_llm_config
 
@@ -94,7 +95,7 @@ async def load_tts_config(conn: asyncpg.Connection, org_id: UUID) -> TTSConfig:
     )
     return TTSConfig(
         endpoint_url=((row["tts_endpoint_url"] if row else None) or "").strip(),
-        api_key=((row["tts_api_key"] if row else None) or "").strip(),
+        api_key=(tresor.entschluesseln(row["tts_api_key"] if row else None) or "").strip(),
         modell=((row["tts_modell"] if row else None) or "").strip(),
         stimme=((row["tts_stimme"] if row else None) or "").strip(),
         modell_2=((row["tts_modell_2"] if row else None) or "").strip(),

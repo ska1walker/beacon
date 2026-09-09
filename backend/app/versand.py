@@ -34,7 +34,7 @@ from uuid import UUID
 
 import orjson
 
-from app import links
+from app import links, tresor
 from app.config import settings
 
 # Olares adressiert einen Entrance als <appid><index>.<nutzer>.<zone>, mit
@@ -154,7 +154,8 @@ def smtp_aus(einst: dict[str, Any] | None) -> Smtp | None:
         sicherheit = "starttls"
     return Smtp(
         host=host, port=int(e.get("smtp_port") or 587),
-        benutzer=(e.get("smtp_benutzer") or None), passwort=(e.get("smtp_passwort") or None),
+        benutzer=(e.get("smtp_benutzer") or None),
+        passwort=tresor.entschluesseln(e.get("smtp_passwort")) or None,
         sicherheit=sicherheit, absender=absender, absender_name=(e.get("smtp_absender_name") or None),
     )
 
@@ -188,7 +189,8 @@ def smtp_fuer(einst: dict[str, Any] | None, nutzer: dict[str, Any] | None) -> Sm
             sicherheit = "starttls"
         return Smtp(
             host=eigener_host, port=int(n.get("smtp_port") or 587),
-            benutzer=(n.get("smtp_benutzer") or None), passwort=(n.get("smtp_passwort") or None),
+            benutzer=(n.get("smtp_benutzer") or None),
+            passwort=tresor.entschluesseln(n.get("smtp_passwort")) or None,
             sicherheit=sicherheit, absender=adresse, absender_name=name,
         )
 
@@ -339,7 +341,7 @@ class Brevo:
 
 def brevo_aus(einst: dict[str, Any] | None) -> Brevo | None:
     e = einst or {}
-    key = (e.get("brevo_api_key") or "").strip()
+    key = (tresor.entschluesseln(e.get("brevo_api_key")) or "").strip()
     absender = (e.get("marketing_absender") or e.get("smtp_absender") or "").strip()
     if not key or not absender:
         return None

@@ -20,7 +20,7 @@ import orjson
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import ticketeingang
+from app import ticketeingang, tresor
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire, acquire_als_quelle, acquire_as
 
@@ -96,9 +96,15 @@ def signatur_stimmt(secret: str, roh: bytes, kopf: str | None) -> bool:
     Schlüsselreihenfolge und Neu-Serialisierung ändern den Hash. Und der
     Vergleich läuft zeitkonstant — ein naives `==` verrät über die
     Laufzeit, wie viele Zeichen stimmten.
+
+    Entschlüsselt wird **hier**, nicht bei den Aufrufern: Es gibt zwei
+    Empfangswege (`/api/eingang` und `/api/post/eingang`), und einer davon
+    war beim Umstellen auf den Tresor genau deshalb vergessen worden.
+    Klartext aus der Zeit davor geht unverändert durch.
     """
     if not kopf:
         return False
+    secret = tresor.entschluesseln(secret) or ""
     erwartet = "sha256=" + hmac.new(secret.encode(), roh, hashlib.sha256).hexdigest()
     return hmac.compare_digest(erwartet, kopf)
 
@@ -506,7 +512,9 @@ async def quelle_anlegen(
             user.org_id,
             payload.name,
             payload.kind,
-            geheim,
+            # Verschlüsselt in die Datenbank; zurückgegeben wird das
+            # Geheimnis genau einmal, hier, im Klartext.
+            tresor.verschluesseln(geheim),
             payload.tickets_direkt,
         )
     return QuelleNeu(**dict(zeile), pfad=_pfad(zeile["kind"], zeile["id"]), secret=geheim)
