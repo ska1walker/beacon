@@ -1125,13 +1125,19 @@ richtige Hürde: Wer an der Box sitzt, kommt ohnehin an alles heran.
 
 Seit 0.7.0 braucht dieser Weg kein Terminal mehr. Auf der Anmeldeseite
 steht „Passwort vergessen?". Wer dort seinen Zugang nennt, lässt Beacon
-einen Code in den eigenen Datenordner schreiben:
+einen Code in den eigenen Datenordner schreiben. In der **Dateien**-App
+von Olares liegt er hier:
 
-    /app/data/passwort-zuruecksetzen.txt
+    Data › beacon › passwort-zuruecksetzen.txt
 
-Die Datei lässt sich in der Dateien-App von Olares öffnen. Code, Zugang
-und neues Passwort auf der Seite eingeben — fertig. Fünfzehn Minuten
-gültig, danach wertlos.
+Code, Zugang und neues Passwort auf der Seite eingeben — fertig.
+Fünfzehn Minuten gültig, danach wertlos.
+
+**Der Pfad, den man einem Menschen nennt, ist nicht `/app/data`.** Das
+ist der Pfad *im Container*; in der Dateien-App gibt es ihn nicht. Dort
+heißt derselbe Ordner `Data` und darunter der Name der App. 0.7.0 nannte
+zuerst den Containerpfad, und genau daran ist der erste Versuch auf der
+Box gescheitert: Die Datei lag da, nur nicht dort, wo sie gesucht wurde.
 
 **Warum kein Rücksetzlink per Mail:** Auf einer frischen Box ist kein
 Postfach eingerichtet, ein solcher Link käme nie an. Und er verlagerte

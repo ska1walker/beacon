@@ -53,7 +53,7 @@ async def test_der_code_steht_in_der_datei_und_nie_in_der_antwort(datenbank):
     code = _code_aus_der_datei()
     assert code not in antwort.text
     # Die Antwort sagt nur, wo zu schauen ist.
-    assert zuruecksetzen.DATEI in antwort.json()["pfad"]
+    assert zuruecksetzen.DATEI in antwort.json()["ordner"]
     assert antwort.json()["minuten"] == zuruecksetzen.GUELTIG_MINUTEN
 
 
@@ -204,3 +204,12 @@ def test_leerzeichen_statt_bindestriche_gehen_auch():
     code = zuruecksetzen.anfordern("jemand")
     assert zuruecksetzen.stimmt("jemand", code.replace("-", " ").lower())
     assert zuruecksetzen.stimmt("jemand", f"  {code}  ")
+
+
+def test_der_ort_ist_der_klickweg_in_der_dateien_app():
+    """`/app/data` gibt es in der Dateien-App nicht — dort heißt es Data › beacon."""
+    ort = zuruecksetzen.wo_liegt_die_datei()
+    assert ort == f"Data › beacon › {zuruecksetzen.DATEI}"
+    assert "/app/data" not in ort
+    # Für die Kommandozeile bleibt der Pfad im Container erreichbar.
+    assert zuruecksetzen.wo_liegt_die_datei_im_container().endswith(zuruecksetzen.DATEI)

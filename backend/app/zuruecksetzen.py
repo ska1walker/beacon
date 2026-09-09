@@ -144,6 +144,22 @@ def verbrauchen() -> None:
     _pfad().unlink(missing_ok=True)
 
 
+# Wo die Datei in der Dateien-App von Olares auftaucht. `/app/data` ist
+# der Pfad **im Container** — in der Dateien-App gibt es ihn nicht, dort
+# liegt derselbe Ordner unter „Data" mit dem Namen der App. Wer einem
+# Menschen `/app/data` nennt, schickt ihn an eine Stelle, die er nicht
+# finden kann; genau daran ist der erste Versuch gescheitert.
+#
+# Der Ordnername ist der Olares-App-Name, und der ist gleich dem
+# Chart-Namen — `scripts/check-chart.sh` erzwingt das.
+ORDNER_IN_DATEIEN = ("Data", "beacon")
+
+
 def wo_liegt_die_datei() -> str:
-    """Der Pfad, wie er einem Menschen genannt wird."""
+    """Der Weg, den ein Mensch in der Dateien-App klickt."""
+    return " › ".join((*ORDNER_IN_DATEIEN, DATEI))
+
+
+def wo_liegt_die_datei_im_container() -> str:
+    """Derselbe Ort, für die Kommandozeile — Log und Rettungsweg per SSH."""
     return f"{settings.app_data_dir.rstrip('/')}/{DATEI}"

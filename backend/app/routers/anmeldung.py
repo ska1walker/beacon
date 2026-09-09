@@ -52,7 +52,9 @@ class Ruecksetzung(BaseModel):
 class Ablageort(BaseModel):
     """Wo die Datei liegt. Kein Geheimnis — der Weg dorthin ist eines."""
 
-    pfad: str
+    # Der Klickweg in der Dateien-App. `pfad` war früher der Pfad im
+    # Container, und den gibt es in der Dateien-App nicht.
+    ordner: str
     minuten: int
 
 
@@ -252,7 +254,7 @@ async def vergessen(
     if gibt_es:
         zuruecksetzen.anfordern(daten.name.strip())
     return Ablageort(
-        pfad=zuruecksetzen.wo_liegt_die_datei(), minuten=zuruecksetzen.GUELTIG_MINUTEN
+        ordner=zuruecksetzen.wo_liegt_die_datei(), minuten=zuruecksetzen.GUELTIG_MINUTEN
     )
 
 

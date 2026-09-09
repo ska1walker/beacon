@@ -43,7 +43,8 @@ export function passwortAendern(alt: string, neu: string) {
 
 /** Wo der Rücksetzcode liegt. Der Code selbst kommt nie über die Leitung. */
 export type Ablageort = {
-  pfad: string;
+  /** Der Klickweg in der Dateien-App, etwa „Data › beacon › …". */
+  ordner: string;
   minuten: number;
 };
 

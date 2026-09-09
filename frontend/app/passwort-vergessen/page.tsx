@@ -91,8 +91,9 @@ export default function PasswortVergessenSeite() {
       titel="Code eingeben"
       unter={
         <>
-          Öffnen Sie auf dieser Box die Dateien-App und darin{" "}
-          <code className="tor-kennung">{ort.pfad}</code>. Der Code darin gilt {ort.minuten} Minuten.
+          Öffnen Sie auf dieser Box die <strong>Dateien</strong>-App und darin{" "}
+          <code className="tor-kennung">{ort.ordner}</code>. Der Code darin gilt {ort.minuten}{" "}
+          Minuten.
         </>
       }
       fehler={fehler}
