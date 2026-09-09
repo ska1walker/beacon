@@ -54,25 +54,51 @@ def code_neu() -> str:
     return "-".join(roh[i:i + _JE_GRUPPE] for i in range(0, len(roh), _JE_GRUPPE))
 
 
-def anfordern(name: str) -> str:
-    """Schreibt einen frischen Code neben die Daten und gibt ihn zurück.
+def anfordern(name: str, zugaenge: list[str], *, bekannt: bool) -> str | None:
+    """Schreibt die Datei neben die Daten. Gibt den Code, wenn es einen gibt.
 
-    Zurückgegeben wird er nur für den Test — der Aufrufer schickt ihn
-    **nicht** an den Browser. Wer ihn lesen will, muss an die Box.
+    **Die Datei entsteht auch, wenn der Name nicht stimmt.** Das ist kein
+    Versehen: Auf einer fremden Box weiß der Mensch oft gar nicht, wie
+    sein Zugang heißt — auf Kais Box heißt Marc `marc-bayer`, auf seiner
+    eigenen anders. Die Seite darf ihm das nicht sagen, sie ist öffentlich.
+    Die Datei darf es: Sie liegt hinter derselben Hürde wie der Code, und
+    wer sie öffnen kann, hat ohnehin Zugriff auf alles.
+
+    Zurückgegeben wird der Code nur an den Aufrufer, damit Tests ihn
+    prüfen können — an den Browser geht er nie.
     """
-    code = code_neu()
+    code = code_neu() if bekannt else None
     laeuft_ab = datetime.now(UTC) + timedelta(minutes=GUELTIG_MINUTEN)
-    text = (
-        "Beacon — Passwort zurücksetzen\n"
-        "==============================\n\n"
-        f"Zugang:     {name}\n"
-        f"Code:       {code}\n"
-        f"Gültig bis: {laeuft_ab.astimezone().strftime('%d.%m.%Y %H:%M:%S %Z')}\n\n"
-        "Diesen Code auf der Anmeldeseite von Beacon eingeben, zusammen\n"
-        "mit dem Zugang oben und dem neuen Passwort.\n\n"
-        "Wer diese Datei nicht angefordert hat, kann sie löschen. Solange\n"
-        "sie liegt, gilt der Code — aber nur, wer an diese Box kommt, kann\n"
-        "ihn lesen.\n"
+
+    kopf = "Beacon — Passwort zurücksetzen\n==============================\n\n"
+    if code is not None:
+        teil = (
+            f"Zugang:     {name}\n"
+            f"Code:       {code}\n"
+            f"Gültig bis: {laeuft_ab.astimezone().strftime('%d.%m.%Y %H:%M:%S %Z')}\n\n"
+            "Diesen Code auf der Anmeldeseite von Beacon eingeben, zusammen\n"
+            "mit dem Zugang oben und dem neuen Passwort.\n"
+        )
+    elif zugaenge:
+        teil = (
+            f"Für „{name}\" gibt es hier keinen Zugang mit Passwort.\n\n"
+            "Auf dieser Box heißen die Zugänge:\n"
+            + "".join(f"  - {z}\n" for z in zugaenge)
+            + "\nEinen davon auf der Seite eintragen und noch einmal auf\n"
+              "„Code erzeugen\" drücken.\n"
+        )
+    else:
+        teil = (
+            "Auf dieser Box hat noch niemand ein Passwort gesetzt.\n\n"
+            "Solange das so ist, brauchen Sie keines: Öffnen Sie Beacon von\n"
+            "der Olares-Oberfläche dieser Box aus, dann sind Sie drin. Setzen\n"
+            "Sie dort unter Einstellungen ein Passwort — erst das schließt\n"
+            "die Tür.\n"
+        )
+
+    fuss = (
+        "\nWer diese Datei nicht angefordert hat, kann sie löschen. Nur wer\n"
+        "an diese Box kommt, kann sie lesen.\n"
     )
     ziel = _pfad()
     ziel.parent.mkdir(parents=True, exist_ok=True)
@@ -81,7 +107,7 @@ def anfordern(name: str) -> str:
     # der Code für jeden lesbar da.
     kennung = os.open(ziel, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(kennung, "w", encoding="utf-8") as datei:
-        datei.write(text)
+        datei.write(kopf + teil + fuss)
     return code
 
 

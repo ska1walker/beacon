@@ -61,7 +61,13 @@ export default function PasswortVergessenSeite() {
     return (
       <Tor
         titel="Passwort vergessen"
-        unter="Beacon legt einen Code in seinen Datenordner auf dieser Box. Sie brauchen Zugriff auf die Box, um ihn zu lesen."
+        unter={
+          <>
+            Beacon legt einen Code in seinen Datenordner auf dieser Box. Sie brauchen Zugriff
+            auf die Box, um ihn zu lesen. Kennen Sie Ihren Namen nicht, tragen Sie
+            irgendetwas ein — die Datei nennt dann die Zugänge dieser Box.
+          </>
+        }
         fehler={fehler}
         laeuft={laeuft}
         knopf="Code erzeugen"

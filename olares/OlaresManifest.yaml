@@ -27,7 +27,7 @@ metadata:
   title: Beacon
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
-  version: 0.7.1
+  version: 0.7.2
   categories:
     - AI
 
@@ -100,7 +100,7 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.7.1'
+  versionName: '0.7.2'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
   promoteImage:
@@ -191,7 +191,7 @@ options:
   # Einstellungen. Er erzieht nur dazu, den zweiten Faktor im Halbschlaf
   # wegzuklicken — und das ist eine Verschlechterung, keine Härtung.
   #
-  # Der Schutz von Beacon hängt seit 0.7.1 **nicht mehr am Entrance**. Der
+  # Der Schutz von Beacon hängt seit 0.7.2 **nicht mehr am Entrance**. Der
   # steht oben auf `public`, weil das Team von außerhalb des Netzes
   # arbeitet und eine Olares-App je Nutzer installiert wird — ein zweites
   # Box-Konto bekäme ein eigenes, leeres Beacon und sähe den Bestand

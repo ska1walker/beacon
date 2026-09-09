@@ -64,16 +64,36 @@ async def test_die_datei_ist_nur_fuer_den_eigentuemer_lesbar(datenbank):
     assert oct(_datei().stat().st_mode)[-3:] == "600"
 
 
-async def test_ein_unbekannter_name_antwortet_gleich_und_schreibt_nichts(datenbank):
-    """Sonst wäre dieser Endpunkt das Namensverzeichnis der Box."""
+async def test_ein_unbekannter_name_antwortet_gleich_und_gibt_keinen_code(datenbank):
+    """Über das Netz ist nicht zu erfahren, ob es den Namen gibt."""
     await _zugang_mit_passwort("zur-echt", "ein-langes-passwort-3")
     async with klient_fuer("zur-echt") as k:
         echt = await k.post("/api/anmeldung/vergessen", json={"name": "zur-echt"})
-        _datei().unlink(missing_ok=True)
         erfunden = await k.post("/api/anmeldung/vergessen", json={"name": "gibt-es-nicht-xyz"})
     assert echt.status_code == erfunden.status_code == 200
     assert echt.json() == erfunden.json()
-    assert not _datei().exists()
+    # Die Datei liegt trotzdem — aber ohne Code.
+    text = _datei().read_text(encoding="utf-8")
+    assert "Code:" not in text
+    assert "gibt-es-nicht-xyz" in text
+
+
+async def test_bei_falschem_namen_nennt_die_datei_die_zugaenge(datenbank):
+    """Auf einer fremden Box weiß der Mensch oft nicht, wie sein Zugang heißt.
+
+    Die Seite darf es nicht sagen, sie ist öffentlich. Die Datei darf es:
+    Wer sie öffnen kann, kommt ohnehin an alles auf dieser Box.
+    """
+    await _zugang_mit_passwort("zur-liste-a", "ein-langes-passwort-12")
+    await _zugang_mit_passwort("zur-liste-b", "ein-langes-passwort-13")
+    async with klient_fuer("zur-liste-a") as k:
+        antwort = await k.post("/api/anmeldung/vergessen", json={"name": "keine-ahnung"})
+    assert antwort.status_code == 200
+    text = _datei().read_text(encoding="utf-8")
+    assert "zur-liste-a" in text
+    assert "zur-liste-b" in text
+    # Und die Antwort an den Browser verrät davon nichts.
+    assert "zur-liste-a" not in antwort.text
 
 
 async def test_mit_dem_code_gelingt_ein_neues_passwort(datenbank):
@@ -186,8 +206,8 @@ async def test_ein_zu_kurzes_passwort_wird_abgelehnt(datenbank):
 
 def test_ein_neuer_code_ueberschreibt_den_alten():
     """Sonst sammelten sich Codes an, von denen jeder gültig bliebe."""
-    erster = zuruecksetzen.anfordern("jemand")
-    zweiter = zuruecksetzen.anfordern("jemand")
+    erster = zuruecksetzen.anfordern("jemand", ["jemand"], bekannt=True)
+    zweiter = zuruecksetzen.anfordern("jemand", ["jemand"], bekannt=True)
     assert erster != zweiter
     assert zuruecksetzen.stimmt("jemand", zweiter)
     assert not zuruecksetzen.stimmt("jemand", erster)
@@ -195,13 +215,13 @@ def test_ein_neuer_code_ueberschreibt_den_alten():
 
 def test_der_code_ist_gegen_gross_klein_und_striche_gutmuetig():
     """Er wird abgetippt. Ein Bindestrich zu wenig darf nicht scheitern."""
-    code = zuruecksetzen.anfordern("jemand")
+    code = zuruecksetzen.anfordern("jemand", ["jemand"], bekannt=True)
     assert zuruecksetzen.stimmt("JEMAND", code.replace("-", "").lower())
 
 
 def test_leerzeichen_statt_bindestriche_gehen_auch():
     """Abgetippt wird selten genau so, wie es dasteht."""
-    code = zuruecksetzen.anfordern("jemand")
+    code = zuruecksetzen.anfordern("jemand", ["jemand"], bekannt=True)
     assert zuruecksetzen.stimmt("jemand", code.replace("-", " ").lower())
     assert zuruecksetzen.stimmt("jemand", f"  {code}  ")
 
@@ -213,3 +233,11 @@ def test_der_ort_ist_der_klickweg_in_der_dateien_app():
     assert "/app/data" not in ort
     # Für die Kommandozeile bleibt der Pfad im Container erreichbar.
     assert zuruecksetzen.wo_liegt_die_datei_im_container().endswith(zuruecksetzen.DATEI)
+
+
+def test_ohne_ein_einziges_passwort_erklaert_die_datei_den_anderen_weg():
+    """Eine frische Box lässt die Olares-Sitzung noch durch — das gehört gesagt."""
+    assert zuruecksetzen.anfordern("wer-auch-immer", [], bekannt=False) is None
+    text = _datei().read_text(encoding="utf-8")
+    assert "noch niemand ein Passwort gesetzt" in text
+    assert "Einstellungen" in text

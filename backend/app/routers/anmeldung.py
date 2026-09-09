@@ -242,17 +242,20 @@ async def vergessen(
                 "Zu viele Versuche. Bitte warten Sie eine Viertelstunde.",
                 headers={"Retry-After": str(exc.sekunden)},
             ) from exc
-        gibt_es = await conn.fetchval(
-            "select exists(select 1 from public.users "
-            "where lower(olares_username) = lower($1) and deleted_at is null "
-            "and passwort_hash is not null)",
-            daten.name.strip(),
+        # Alle Zugänge mit Passwort — sie kommen in die Datei, nicht in die
+        # Antwort. Auf einer fremden Box weiß der Mensch oft nicht, wie
+        # sein Zugang heißt; wer die Datei öffnen kann, darf es erfahren.
+        zeilen = await conn.fetch(
+            "select olares_username from public.users "
+            "where deleted_at is null and passwort_hash is not null "
+            "order by created_at"
         )
+        zugaenge = [z["olares_username"] for z in zeilen]
+        gibt_es = any(z.lower() == daten.name.strip().lower() for z in zugaenge)
         # Der Versuch zählt in jedem Fall. Zählte er nur beim Treffer,
         # ließe sich an der Bremse ablesen, welche Namen es gibt.
         await kern.versuch_merken(conn, kennungen)
-    if gibt_es:
-        zuruecksetzen.anfordern(daten.name.strip())
+    zuruecksetzen.anfordern(daten.name.strip(), zugaenge, bekannt=gibt_es)
     return Ablageort(
         ordner=zuruecksetzen.wo_liegt_die_datei(), minuten=zuruecksetzen.GUELTIG_MINUTEN
     )

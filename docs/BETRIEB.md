@@ -1133,6 +1133,19 @@ von Olares liegt er hier:
 Code, Zugang und neues Passwort auf der Seite eingeben — fertig.
 Fünfzehn Minuten gültig, danach wertlos.
 
+**Die Datei entsteht auch bei falschem Namen** und nennt dann die Zugänge
+dieser Box. Auf einer fremden Box ist das der entscheidende Punkt: Dort
+weiß der Mensch oft gar nicht, wie sein Zugang heißt — auf Kais Box heißt
+Marc `marc-bayer`, auf seiner eigenen anders. Die Seite darf ihm das nicht
+sagen, sie steht öffentlich im Netz. Die Datei darf es, denn sie liegt
+hinter derselben Hürde wie der Code selbst.
+
+Hat auf der Box **noch niemand** ein Passwort gesetzt, sagt die Datei das
+und nennt den anderen Weg: Beacon von der Olares-Oberfläche der Box aus
+öffnen. Solange kein Passwort gesetzt ist, lässt die Anwendung die
+Box-Sitzung durch (`_noch_unbewohnt()`), und unter Einstellungen wird das
+erste gesetzt.
+
 **Der Pfad, den man einem Menschen nennt, ist nicht `/app/data`.** Das
 ist der Pfad *im Container*; in der Dateien-App gibt es ihn nicht. Dort
 heißt derselbe Ordner `Data` und darunter der Name der App. 0.7.0 nannte
