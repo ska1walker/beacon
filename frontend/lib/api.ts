@@ -30,7 +30,7 @@ function zurZurAnmeldung(pfad: string): void {
   if (typeof window === "undefined" || leitetUm) return;
   if (pfad.startsWith("/api/anmeldung") || pfad.startsWith("/api/einladung")) return;
   const hier = window.location.pathname;
-  if (hier === "/anmelden" || hier.startsWith("/einladung/")) return;
+  if (hier === "/anmelden" || hier === "/passwort-vergessen" || hier.startsWith("/einladung/")) return;
   leitetUm = true;
   const weiter = hier + window.location.search;
   window.location.assign(`/anmelden?weiter=${encodeURIComponent(weiter)}`);

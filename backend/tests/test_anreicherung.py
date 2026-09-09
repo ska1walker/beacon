@@ -7,6 +7,7 @@ uns gehört: Belegpflicht, Nie-Überschreiben, Ablage, Übernahme.
 """
 
 import httpx
+import orjson
 import pytest
 
 from app import anreicherung
@@ -316,3 +317,67 @@ async def test_laeufe_bleiben_in_der_organisation(datenbank, welt):
         lauf = (await a.post(f"/api/companies/{firma['id']}/anreichern")).json()
         assert (await b.get(f"/api/anreicherungen?entity=companies&entity_id={firma['id']}")).json() == []
         assert (await b.post(f"/api/anreicherungen/{lauf['id']}/verwerfen")).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Welcher Dienst am anderen Ende hängt
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "adresse,art",
+    [
+        ("https://api.search.brave.com/res/v1/web/search", "brave"),
+        ("https://api.tavily.com/search", "tavily"),
+        ("http://searxngv2.searxngv2server-shared.svc.cluster.local:8080", "searxng"),
+        ("https://suche.example.olares.com/search", "searxng"),
+    ],
+)
+def test_die_adresse_sagt_welcher_dienst_es_ist(adresse, art):
+    """Es gibt kein Auswahlfeld — ein Feld mehr wäre ein Feld, das falsch steht."""
+    assert anreicherung.Suchdienst(endpoint_url=adresse, api_key="x").art == art
+
+
+async def test_tavily_wird_per_post_mit_bearer_gefragt():
+    """Der einzige der drei, der POST spricht. Region geht als Ländername mit."""
+    gesehen: dict[str, object] = {}
+
+    def antworten(request: httpx.Request) -> httpx.Response:
+        gesehen["methode"] = request.method
+        gesehen["kopf"] = request.headers.get("authorization")
+        gesehen["koerper"] = orjson.loads(request.content)
+        return httpx.Response(200, json={"results": [
+            {"url": "https://brinkmann-baustoffe.de/impressum",
+             "title": "Impressum — Brinkmann Baustoffe",
+             "content": "Brinkmann Baustoffe GmbH, Tecklenburg"},
+        ]})
+
+    dienst = anreicherung.Suchdienst(
+        endpoint_url="https://api.tavily.com/search", api_key="tvly-test", region="DE"
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        quellen = await anreicherung.suchen(klient, dienst, "Brinkmann Baustoffe Impressum")
+
+    assert gesehen["methode"] == "POST"
+    assert gesehen["kopf"] == "Bearer tvly-test"
+    # Tavily nimmt kein Kürzel: „DE" würde stillschweigend ignoriert.
+    assert gesehen["koerper"]["country"] == "germany"
+    assert gesehen["koerper"]["language"] == "de"
+    assert [q.url for q in quellen] == ["https://brinkmann-baustoffe.de/impressum"]
+    assert "Tecklenburg" in quellen[0].text
+
+
+async def test_ohne_region_nennt_tavily_kein_land():
+    gesehen: dict[str, object] = {}
+
+    def antworten(request: httpx.Request) -> httpx.Response:
+        gesehen["koerper"] = orjson.loads(request.content)
+        return httpx.Response(200, json={"results": []})
+
+    dienst = anreicherung.Suchdienst(
+        endpoint_url="https://api.tavily.com/search", api_key="tvly-test", region=""
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        await anreicherung.suchen(klient, dienst, "irgendwas")
+
+    assert "country" not in gesehen["koerper"]
+    assert "language" not in gesehen["koerper"]

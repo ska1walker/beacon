@@ -81,7 +81,8 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
               placeholder="https://searxng-beispiel.olares.com"
             />
             <p className="feld-hinweis">
-              Eine SearXNG-Instanz (etwa auf dieser Box) oder{" "}
+              Drei Adressen, die Beacon am Namen erkennt: eine SearXNG-Instanz auf dieser Box,{" "}
+              <code>https://api.tavily.com/search</code> oder{" "}
               <code>https://api.search.brave.com/res/v1/web/search</code>. Ohne Suchdienst wird nur
               die Website der Firma gelesen — Firmennamen verlassen die Box dann nicht.
             </p>
@@ -99,7 +100,7 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
               placeholder={einstellungen.suche_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
               autoComplete="off"
             />
-            <p className="feld-hinweis">Brave verlangt einen; eine eigene SearXNG-Instanz meist nicht.</p>
+            <p className="feld-hinweis">Tavily und Brave verlangen einen; eine eigene SearXNG-Instanz meist nicht.</p>
           </div>
 
           <div className="feld">

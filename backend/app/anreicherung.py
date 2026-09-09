@@ -101,9 +101,18 @@ class SucheGestoert(SucheProblem):
 
 
 # Länder, für die eine Region gesetzt werden darf. Zwei Buchstaben, und
-# beide Dienste verstehen sie: Brave als `country`, SearXNG über die
-# Sprache `de-DE`.
+# jeder Dienst versteht sie auf seine Weise: Brave als `country`, SearXNG
+# über die Sprache `de-DE`, Tavily über den ausgeschriebenen Ländernamen.
 REGIONEN = {"DE": "de-DE", "AT": "de-AT", "CH": "de-CH", "NL": "nl-NL", "FR": "fr-FR", "GB": "en-GB", "US": "en-US"}
+
+# Tavily nimmt kein Kürzel, sondern das Land als Wort. Ohne diese Tabelle
+# würde die Region stillschweigend ignoriert — und „Baustoffhandel" läge
+# wieder in Fürth statt in Tecklenburg.
+TAVILY_LAENDER = {
+    "DE": "germany", "AT": "austria", "CH": "switzerland",
+    "NL": "netherlands", "FR": "france",
+    "GB": "united kingdom", "US": "united states",
+}
 
 
 @dataclass(frozen=True)
@@ -118,8 +127,19 @@ class Suchdienst:
 
     @property
     def art(self) -> str:
+        """Welcher Dienst am anderen Ende hängt — am Namen erkannt.
+
+        Es gibt kein Auswahlfeld dafür. Die Adresse sagt es eindeutig,
+        und ein Feld mehr wäre ein Feld, das falsch stehen kann.
+        SearXNG ist der Rest: Es läuft auf der eigenen Box unter einem
+        Namen, den niemand vorhersagen kann.
+        """
         host = urlparse(self.endpoint_url).hostname or ""
-        return "brave" if host.endswith("search.brave.com") else "searxng"
+        if host.endswith("search.brave.com"):
+            return "brave"
+        if host.endswith("tavily.com"):
+            return "tavily"
+        return "searxng"
 
 
 @dataclass(frozen=True)
@@ -267,6 +287,23 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
         antwort.raise_for_status()
         treffer = (antwort.json().get("web") or {}).get("results") or []
         rohe = [(t.get("url"), t.get("title"), t.get("description")) for t in treffer]
+    elif suche.art == "tavily":
+        # Der einzige der drei, der POST spricht und den Schlüssel als
+        # Bearer nimmt. `search_depth` bleibt auf der Vorgabe „basic":
+        # Die Anreicherung will Titel und Kurztext, nicht den ganzen
+        # Seiteninhalt — und „advanced" kostet das Doppelte je Anfrage.
+        koerper: dict[str, Any] = {"query": anfrage, "max_results": anzahl, "topic": "general"}
+        if region:
+            koerper["country"] = TAVILY_LAENDER[region]
+            koerper["language"] = REGIONEN[region].split("-")[0]
+        antwort = await client.post(
+            suche.endpoint_url,
+            json=koerper,
+            headers={"Authorization": f"Bearer {suche.api_key}", "Accept": "application/json"},
+        )
+        antwort.raise_for_status()
+        treffer = antwort.json().get("results") or []
+        rohe = [(t.get("url"), t.get("title"), t.get("content")) for t in treffer]
     else:
         basis = suche.endpoint_url.rstrip("/")
         url = basis if basis.endswith("/search") else basis + "/search"

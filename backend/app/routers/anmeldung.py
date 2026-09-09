@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from app import anmeldung as kern
+from app import zuruecksetzen
 from app.auth import CurrentUser, get_current_user
 from app.config import settings
 from app.db import acquire, acquire_as
@@ -36,6 +37,23 @@ class Passwortwechsel(BaseModel):
 
 class Einloesung(BaseModel):
     passwort: str = Field(min_length=1, max_length=200)
+
+
+class Vergessen(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+class Ruecksetzung(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    code: str = Field(min_length=1, max_length=100)
+    passwort: str = Field(min_length=1, max_length=200)
+
+
+class Ablageort(BaseModel):
+    """Wo die Datei liegt. Kein Geheimnis — der Weg dorthin ist eines."""
+
+    pfad: str
+    minuten: int
 
 
 class Lage(BaseModel):
@@ -195,6 +213,112 @@ async def passwort_aendern(
             user.user_id, kern.token_hash(keks) if keks else "",
         )
     return Response(status_code=204)
+
+
+@router.post("/anmeldung/vergessen", response_model=Ablageort)
+async def vergessen(
+    daten: Vergessen, request: Request
+) -> Ablageort:
+    """Legt einen Rücksetzcode in den Datenordner der App.
+
+    Die Antwort ist **immer dieselbe**, ob es den Zugang gibt oder nicht.
+    Sonst wäre dieser Endpunkt das Namensverzeichnis, das die
+    Anmeldemaske selbst sorgfältig verschweigt.
+
+    Geschrieben wird nur für einen Zugang, der schon ein Passwort hat: Wer
+    noch keines gesetzt hat, kommt auf einer frischen Box ohnehin über die
+    Box-Sitzung herein und braucht diesen Weg nicht.
+    """
+    _herkunft_pruefen(request)
+    kennungen = [f"name:{daten.name.strip().lower()}", f"ip:{_adresse(request)}"]
+    async with acquire() as conn:
+        try:
+            await kern.bremse_pruefen(conn, kennungen)
+        except kern.ZuVieleVersuche as exc:
+            raise HTTPException(
+                429,
+                "Zu viele Versuche. Bitte warten Sie eine Viertelstunde.",
+                headers={"Retry-After": str(exc.sekunden)},
+            ) from exc
+        gibt_es = await conn.fetchval(
+            "select exists(select 1 from public.users "
+            "where lower(olares_username) = lower($1) and deleted_at is null "
+            "and passwort_hash is not null)",
+            daten.name.strip(),
+        )
+        # Der Versuch zählt in jedem Fall. Zählte er nur beim Treffer,
+        # ließe sich an der Bremse ablesen, welche Namen es gibt.
+        await kern.versuch_merken(conn, kennungen)
+    if gibt_es:
+        zuruecksetzen.anfordern(daten.name.strip())
+    return Ablageort(
+        pfad=zuruecksetzen.wo_liegt_die_datei(), minuten=zuruecksetzen.GUELTIG_MINUTEN
+    )
+
+
+@router.post("/anmeldung/zuruecksetzen", response_model=Lage)
+async def zuruecksetzen_einloesen(
+    daten: Ruecksetzung,
+    request: Request,
+    antwort: Response,
+    user_agent: Annotated[str | None, Header()] = None,
+) -> Lage:
+    """Setzt mit dem Code aus der Datei ein neues Passwort.
+
+    Danach ist die Datei weg und **jede** offene Sitzung beendet: Wer sein
+    Passwort zurücksetzt, tut das oft, weil etwas nicht stimmt.
+    """
+    _herkunft_pruefen(request)
+    try:
+        kern.passwort_pruefen(daten.passwort)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    kennungen = [f"name:{daten.name.strip().lower()}", f"ip:{_adresse(request)}"]
+    async with acquire() as conn:
+        try:
+            await kern.bremse_pruefen(conn, kennungen)
+        except kern.ZuVieleVersuche as exc:
+            raise HTTPException(
+                429,
+                "Zu viele Versuche. Bitte warten Sie eine Viertelstunde.",
+                headers={"Retry-After": str(exc.sekunden)},
+            ) from exc
+
+        if not zuruecksetzen.stimmt(daten.name, daten.code):
+            await kern.versuch_merken(conn, kennungen)
+            raise HTTPException(403, "Der Code stimmt nicht oder ist abgelaufen.")
+
+        zeile = await conn.fetchrow(
+            """
+            select u.id, r.org_id
+              from public.users u
+              left join public.user_org_roles r on r.user_id = u.id
+             where lower(u.olares_username) = lower($1) and u.deleted_at is null
+             order by r.joined_at
+             limit 1
+            """,
+            daten.name.strip(),
+        )
+        if zeile is None or zeile["org_id"] is None:
+            raise HTTPException(403, "Der Code stimmt nicht oder ist abgelaufen.")
+
+        await conn.execute(
+            "update public.users set passwort_hash = $1, passwort_am = now(), "
+            "gesperrt_bis = null where id = $2",
+            kern.hash_passwort(daten.passwort), zeile["id"],
+        )
+        await conn.execute(
+            "update public.sitzungen set beendet_am = now() "
+            "where user_id = $1 and beendet_am is null",
+            zeile["id"],
+        )
+        await kern.versuche_loeschen(conn, kennungen)
+        token = await kern.sitzung_anlegen(conn, zeile["id"], zeile["org_id"], user_agent or "")
+
+    zuruecksetzen.verbrauchen()
+    _keks_setzen(request, antwort, token)
+    return Lage(angemeldet=True, name=daten.name, modus=settings.anmeldung_modus)
 
 
 @router.get("/einladung/{token}")

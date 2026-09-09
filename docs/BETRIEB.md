@@ -501,8 +501,36 @@ Für alles darüber hinaus braucht sie einen **Suchdienst** unter
 
 | Dienst | Adresse | Schlüssel |
 |---|---|---|
-| SearXNG (empfohlen, läuft auf der Box) | `https://<searxng-route>.<user>.olares.com` — Beacon hängt `/search?format=json` an | meist keiner; sonst als `Authorization: Bearer` |
+| SearXNG (läuft auf der Box) | `http://searxngv2.searxngv2server-shared.svc.cluster.local:8080` — Beacon hängt `/search?format=json` an | meist keiner; sonst als `Authorization: Bearer` |
+| Tavily | `https://api.tavily.com/search` | Pflicht, geht als `Authorization: Bearer` |
 | Brave Search | `https://api.search.brave.com/res/v1/web/search` | Pflicht, geht als `X-Subscription-Token` |
+
+**Es gibt kein Auswahlfeld für den Dienst.** Die Adresse sagt eindeutig,
+wer am anderen Ende hängt (`Suchdienst.art`); ein Feld mehr wäre ein
+Feld, das falsch stehen kann. SearXNG ist der Rest — es läuft auf der
+eigenen Box unter einem Namen, den niemand vorhersagen kann.
+
+Die Region wird für jeden Dienst anders geschrieben: Brave nimmt das
+Kürzel als `country`, SearXNG die Sprache `de-DE`, Tavily den
+ausgeschriebenen Ländernamen (`germany`). Ohne diese Übersetzung
+lieferte „Baustoffhandel" wieder Fürth statt Tecklenburg.
+
+**SearXNG auf der eigenen Box ist für die Anreicherung meist untauglich**
+— gemessen am 9. September 2026 auf der Box in Munster: Der Dienst lief,
+war aus dem Beacon-Pod erreichbar und hatte JSON freigeschaltet, aber
+**alle vier allgemeinen Anbieter verweigerten die Antwort** (DuckDuckGo
+mit CAPTCHA, Brave mit „zu viele Anfragen", Startpage und Karmasearch mit
+Abruffehlern). Google war eingeschaltet und lieferte nichts. „Brinkmann
+Baustoffe Tecklenburg Impressum" ergab null Treffer, „Bundeskanzler"
+genau einen, und der kam aus Wikipedia.
+
+Das ist kein Konfigurationsfehler. SearXNG fragt diese Dienste ohne
+Schlüssel ab, wie ein Mensch mit Browser, und sie erkennen einen
+Selbstbetreiber an der Adresse. Genau dafür gibt es seit 0.3.0 die
+Meldung „Der Suchdienst ist gerade gesperrt" statt „nichts gefunden".
+Wer SearXNG trotzdem will, hinterlegt in dessen `settings.yml` einen
+API-Schlüssel bei Google oder Brave — dann ist man aber wieder bei einem
+externen Konto, nur mit einer Zwischenstation.
 
 Mit Suchdienst findet die Anreicherung die Website, wenn nur der Name
 bekannt ist, und holt die **LinkedIn-Treffer**: Unternehmensseite
@@ -1094,6 +1122,37 @@ ein offener Eingang nicht haben darf.
 
 Der Rettungsweg hängt stattdessen am **Zugang zur Box**, und das ist die
 richtige Hürde: Wer an der Box sitzt, kommt ohnehin an alles heran.
+
+Seit 0.7.0 braucht dieser Weg kein Terminal mehr. Auf der Anmeldeseite
+steht „Passwort vergessen?". Wer dort seinen Zugang nennt, lässt Beacon
+einen Code in den eigenen Datenordner schreiben:
+
+    /app/data/passwort-zuruecksetzen.txt
+
+Die Datei lässt sich in der Dateien-App von Olares öffnen. Code, Zugang
+und neues Passwort auf der Seite eingeben — fertig. Fünfzehn Minuten
+gültig, danach wertlos.
+
+**Warum kein Rücksetzlink per Mail:** Auf einer frischen Box ist kein
+Postfach eingerichtet, ein solcher Link käme nie an. Und er verlagerte
+das Vertrauen in ein Postfach, das wir nicht kennen — bei einem Zugang,
+der den ganzen Bestand öffnet.
+
+Vier Dinge, die diesen Weg tragbar machen:
+
+- **Der Code steht nie in einer Antwort.** Der Endpunkt sagt nur, wo die
+  Datei liegt. Über das Netz ist er nicht zu erfahren.
+- **Ein unbekannter Name antwortet genauso.** Sonst wäre dieser Weg das
+  Namensverzeichnis, das die Anmeldemaske sorgfältig verschweigt — und
+  der Versuch zählt in beiden Fällen in die Bremse, sonst ließe sich an
+  ihr ablesen, welche Namen es gibt.
+- **Die Datei ist der ganze Datensatz.** Kein Eintrag in der Datenbank.
+  Ein zurückgespielter Abzug kann keinen alten Code wiederbeleben.
+- **Einlösen beendet jede offene Sitzung** und leert die Bremse. Wer
+  zurücksetzt, tut das oft, weil etwas nicht stimmt.
+
+Der Weg über die Kommandozeile bleibt daneben bestehen — für den Fall,
+dass die Oberfläche selbst nicht mehr hochkommt:
 
 ```bash
 ssh olares@192.168.1.17

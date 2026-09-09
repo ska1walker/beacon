@@ -41,6 +41,20 @@ export function passwortAendern(alt: string, neu: string) {
   return api.post<void>("/api/anmeldung/passwort", { alt, neu });
 }
 
+/** Wo der Rücksetzcode liegt. Der Code selbst kommt nie über die Leitung. */
+export type Ablageort = {
+  pfad: string;
+  minuten: number;
+};
+
+export function ruecksetzungAnfordern(name: string) {
+  return api.post<Ablageort>("/api/anmeldung/vergessen", { name });
+}
+
+export function ruecksetzungEinloesen(name: string, code: string, passwort: string) {
+  return api.post<Lage>("/api/anmeldung/zuruecksetzen", { name, code, passwort });
+}
+
 export function einladungLesen(token: string) {
   return api.get<Einladung>(`/api/einladung/${encodeURIComponent(token)}`);
 }

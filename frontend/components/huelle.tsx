@@ -83,7 +83,11 @@ export function Huelle({ children }: { children: React.ReactNode }) {
   // Konto-Fuß, keine Abfragen. Alles davon setzte voraus, dass jemand
   // angemeldet ist — und genau das ist dort noch offen. (Die Prüfung steht
   // **nach** allen Haken, damit React sie in jedem Anlauf gleich zählt.)
-  if (aktuell === "/anmelden" || aktuell.startsWith("/einladung/")) {
+  if (
+    aktuell === "/anmelden"
+    || aktuell === "/passwort-vergessen"
+    || aktuell.startsWith("/einladung/")
+  ) {
     return <>{children}</>;
   }
 

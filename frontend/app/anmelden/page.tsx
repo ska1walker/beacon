@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ApiFehler } from "@/lib/api";
@@ -43,7 +44,13 @@ function Maske() {
       laeuft={laeuft}
       knopf="Anmelden"
       onSenden={senden}
-      fuss="Noch kein Zugang? Der Eigentümer erzeugt Ihnen einen Einladungslink."
+      fuss={
+        <>
+          <Link href="/passwort-vergessen">Passwort vergessen?</Link>
+          <br />
+          Noch kein Zugang? Der Eigentümer erzeugt Ihnen einen Einladungslink.
+        </>
+      }
     >
       <div className="feld">
         <label htmlFor="tor-name">Name</label>
