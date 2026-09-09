@@ -311,6 +311,64 @@ erlaubt einen eigenen Wert (eigene Domain, oder eine Box, die ihre
 Domain nicht mitteilt). Ohne Adresse geht keine Bestätigungsmail hinaus,
 und der Block sagt das.
 
+## Jeder unter seinem eigenen Namen — Absenderadressen
+
+Bis 0.6.4 hatte eine Organisation genau **einen** Absender
+(`org_settings.smtp_absender`). Sobald zwei Menschen in einem Bestand
+arbeiten, ist das falsch: Marcs Angebot ging als Kai hinaus, und der
+Empfänger sah einen Namen, mit dem er nie gesprochen hatte.
+
+Seit 0.6.5 trägt jeder Mensch seine eigene Adresse — unter *Einstellungen ›
+E-Mail › Ihre Absenderadresse*. Jeder setzt **nur seine eigene**; der Pfad
+`PUT /api/mitglieder/wer/absender` kennt keine Kennung, sondern nur „wer
+gerade handelt".
+
+### Zwei Wege, und die Wahl trifft der Mailanbieter
+
+**Eigene Adresse auf dem Konto der Organisation.** Nur `From` wechselt,
+angemeldet wird weiter mit dem Konto aus den Einstellungen. Ein Feld, und
+es funktioniert bei Anbietern, die eine fremde Absenderadresse derselben
+Domain durchlassen. Manche tun das nicht — one.com etwa weist je nach
+Tarif eine `From` zurück, die nicht dem angemeldeten Postfach entspricht.
+Dann steht der Grund in der Zeile in `mails`, nicht im Verborgenen.
+
+**Eigene Zugangsdaten.** Wer sein eigenes Postfach hat, trägt Server,
+Benutzer und Passwort ein und meldet sich selbst an. Das geht immer,
+kostet aber ein Postfach je Person.
+
+### Die Domainschranke ist kein Formalismus
+
+Auf dem gemeinsamen Konto ist nur eine Adresse **derselben Domain**
+erlaubt. Ohne diese Schranke könnte jedes Mitglied über das Konto der
+Organisation als beliebige Adresse schreiben — als der Geschäftsführer
+eines Kunden zum Beispiel. Wer eigene Zugangsdaten hinterlegt, meldet sich
+selbst an und darf deshalb führen, was sein Anbieter durchlässt. Geprüft
+wird beim Speichern **und** beim Versand.
+
+### Wer schickt, hängt an `mails.created_by`
+
+Nicht daran, wer die Schleife anstößt. Sonst ginge Marcs Angebot als Kai
+hinaus, sobald Kai als Nächster etwas versendet. Dieselbe Kennung schreibt
+auch die Absenderadresse: bei geteiltem Olares-Zugang der gewählte
+Sitzplatz, mit eigener Anmeldung man selbst.
+
+**Marketing bleibt beim Absender der Organisation.** Eine Kampagne kommt
+von der Firma, nicht von einem Menschen, und der Abmeldelink hängt an
+derselben Adresse.
+
+### Die Antwort soll im Bestand landen
+
+Beacon liest genau **ein** Postfach je Organisation. Schickt jemand unter
+eigener Adresse, käme die Antwort dort an, wo niemand sie einliest — der
+Faden im CRM bliebe stumm. Deshalb trägt jede Mail `Reply-To` auf das
+Postfach der Organisation, **sofern eines eingerichtet ist**. Ist keines
+da, sagt die Einstellungsseite genau das, statt etwas zu versprechen.
+
+Tests: `backend/tests/test_versand.py` — Hausadresse ohne Eintrag, nur das
+`From` wechselt, fremde Domain abgewiesen, eigene Zugangsdaten führen
+alles, kein Hauskonto hilft nicht, `Reply-To` gesetzt und bei gleicher
+Adresse weggelassen, und der ganze Weg mit zwei Menschen über ein Konto.
+
 ## Suchen oder fragen
 
 Seit 0.2.4 ein Feld für beides, links unter der Marke, ⌘K/Strg+K von

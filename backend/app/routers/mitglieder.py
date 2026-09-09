@@ -20,7 +20,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import anmeldung, audit
+from app import anmeldung, audit, versand
 from app.auth import CurrentUser, get_current_user, verwaltet
 from app.config import settings
 from app.db import acquire_as
@@ -395,3 +395,138 @@ async def einladen(mitglied_id: UUID, user: CurrentUser = Depends(verwaltet)) ->
         "name": person["display_name"] or person["olares_username"],
         "gilt_tage": settings.einladung_tage,
     }
+
+
+ABSENDERSPALTEN = (
+    "absender_email", "absender_name", "smtp_host", "smtp_port",
+    "smtp_benutzer", "smtp_passwort", "smtp_sicherheit",
+)
+
+
+class Absenderkonto(BaseModel):
+    """Womit diese Person schickt. Leere Felder heißen: wie die Organisation."""
+
+    absender_email: str | None = None
+    absender_name: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_benutzer: str | None = None
+    # Beim Lesen nie das Passwort, nur ob eines liegt.
+    smtp_passwort_set: bool = False
+    smtp_sicherheit: str | None = None
+    # Der Absender der Organisation — als Vergleich in der Oberfläche.
+    haus_absender: str | None = None
+    # Liest Beacon ein Postfach? Nur dann trägt eine Mail `Reply-To` zurück,
+    # und nur dann darf die Oberfläche das versprechen.
+    postfach_aktiv: bool = False
+
+
+class AbsenderkontoPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    absender_email: str | None = None
+    absender_name: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_benutzer: str | None = None
+    # `null` lässt es stehen, "" löscht es — dasselbe Muster wie bei den
+    # Schlüsseln der Organisation.
+    smtp_passwort: str | None = None
+    smtp_sicherheit: str | None = None
+
+
+@router.get("/wer/absender", response_model=Absenderkonto)
+async def absender_lesen(user: CurrentUser = Depends(get_current_user)) -> Absenderkonto:
+    async with acquire_as(user.user_id) as conn:
+        z = await conn.fetchrow(
+            "select absender_email, absender_name, smtp_host, smtp_port, smtp_benutzer, "
+            "       smtp_passwort is not null and smtp_passwort <> '' as pw, smtp_sicherheit "
+            "from public.users where id = $1",
+            user.user_id,
+        )
+        haus = await conn.fetchrow(
+            "select smtp_absender, coalesce(imap_host, '') <> '' as postfach "
+            "from public.org_settings where org_id = $1",
+            user.org_id,
+        )
+    return Absenderkonto(
+        absender_email=z["absender_email"], absender_name=z["absender_name"],
+        smtp_host=z["smtp_host"], smtp_port=z["smtp_port"], smtp_benutzer=z["smtp_benutzer"],
+        smtp_passwort_set=bool(z["pw"]), smtp_sicherheit=z["smtp_sicherheit"],
+        haus_absender=haus["smtp_absender"] if haus else None,
+        postfach_aktiv=bool(haus and haus["postfach"]),
+    )
+
+
+@router.put("/wer/absender", response_model=Absenderkonto)
+async def absender_setzen(
+    payload: AbsenderkontoPatch, user: CurrentUser = Depends(get_current_user)
+) -> Absenderkonto:
+    """Setzt die Absenderadresse der handelnden Person.
+
+    Geschrieben wird `user.user_id` — dieselbe Person, die auch in
+    `mails.created_by` landet. Beides muss übereinstimmen, sonst setzt man
+    eine Adresse und schickt unter einer anderen. Bei einem geteilten
+    Olares-Zugang ist das der gewählte Sitzplatz; mit eigener Anmeldung
+    greift der Sitzplatz nicht mehr, dann ist es man selbst.
+
+    Es gibt **keinen** Weg, die Adresse einer beliebigen anderen Person zu
+    setzen: Der Pfad kennt keine Kennung, nur „wer gerade handelt".
+
+    Die Domainprüfung greift hier schon: Wer auf dem gemeinsamen Konto
+    schreibt, bleibt bei dessen Domain. Wer eigene Zugangsdaten hinterlegt,
+    meldet sich selbst an und darf führen, was sein Anbieter durchlässt.
+    """
+    felder = payload.model_dump(exclude_unset=True)
+    if not felder:
+        raise HTTPException(400, "Nichts zu ändern.")
+
+    for schluessel in ("absender_email", "absender_name", "smtp_host", "smtp_benutzer"):
+        if isinstance(felder.get(schluessel), str):
+            felder[schluessel] = felder[schluessel].strip() or None
+
+    adresse = felder.get("absender_email")
+    if adresse and "@" not in adresse:
+        raise HTTPException(422, "Das ist keine E-Mail-Adresse.")
+
+    if felder.get("smtp_sicherheit") and felder["smtp_sicherheit"] not in versand.SICHERHEIT:
+        raise HTTPException(422, "Sicherheit muss starttls, ssl oder keine sein.")
+
+    async with acquire_as(user.user_id) as conn:
+        vorher = dict(await conn.fetchrow(
+            "select absender_email, absender_name, smtp_host, smtp_port, smtp_benutzer, "
+            "       smtp_passwort, smtp_sicherheit from public.users where id = $1",
+            user.user_id,
+        ))
+        nachher = {**vorher, **{k: v for k, v in felder.items() if k != "smtp_passwort"}}
+        if "smtp_passwort" in felder:
+            nachher["smtp_passwort"] = felder["smtp_passwort"] or None
+
+        haus = await conn.fetchval(
+            "select smtp_absender from public.org_settings where org_id = $1", user.org_id
+        )
+        ziel = (nachher.get("absender_email") or "").strip()
+        if ziel and not (nachher.get("smtp_host") or "").strip():
+            hausdomain = versand.domain_von((haus or "").strip())
+            if hausdomain and versand.domain_von(ziel) != hausdomain:
+                raise HTTPException(
+                    422,
+                    f"„{ziel}“ gehört nicht zu {hausdomain}. Auf dem gemeinsamen Konto geht "
+                    "nur eine Adresse derselben Domain. Für eine andere hinterlegen Sie "
+                    "eigene Zugangsdaten.",
+                )
+
+        # Der Spaltenname geht in den SQL-Text, also kommt er aus einer
+        # festen Liste und nicht aus der Anfrage. Das Modell verbietet
+        # zwar fremde Felder; eine Liste hier hängt nicht davon ab.
+        for schluessel in ABSENDERSPALTEN:
+            if vorher[schluessel] != nachher[schluessel]:
+                await conn.execute(
+                    f"update public.users set {schluessel} = $2 where id = $1",  # noqa: S608
+                    user.user_id, nachher[schluessel],
+                )
+        await audit.log_fuer(
+            conn, user, action="update", entity="users", entity_id=user.user_id,
+            diff={"absender": ziel or "(Organisation)"},
+        )
+    return await absender_lesen(user)

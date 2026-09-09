@@ -6,6 +6,7 @@ fehlgeschlagen, wartend) und was am Kontakt und am Ticket passiert. Ob
 `smtplib` verbinden kann, prüft kein Test, sondern der Knopf „Testmail“.
 """
 
+import json
 import re
 from uuid import uuid4
 
@@ -312,3 +313,136 @@ async def test_schleifen_finden_wartende_mails_und_faellige_postfaecher(datenban
         assert org not in [o["org_id"] for o in await _post_faellig()]
         await k.put("/api/settings", json={"imap_host": "imap.test", "imap_benutzer": "x", "imap_passwort": "y", "imap_aktiv": True})
         assert org in [o["org_id"] for o in await _post_faellig()]
+
+
+# ── Jeder unter seinem eigenen Namen ────────────────────────────────────
+
+
+def test_ohne_eigene_adresse_bleibt_es_beim_haus():
+    haus = {"smtp_host": "send.one.com", "smtp_absender": "kai.boehm@aimighty.de",
+            "smtp_absender_name": "Kai Böhm", "smtp_benutzer": "kai.boehm@aimighty.de"}
+    assert versand.smtp_fuer(haus, None).absender == "kai.boehm@aimighty.de"
+    assert versand.smtp_fuer(haus, {"absender_email": ""}).absender == "kai.boehm@aimighty.de"
+
+
+def test_eigene_adresse_wechselt_nur_das_von():
+    """Dasselbe Konto, dieselbe Anmeldung — nur der Absender ist ein anderer."""
+    haus = {"smtp_host": "send.one.com", "smtp_port": 587, "smtp_benutzer": "kai.boehm@aimighty.de",
+            "smtp_passwort": "geheim", "smtp_absender": "kai.boehm@aimighty.de",
+            "smtp_absender_name": "Kai Böhm"}
+    k = versand.smtp_fuer(haus, {"absender_email": "marc.bayer@aimighty.de", "absender_name": "Marc Bayer"})
+    assert k.absender == "marc.bayer@aimighty.de"
+    assert k.von == "Marc Bayer <marc.bayer@aimighty.de>"
+    # Angemeldet wird weiterhin als das Hauskonto.
+    assert k.benutzer == "kai.boehm@aimighty.de"
+    assert k.passwort == "geheim"
+    assert k.host == "send.one.com"
+
+
+def test_eine_fremde_domain_geht_nicht_ueber_das_gemeinsame_konto():
+    """Sonst wäre das Konto der Organisation ein Weg, als beliebige Adresse
+    zu schreiben — etwa als der Geschäftsführer eines Kunden."""
+    haus = {"smtp_host": "send.one.com", "smtp_absender": "kai.boehm@aimighty.de"}
+    with pytest.raises(versand.Unmoeglich) as fehler:
+        versand.smtp_fuer(haus, {"absender_email": "chef@fremdefirma.de"})
+    assert "aimighty.de" in str(fehler.value)
+
+
+def test_mit_eigenen_zugangsdaten_zaehlt_die_domain_nicht():
+    """Wer sich selbst anmeldet, führt, was sein Anbieter durchlässt."""
+    haus = {"smtp_host": "send.one.com", "smtp_absender": "kai.boehm@aimighty.de"}
+    k = versand.smtp_fuer(haus, {
+        "absender_email": "marc@bayer-consulting.de", "absender_name": "Marc Bayer",
+        "smtp_host": "mail.bayer-consulting.de", "smtp_port": 465,
+        "smtp_benutzer": "marc@bayer-consulting.de", "smtp_passwort": "seins",
+        "smtp_sicherheit": "ssl",
+    })
+    assert (k.host, k.port, k.sicherheit) == ("mail.bayer-consulting.de", 465, "ssl")
+    assert k.benutzer == "marc@bayer-consulting.de" and k.passwort == "seins"
+    assert k.absender == "marc@bayer-consulting.de"
+
+
+def test_ohne_hauskonto_hilft_eine_eigene_adresse_allein_nicht():
+    assert versand.smtp_fuer({}, {"absender_email": "marc.bayer@aimighty.de"}) is None
+
+
+def test_die_antwort_geht_ans_postfach_der_organisation():
+    """Beacon liest ein Postfach. Ohne Reply-To liefe die Antwort auf Marcs
+    eigene Adresse und wäre im Bestand nie zu sehen."""
+    konto = versand.Smtp(host="h", port=587, benutzer=None, passwort=None, sicherheit="starttls",
+                         absender="marc.bayer@aimighty.de", absender_name="Marc Bayer")
+    m = versand.nachricht_bauen(an="kunde@example.de", betreff="Angebot", text="Hallo",
+                                konto=konto, message_id="<a@b>",
+                                antwort_an="kai.boehm@aimighty.de")
+    assert m["From"] == "Marc Bayer <marc.bayer@aimighty.de>"
+    assert m["Reply-To"] == "kai.boehm@aimighty.de"
+    # Schickt jemand ohnehin unter der Hausadresse, steht kein Reply-To da —
+    # ein Kopf, der auf sich selbst zeigt, ist nur Rauschen.
+    gleich = versand.nachricht_bauen(an="kunde@example.de", betreff="A", text="B", konto=konto,
+                                     message_id="<c@d>", antwort_an="MARC.BAYER@aimighty.de")
+    assert gleich["Reply-To"] is None
+
+
+async def test_marc_schickt_unter_seinem_namen_kai_unter_seinem(datenbank, briefkasten):
+    """Der ganze Weg: zwei Menschen, ein Konto, zwei Absender.
+
+    Entscheidend ist, dass die Zuordnung an `mails.created_by` hängt und
+    nicht daran, wer die Schleife anstößt — sonst ginge Marcs Angebot als
+    Kai hinaus, sobald Kai als Nächster etwas versendet.
+    """
+    async with klient_fuer("vers-absender") as k:
+        await k.put("/api/settings", json={**SMTP, "imap_host": "imap.one.com",
+                                           "imap_benutzer": "kai@aimighty.de"})
+        m = (await k.post("/api/mitglieder", json={"display_name": "Marc Bayer"})).json()
+        kontakt = await _kontakt(k)
+        kai = await conn_nutzer(k)
+
+        # Marc setzt seine Adresse — über seinen eigenen Sitzplatz, denn
+        # niemand ändert die Absenderadresse eines anderen.
+        gesetzt = await k.put(
+            "/api/mitglieder/wer/absender",
+            json={"absender_email": "marc.bayer@aimighty.de", "absender_name": "Marc Bayer"},
+            headers={"X-Beacon-Sitzplatz": m["id"]},
+        )
+        assert gesetzt.status_code == 200, gesetzt.text
+        assert gesetzt.json()["haus_absender"] == SMTP["smtp_absender"]
+
+        async with acquire_as(kai) as conn:
+            org = await conn.fetchval("select org_id from public.contacts where id = $1", kontakt["id"])
+            await versand.einreihen(conn, org, art="transaktional", an=kontakt["email"],
+                                    betreff="Angebot", text="Hallo", created_by=m["id"])
+            await versand.einreihen(conn, org, art="transaktional", an=kontakt["email"],
+                                    betreff="Nachfrage", text="Hallo", created_by=kai)
+            bilanz = await versand.verarbeiten(conn, org, sender=briefkasten)
+        assert bilanz["gesendet"] == 2, bilanz
+
+    absender = {n["Subject"]: (n["From"], n["Reply-To"]) for _, n in briefkasten.nachrichten}
+    assert absender["Angebot"][0] == "Marc Bayer <marc.bayer@aimighty.de>"
+    assert absender["Nachfrage"][0] == f'Kai Böhm <{SMTP["smtp_absender"]}>'
+    # Beide Antworten laufen in das Postfach, das Beacon einliest.
+    assert absender["Angebot"][1] == SMTP["smtp_absender"]
+    assert absender["Nachfrage"][1] is None
+
+
+async def test_eine_fremde_domain_wird_beim_speichern_abgewiesen(datenbank):
+    async with klient_fuer("vers-domain") as k:
+        await k.put("/api/settings", json=SMTP)
+        r = await k.put("/api/mitglieder/wer/absender",
+                        json={"absender_email": "chef@fremdefirma.de"})
+        assert r.status_code == 422
+        assert "aimighty.de" in r.json()["detail"]
+        # Und nichts wurde gespeichert.
+        assert (await k.get("/api/mitglieder/wer/absender")).json()["absender_email"] is None
+
+
+async def test_das_eigene_smtp_passwort_kommt_nie_zurueck(datenbank):
+    async with klient_fuer("vers-pw") as k:
+        await k.put("/api/settings", json=SMTP)
+        await k.put("/api/mitglieder/wer/absender", json={
+            "absender_email": "wer@aimighty.de", "smtp_host": "mail.example.de",
+            "smtp_benutzer": "wer@aimighty.de", "smtp_passwort": "streng geheim",
+        })
+        gelesen = (await k.get("/api/mitglieder/wer/absender")).json()
+        assert gelesen["smtp_passwort_set"] is True
+        assert "streng geheim" not in json.dumps(gelesen)
+        assert "smtp_passwort" not in gelesen

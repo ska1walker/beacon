@@ -19,6 +19,7 @@ import { Pipelinesblock } from "@/components/pipelines-verwalten";
 import { Katalogblock, Verlustgruendeblock } from "@/components/katalog";
 import { Postausgangblock } from "@/components/postausgang";
 import { Marketingversandblock, Versandblock } from "@/components/versand";
+import { Absenderkontoblock } from "@/components/absenderkonto";
 import { AnreicherungEinstellungen } from "@/components/anreicherung-einstellungen";
 import { Sprachausgabeblock } from "@/components/podcast";
 
@@ -191,6 +192,7 @@ function Inhalt() {
         {bereich === "email" && (
           <>
             <Versandblock />
+            <Absenderkontoblock />
             <Marketingversandblock />
             <Postfachblock />
             <Postausgangblock />

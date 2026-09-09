@@ -25,7 +25,7 @@ import re
 import smtplib
 import ssl
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
@@ -159,6 +159,53 @@ def smtp_aus(einst: dict[str, Any] | None) -> Smtp | None:
     )
 
 
+def domain_von(adresse: str) -> str:
+    return adresse.rsplit("@", 1)[-1].strip().lower() if "@" in adresse else ""
+
+
+def smtp_fuer(einst: dict[str, Any] | None, nutzer: dict[str, Any] | None) -> Smtp | None:
+    """Das Konto, mit dem **diese Person** schickt.
+
+    Drei Fälle, in dieser Reihenfolge:
+
+    1. Eigene Zugangsdaten vollständig → eigenes Postfach, eigene Anmeldung.
+       Wer sich selbst anmeldet, darf auch eine fremde Domain führen.
+    2. Nur eine eigene Adresse → das Konto der Organisation, aber mit
+       dieser `From`. Erlaubt ist dabei nur dieselbe Domain wie der
+       Absender der Organisation; sonst wäre das gemeinsame Konto ein Weg,
+       als beliebige Adresse zu schreiben.
+    3. Nichts hinterlegt → der Absender der Organisation, wie bisher.
+    """
+    haus = smtp_aus(einst)
+    n = nutzer or {}
+    adresse = (n.get("absender_email") or "").strip()
+    name = (n.get("absender_name") or "").strip() or None
+
+    eigener_host = (n.get("smtp_host") or "").strip()
+    if eigener_host and adresse:
+        sicherheit = (n.get("smtp_sicherheit") or "starttls").lower()
+        if sicherheit not in SICHERHEIT:
+            sicherheit = "starttls"
+        return Smtp(
+            host=eigener_host, port=int(n.get("smtp_port") or 587),
+            benutzer=(n.get("smtp_benutzer") or None), passwort=(n.get("smtp_passwort") or None),
+            sicherheit=sicherheit, absender=adresse, absender_name=name,
+        )
+
+    if haus is None or not adresse:
+        return haus
+    if domain_von(adresse) != domain_von(haus.absender):
+        # Nicht heimlich auf das Hauskonto zurückfallen: Wer eine fremde
+        # Domain einträgt, soll den Fehler sehen, nicht eine Mail unter
+        # falschem Namen. Das Speichern weist das ohnehin schon ab.
+        raise Unmoeglich(
+            f"„{adresse}“ gehört nicht zur Domain des Absenders der Organisation "
+            f"({domain_von(haus.absender)}). Hinterlegen Sie eigene Zugangsdaten, "
+            "um unter einer anderen Domain zu schreiben."
+        )
+    return replace(haus, absender=adresse, absender_name=name or haus.absender_name)
+
+
 def _smtp_senden(konto: Smtp, nachricht: EmailMessage) -> None:
     """Blockierend — läuft in einem Thread. Ein Versand, ein Verbindungsaufbau."""
     kontext = ssl.create_default_context()
@@ -200,10 +247,17 @@ def nachricht_bauen(
     in_reply_to: str | None = None,
     referenzen: str | None = None,
     abmelde_url: str | None = None,
+    antwort_an: str | None = None,
 ) -> EmailMessage:
     m = EmailMessage()
     m["From"] = konto.von
     m["To"] = an
+    # Damit die Antwort im Bestand landet und nicht im privaten Postfach:
+    # Beacon liest genau ein Postfach je Organisation. Schickt jemand unter
+    # seiner eigenen Adresse, käme die Antwort dort an, wo niemand sie
+    # einliest — und der Faden im CRM bliebe stumm.
+    if antwort_an and antwort_an.strip().lower() != konto.absender.strip().lower():
+        m["Reply-To"] = antwort_an
     m["Subject"] = betreff
     m["Message-ID"] = message_id
     m["Date"] = datetime.now().astimezone()
@@ -350,7 +404,22 @@ async def versenden(
         return dict(zeile)
 
     einst = await _einstellungen(conn, org_id)
-    konto: Smtp | Brevo | None = marketing_konto(einst) if zeile["art"] == "marketing" else smtp_aus(einst)
+    # Wer diese Zeile eingereiht hat, schickt sie auch — unter seiner
+    # Adresse. Marketing bleibt beim Absender der Organisation: Eine
+    # Kampagne kommt von der Firma, nicht von einem Menschen, und der
+    # Abmeldelink hängt an derselben Adresse.
+    nutzer = None
+    if zeile["art"] != "marketing" and zeile["created_by"]:
+        nutzer = await conn.fetchrow(
+            "select absender_email, absender_name, smtp_host, smtp_port, smtp_benutzer, "
+            "       smtp_passwort, smtp_sicherheit "
+            "from public.users where id = $1",
+            zeile["created_by"],
+        )
+    konto: Smtp | Brevo | None = (
+        marketing_konto(einst) if zeile["art"] == "marketing"
+        else smtp_fuer(einst, dict(nutzer) if nutzer else None)
+    )
     if konto is None:
         raise Unmoeglich("Kein SMTP-Konto hinterlegt. Server und Absenderadresse stehen unter Einstellungen → E-Mail.")
     if sender is None:
@@ -365,9 +434,17 @@ async def versenden(
             text = f"{text.rstrip()}\n\n—\nKeine weiteren Mails? Hier abmelden: {abmelde_url}\n"
         text = rendern(text, {"abmeldelink": abmelde_url or ""})
 
+    # Beacon liest genau ein Postfach je Organisation. Schickt jemand unter
+    # eigener Adresse, käme die Antwort dort an, wo niemand sie einliest —
+    # also zeigt `Reply-To` zurück auf das Postfach der Organisation.
+    antwort_an = None
+    if (einst.get("imap_host") or "").strip():
+        antwort_an = (einst.get("smtp_absender") or "").strip() or None
+
     nachricht = nachricht_bauen(
         an=zeile["an"], betreff=zeile["betreff"], text=text, konto=konto, message_id=message_id,
         in_reply_to=zeile["in_reply_to"], referenzen=zeile["referenzen"], abmelde_url=abmelde_url,
+        antwort_an=antwort_an,
     )
     try:
         await sender(konto, nachricht)

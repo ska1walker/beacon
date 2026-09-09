@@ -1040,3 +1040,20 @@ export interface Stimmenstand {
   verfuegbar: string[];
   installationen: Record<string, string>;
 }
+
+/** Womit eine Person schickt. Leere Felder heißen: wie die Organisation.
+    Nicht zu verwechseln mit `Absender` — das ist der Briefkopf der Firma. */
+export interface Absenderkonto {
+  absender_email: string | null;
+  absender_name: string | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_benutzer: string | null;
+  /** Nur ob eines liegt — das Passwort selbst kommt nie zurück. */
+  smtp_passwort_set: boolean;
+  smtp_sicherheit: string | null;
+  /** Der Absender der Organisation, als Vergleich. */
+  haus_absender: string | null;
+  /** Liest Beacon ein Postfach? Nur dann trägt eine Mail `Reply-To` zurück. */
+  postfach_aktiv: boolean;
+}

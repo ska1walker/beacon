@@ -2,6 +2,6 @@ apiVersion: v2
 name: beacon
 description: KI-gestütztes CRM für den Vertrieb — läuft vollständig auf der eigenen Box
 type: application
-version: 0.6.4          # Chart-Version (Semver) — bei jeder Chart-Änderung erhöhen
-appVersion: "0.6.4"     # MUSS gleich version sein: der Linter prüft es, und der
+version: 0.6.5          # Chart-Version (Semver) — bei jeder Chart-Änderung erhöhen
+appVersion: "0.6.5"     # MUSS gleich version sein: der Linter prüft es, und der
                         # wirksame Image-Tag hängt daran (siehe values.yaml)
