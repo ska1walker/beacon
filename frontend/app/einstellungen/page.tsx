@@ -10,6 +10,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
 import { Sicherungsblock } from "@/components/sicherung";
+import { Einfuhrblock } from "@/components/einfuhr";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
 import { Postfachblock } from "@/components/postfach";
@@ -150,6 +151,11 @@ function Inhalt() {
     queryFn: () => api.get<OrgSettings>("/api/settings"),
   });
 
+  // Dieselbe Abfrage, die auch der Rollenhinweis stellt — der Import
+  // schreibt tausendfach und bleibt Verwaltern vorbehalten.
+  const wer = useQuery({ queryKey: ["wer"], queryFn: () => api.get<Wer>("/api/mitglieder/wer") });
+  const darfVerwalten = wer.data?.rolle === "owner" || wer.data?.rolle === "admin";
+
   if (abfrage.isPending) return <Laedt />;
   if (abfrage.isError) return <Fehler text={(abfrage.error as Error).message} />;
   const e = abfrage.data!;
@@ -211,6 +217,7 @@ function Inhalt() {
         {bereich === "daten" && (
           <>
             <Sicherungsblock />
+            <Einfuhrblock darfVerwalten={darfVerwalten} />
             <Datenwege e={e} />
           </>
         )}

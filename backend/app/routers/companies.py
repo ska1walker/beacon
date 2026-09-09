@@ -63,6 +63,65 @@ def _bedingungen(sql: str, args: list[Any], q: str | None, stage: str | None, fi
     return sql
 
 
+def abfrage_sql(
+    args: list[Any], q: str | None, filter: str | None,
+    sort: str | None, richtung: str | None, stage: str | None = None,
+) -> str:
+    """Die vollständige Abfrage ohne `limit` — Liste, Zählung und Ausfuhr.
+
+    Die Ausfuhr soll exakt das liefern, was die Tabelle zeigt. Ein
+    zweiter Filterbauer daneben wäre die Stelle, an der beide
+    auseinanderlaufen, ohne dass es jemand merkt.
+    """
+    sql = _bedingungen(LIST_SQL, args, q, stage, filter)
+    try:
+        return sql + segmente.sortierung_zu_sql("companies", sort, richtung)
+    except segmente.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+async def einfuegen(conn, user: CurrentUser, payload: CompanyIn, custom_json: str) -> UUID:
+    """Legt eine Firma an und protokolliert es. Ohne Anreicherung.
+
+    Der Endpunkt stößt danach die Anreicherung an, die Einfuhr nicht —
+    siehe `contacts.einfuegen` für den Grund.
+    """
+    new_id = await conn.fetchval(
+        """
+        insert into public.companies
+          (org_id, name, domain, industry, employee_count, city, country, phone,
+           website, lifecycle_stage, source, description, owner_id, created_by, custom,
+           street, postal_code, linkedin_url)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14,$15::jsonb,
+                $16,$17,$18)
+        returning id
+        """,
+        user.org_id,
+        payload.name,
+        payload.domain,
+        payload.industry,
+        payload.employee_count,
+        payload.city,
+        payload.country,
+        payload.phone,
+        payload.website,
+        payload.lifecycle_stage,
+        payload.source,
+        payload.description,
+        payload.owner_id or user.user_id,
+        user.user_id,
+        custom_json,
+        payload.street,
+        payload.postal_code,
+        payload.linkedin_url,
+    )
+    await audit.log_fuer(
+        conn, user, action="create", entity="companies", entity_id=new_id,
+        diff=payload.model_dump(mode="json"),
+    )
+    return new_id
+
+
 @router.get("", response_model=list[Company])
 async def list_companies(
     user: CurrentUser = Depends(get_current_user),
@@ -75,11 +134,7 @@ async def list_companies(
     offset: int = Query(0, ge=0),
 ) -> list[Company]:
     args: list[Any] = []
-    sql = _bedingungen(LIST_SQL, args, q, stage, filter)
-    try:
-        sql += segmente.sortierung_zu_sql("companies", sort, richtung)
-    except segmente.Ungueltig as exc:
-        raise HTTPException(400, str(exc)) from exc
+    sql = abfrage_sql(args, q, filter, sort, richtung, stage)
     args.extend([limit, offset])
     sql += f" limit ${len(args) - 1} offset ${len(args)}"
 
@@ -188,47 +243,13 @@ async def create_company(
     user: CurrentUser = Depends(get_current_user),
 ) -> Company:
     async with acquire_as(user.user_id) as conn:
-        row = await conn.fetchrow(
-            """
-            insert into public.companies
-              (org_id, name, domain, industry, employee_count, city, country, phone,
-               website, lifecycle_stage, source, description, owner_id, created_by, custom,
-               street, postal_code, linkedin_url)
-            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::public.lifecycle_stage,$11,$12,$13,$14,$15::jsonb,
-                    $16,$17,$18)
-            returning id
-            """,
-            user.org_id,
-            payload.name,
-            payload.domain,
-            payload.industry,
-            payload.employee_count,
-            payload.city,
-            payload.country,
-            payload.phone,
-            payload.website,
-            payload.lifecycle_stage,
-            payload.source,
-            payload.description,
-            payload.owner_id or user.user_id,
-            user.user_id,
-            await _custom_pruefen(conn, 'companies', payload.custom),
-            payload.street,
-            payload.postal_code,
-            payload.linkedin_url,
+        new_id = await einfuegen(
+            conn, user, payload, await _custom_pruefen(conn, "companies", payload.custom)
         )
-        await audit.log_fuer(
-            conn,
-            user,
-            action="create",
-            entity="companies",
-            entity_id=row["id"],
-            diff=payload.model_dump(mode="json"),
-        )
-        full = await conn.fetchrow(LIST_SQL + " and c.id = $1", row["id"])
+        full = await conn.fetchrow(LIST_SQL + " and c.id = $1", new_id)
     # Was über die Firma öffentlich zu finden ist, wird jetzt gesucht —
     # ohne dass jemand darauf wartet.
-    anreicherung.im_hintergrund(user, "companies", row["id"])
+    anreicherung.im_hintergrund(user, "companies", new_id)
     return Company(**dict(full))
 
 

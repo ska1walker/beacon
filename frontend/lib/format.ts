@@ -1,3 +1,5 @@
+import type { EinfuhrGrund } from "@/lib/typen";
+
 import type { StageKind } from "@/lib/typen";
 // Formatieren an einer Stelle. Beträge kommen als Cent aus der API — wer
 // sie irgendwo durch 100 teilt, tut es hier oder gar nicht.
@@ -301,3 +303,22 @@ export function dateigroesse(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
+
+/** Warum eine Zeile nicht angelegt wurde — in einem Satzfragment. */
+export const EINFUHR_GRUND_TEXT: Record<EinfuhrGrund, string> = {
+  dublette_email: "Kontakt gibt es schon (E-Mail)",
+  dublette_datei: "Steht zweimal in der Datei",
+  dublette_domain: "Firma gibt es schon (Domain)",
+  dublette_name: "Firma gibt es schon (Name)",
+  unbekannte_auswahl: "Wert steht nicht zur Auswahl",
+  ungueltiger_wert: "Wert passt nicht zum Feld",
+  unbekannte_person: "Person unbekannt",
+  leer: "Zu wenig in der Zeile",
+};
+
+export const OBJEKT_TEXT: Record<string, string> = {
+  contacts: "Kontakte",
+  companies: "Firmen",
+  tickets: "Tickets",
+  tasks: "Aufgaben",
+};

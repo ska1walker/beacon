@@ -1082,3 +1082,92 @@ export interface Dokument {
   /** Darf der Browser es zeigen, oder nur herunterladen? */
   im_fenster: boolean;
 }
+
+/** Ein Feld, auf das sich eine Spalte einer CSV legen lässt. */
+export interface Einfuhrziel {
+  schluessel: string;
+  text: string;
+  art: string;
+  eigen: boolean;
+  /** Kein Feld der Tabelle, sondern eine Verknüpfung (Firma am Kontakt). */
+  virtuell: boolean;
+}
+
+export interface Einfuhrspalte {
+  nr: number;
+  kopf: string;
+  beispiele: string[];
+  ziel: string | null;
+}
+
+export type EinfuhrGrund =
+  | "dublette_email"
+  | "dublette_datei"
+  | "dublette_domain"
+  | "dublette_name"
+  | "unbekannte_auswahl"
+  | "ungueltiger_wert"
+  | "unbekannte_person"
+  | "leer";
+
+export interface Einfuhrausschluss {
+  zeile: number;
+  grund: EinfuhrGrund | null;
+  text: string | null;
+}
+
+export interface Einfuhrurteil {
+  zeile: number;
+  werte: string[];
+  urteil: "anlegen" | "ueberspringen";
+  grund: EinfuhrGrund | null;
+  text: string | null;
+}
+
+export interface Einfuhrbilanz {
+  anlegen: number;
+  firmen_anlegen: number;
+  ueberspringen: number;
+  gruende: Partial<Record<EinfuhrGrund, number>>;
+}
+
+export interface Einfuhrvorschau {
+  entity: Objektart;
+  /** Womit die Datei gelesen wurde — steht auf dem Bildschirm, damit ein
+      Umlautfehler einen Absender hat. */
+  kodierung: string;
+  trenner: string;
+  zeilen: number;
+  ziele: Einfuhrziel[];
+  spalten: Einfuhrspalte[];
+  nicht_zugeordnet: string[];
+  vorschau: Einfuhrurteil[];
+  bilanz: Einfuhrbilanz;
+  uebersprungen: Einfuhrausschluss[];
+  hinweise: string[];
+}
+
+export interface Einfuhrergebnis {
+  id: string;
+  entity: Objektart;
+  angelegt: number;
+  firmen_angelegt: number;
+  uebersprungen: number;
+  gruende: Partial<Record<EinfuhrGrund, number>>;
+  details: Einfuhrausschluss[];
+}
+
+/** Eine Zeile im Protokoll „Bisherige Importe". */
+export interface Einfuhr {
+  id: string;
+  entity: Objektart;
+  dateiname: string;
+  zeilen: number;
+  angelegt: number;
+  firmen_angelegt: number;
+  uebersprungen: number;
+  status: "fertig" | "fehlgeschlagen";
+  fehler: string | null;
+  created_at: string;
+  von: string | null;
+}

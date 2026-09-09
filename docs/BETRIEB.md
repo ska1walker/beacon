@@ -1277,6 +1277,94 @@ Tests: `backend/tests/test_dokumente.py` — 16 Fälle, darunter der
 Pfadausbruch, die SVG-Auslieferung, die Größengrenze und die fremde
 Organisation, die weder sieht noch holt noch löscht.
 
+## CSV hinein und hinaus
+
+Seit 0.8.0 kommen Kontakte und Firmen als Tabelle herein und die Liste,
+die man gerade gefiltert hat, als Tabelle heraus.
+
+- **Hinein:** Einstellungen › Daten › „Import aus einer CSV". Nur
+  Eigentümer und Verwalter — ein Import schreibt tausendfach in einen
+  Bestand, den andere pflegen.
+- **Hinaus:** der Knopf „Exportieren" neben „Spalten" in der Liste der
+  Kontakte oder Firmen. Jedes Mitglied darf das; die Datei zeigt nur, was
+  die Liste ohnehin zeigt.
+
+### Nichts wird überschrieben
+
+Eine Zeile, deren Kontakt es schon gibt, wird **übersprungen und
+genannt** — mit Zeilennummer und Grund. Der teure Fehler wäre der andere:
+eine Datei mit einer verrutschten Spalte, die stillschweigend
+fünfhundert gepflegte Datensätze überschreibt.
+
+Erkannt wird eine Dublette am Kontakt über die E-Mail-Adresse, an der
+Firma über die Domain und sonst über den Namen ohne Rechtsform
+(„Nordwind Logistik GmbH" trifft „Nordwind Logistik"). Beides gilt auch
+**innerhalb** der Datei: Zwei Kontakte derselben neuen Firma ergeben eine
+Firma, nicht zwei.
+
+### Die Form der Datei
+
+| Frage | So | Warum |
+|---|---|---|
+| Trennzeichen hinaus | `;` | Deutsches Excel liest das Listentrennzeichen aus den Regionaleinstellungen; mit `,` steht die Zeile in einer Spalte. Herein werden `;`, `,` und Tabulator erkannt. |
+| Kodierung hinaus | UTF-8 **mit BOM** | Ohne BOM steht in Excel „BÃ¶hm". |
+| Kodierung herein | BOM, sonst UTF-8, cp1252, latin-1 | Excel schreibt cp1252, HubSpot UTF-8 mit BOM. Die Vorschau **nennt**, was gelesen wurde — ein Umlautfehler ohne Absender ist schwer zu finden. |
+| Datum | hinaus ISO, herein auch `TT.MM.JJJJ` | ISO ist eindeutig und sortiert; Deutsch wird gelesen, weil Menschen so tippen. |
+| Zahl | Komma als Dezimalzeichen | Bei `;`-Trennung erwartet deutsches Excel es so. `12.5` wird dort sonst zum **12. Mai**. |
+| Auswahl | hinaus der Text („Kunde"), herein Text **oder** Wert | Lesbar und rundlauffähig. Ein unbekannter Wert überspringt die Zeile; die Optionsliste wird **nie** erweitert. |
+| Mehrfachauswahl | `Wert A \| Wert B` | `;` ist das Dateitrennzeichen und HubSpots bekannte Falle (Migration 0015), `,` steht in Werten („ISO 9001, 27001"). |
+| Zellen mit `=`, `+`, `-`, `@` | bekommen ein führendes `'` | Sonst ist ein Firmenname wie `=HYPERLINK(...)` für Excel eine Formel. Die Einfuhr nimmt genau dieses eine Zeichen wieder weg. |
+
+Grenze: **10 MB und 20.000 Zeilen**. Darüber ist es ein Umzug und gehört
+zu `pg_dump`, nicht in ein Formular.
+
+### Was die Einfuhr nicht anfasst
+
+- **Sie reichert nicht an.** Fünftausend Hintergrundläufe gegen Suchdienst
+  und Sprachmodell wären ein Selbst-DoS und eine Rechnung. Der Knopf am
+  Datensatz bleibt.
+- **Marketing-Einwilligung kommt nicht mit.** Eine Einwilligung braucht
+  einen Nachweis; eine Zelle in einer Tabelle ist keiner.
+- **`Angelegt` und `Zuletzt geändert` auch nicht.** Sie entstehen beim
+  Schreiben; ein Datum aus der Datei wäre eine Behauptung über die eigene
+  Historie.
+
+### Alles oder nichts
+
+Geht mitten in der Datei etwas Unerwartetes schief, rollt die
+Transaktion zurück und es ist nichts geschrieben. Ein halber Import ist
+schlimmer als keiner — man sieht ihm nicht an, wo er aufgehört hat. Der
+Fehlschlag steht trotzdem unter „Bisherige Importe", sonst bliebe von dem
+Versuch nichts übrig.
+
+### Was protokolliert wird
+
+Jeder angelegte Datensatz bekommt einen Eintrag im Audit-Log mit
+Dateiname und Zeilennummer. Übersprungene Zeilen haben keinen Datensatz
+und damit keinen Eintrag — für sie gibt es die Tabelle `einfuhren` mit
+Bilanz, Gründen und der angewandten Spaltenzuordnung. Sie steht im Abzug:
+Ohne sie ließe sich nach einer Neuinstallation nicht mehr erklären, was
+ein Import getan hat.
+
+Jede **Ausfuhr** steht ebenfalls im Audit-Log (`export`, mit Zeilenzahl,
+Filter und Spalten). Sie verlässt die Box; das ist dieselbe Art von
+Ereignis wie ein Anreicherungslauf.
+
+### Eine HubSpot-Datei
+
+Die Kopfzeilen eines HubSpot-Exports werden erkannt, deutsch und
+englisch: „Vorname/First Name", „E-Mail-Adresse/Email", „Zugehöriges
+Unternehmen/Associated Company", „Kontaktinhaber/Contact Owner" und so
+fort. Liegen bleiben Verlauf, Aktivitäten, Einwilligungen und
+Erstellungsdaten — das ist Einfuhr von Daten, nicht Umzug eines Systems.
+
+Excel: „Speichern unter → CSV UTF-8". Eine `.xlsx` wird abgewiesen und
+sagt genau das.
+
+Tests: `backend/tests/test_csvform.py` (59 Fälle, die reine Form),
+`test_einfuhr.py` (39), `test_ausfuhr.py` (15, darunter der Rundlauf:
+Ausfuhr → Einfuhr in eine zweite Organisation).
+
 ## Oberflächenfehler stehen im Pod-Log
 
 Zerbricht die Oberfläche („Application error: a client-side exception“),

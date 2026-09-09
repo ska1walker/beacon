@@ -44,7 +44,9 @@ from app.routers import (
 )
 from app.routers import anmeldung as anmeldung_router
 from app.routers import assistent as assistent_router
+from app.routers import ausfuhr as ausfuhr_router
 from app.routers import dokumente as dokumente_router
+from app.routers import einfuhr as einfuhr_router
 from app.routers import erkenntnisse as erkenntnisse_router
 from app.routers import fehler as fehler_router
 from app.routers import finden as finden_router
@@ -410,6 +412,8 @@ app.include_router(anmeldung_router.router)
 app.include_router(fehler_router.router)
 app.include_router(podcast_router.router)
 app.include_router(dokumente_router.router)
+app.include_router(einfuhr_router.router)
+app.include_router(ausfuhr_router.router)
 app.include_router(listen.router)
 app.include_router(suche_router.router)
 app.include_router(kampagnen.router)

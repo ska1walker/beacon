@@ -62,6 +62,66 @@ def _bedingungen(sql: str, args: list[Any], q: str | None, company_id: UUID | No
     return sql
 
 
+def abfrage_sql(
+    args: list[Any], q: str | None, filter: str | None,
+    sort: str | None, richtung: str | None, company_id: UUID | None = None,
+) -> str:
+    """Die vollständige Abfrage ohne `limit` — Liste, Zählung und Ausfuhr.
+
+    Die Ausfuhr soll exakt das liefern, was die Tabelle zeigt. Ein
+    zweiter Filterbauer daneben wäre die Stelle, an der beide
+    auseinanderlaufen, ohne dass es jemand merkt.
+    """
+    sql = _bedingungen(LIST_SQL, args, q, company_id, filter)
+    try:
+        return sql + segmente.sortierung_zu_sql("contacts", sort, richtung)
+    except segmente.Ungueltig as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+async def einfuegen(conn, user: CurrentUser, payload: ContactIn, custom_json: str) -> UUID:
+    """Legt einen Kontakt an und protokolliert es. Ohne Anreicherung.
+
+    Der Endpunkt stößt danach die Anreicherung an, die Einfuhr nicht:
+    Fünftausend Hintergrundläufe gegen Suchdienst und Sprachmodell wären
+    ein Selbst-DoS und eine Rechnung. `custom_json` kommt fertig geprüft
+    herein, damit ein Import die Definitionen einmal lädt und nicht je
+    Zeile.
+    """
+    new_id = await conn.fetchval(
+        """
+        insert into public.contacts
+          (org_id, company_id, first_name, last_name, email, phone, mobile, job_title,
+           buying_role, linkedin_url, lifecycle_stage, source, notes, owner_id, created_by,
+           custom)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::public.lifecycle_stage,$12,$13,$14,$15,
+                $16::jsonb)
+        returning id
+        """,
+        user.org_id,
+        payload.company_id,
+        payload.first_name,
+        payload.last_name,
+        str(payload.email) if payload.email else None,
+        payload.phone,
+        payload.mobile,
+        payload.job_title,
+        payload.buying_role,
+        payload.linkedin_url,
+        payload.lifecycle_stage,
+        payload.source,
+        payload.notes,
+        payload.owner_id or user.user_id,
+        user.user_id,
+        custom_json,
+    )
+    await audit.log_fuer(
+        conn, user, action="create", entity="contacts", entity_id=new_id,
+        diff=payload.model_dump(mode="json"),
+    )
+    return new_id
+
+
 @router.get("", response_model=list[Contact])
 async def list_contacts(
     user: CurrentUser = Depends(get_current_user),
@@ -74,11 +134,7 @@ async def list_contacts(
     offset: int = Query(0, ge=0),
 ) -> list[Contact]:
     args: list[Any] = []
-    sql = _bedingungen(LIST_SQL, args, q, company_id, filter)
-    try:
-        sql += segmente.sortierung_zu_sql("contacts", sort, richtung)
-    except segmente.Ungueltig as exc:
-        raise HTTPException(400, str(exc)) from exc
+    sql = abfrage_sql(args, q, filter, sort, richtung, company_id)
     args.extend([limit, offset])
     sql += f" limit ${len(args) - 1} offset ${len(args)}"
 
@@ -199,40 +255,8 @@ async def create_contact(
     user: CurrentUser = Depends(get_current_user),
 ) -> Contact:
     async with acquire_as(user.user_id) as conn:
-        new_id = await conn.fetchval(
-            """
-            insert into public.contacts
-              (org_id, company_id, first_name, last_name, email, phone, mobile, job_title,
-               buying_role, linkedin_url, lifecycle_stage, source, notes, owner_id, created_by,
-               custom)
-            values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::public.lifecycle_stage,$12,$13,$14,$15,
-                    $16::jsonb)
-            returning id
-            """,
-            user.org_id,
-            payload.company_id,
-            payload.first_name,
-            payload.last_name,
-            str(payload.email) if payload.email else None,
-            payload.phone,
-            payload.mobile,
-            payload.job_title,
-            payload.buying_role,
-            payload.linkedin_url,
-            payload.lifecycle_stage,
-            payload.source,
-            payload.notes,
-            payload.owner_id or user.user_id,
-            user.user_id,
-            await _custom_pruefen(conn, 'contacts', payload.custom),
-        )
-        await audit.log_fuer(
-            conn,
-            user,
-            action="create",
-            entity="contacts",
-            entity_id=new_id,
-            diff=payload.model_dump(mode="json"),
+        new_id = await einfuegen(
+            conn, user, payload, await _custom_pruefen(conn, "contacts", payload.custom)
         )
         row = await conn.fetchrow(LIST_SQL + " and k.id = $1", new_id)
     anreicherung.im_hintergrund(user, "contacts", new_id)

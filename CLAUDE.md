@@ -25,6 +25,13 @@ Pixel-Nachbau inklusive HubSpot-Orange war ausdrücklich nicht gewollt.
 richtet sich nach dem, was der AImighty-Vertrieb braucht: die
 Produktleiter Assistent / Analyst / Experte, Servicetage, Kaufrollen.
 
+Seit 0.8.0 gibt es eine **CSV-Einfuhr** für Kontakte und Firmen und eine
+**CSV-Ausfuhr** der aktuellen Liste. Das widerspricht dem nicht: Beides
+folgt Beacons eigenen Feldern, HubSpots Kopfzeilen werden nur als Aliase
+erkannt. Eine Messe-Liste hereinzuholen ist Einfuhr von Daten, kein Umzug
+eines Systems — Verlauf, Aktivitäten und Einwilligungen bleiben draußen.
+Siehe `docs/BETRIEB.md`, „CSV hinein und hinaus".
+
 ---
 
 ## Stand

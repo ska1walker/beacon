@@ -72,6 +72,10 @@ TABELLEN: list[str] = [
     # Links und Mails zeigen auf Kampagnen — sie kommen danach.
     "oeffentliche_links",
     "mails",
+    # Was eine Einfuhr getan und übersprungen hat. Die Datei selbst
+    # bewahrt Beacon nicht auf — ohne diese Zeile ließe sich ein Import
+    # nach einer Neuinstallation nicht mehr erklären.
+    "einfuhren",
     "audit_log",
     # Offene Einladungen überleben eine Neuinstallation, damit ein Link,
     # den jemand schon in der Hand hat, weiter trägt. `sitzungen` und

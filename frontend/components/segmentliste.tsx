@@ -6,6 +6,7 @@ import {
   ArrowUp,
   Bookmark,
   Columns3,
+  Download,
   Filter as FilterZeichen,
   Search,
   Trash2,
@@ -14,6 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
+import { ausfuhrPfad, EXPORTIERBAR } from "@/lib/ausfuhr";
 import { anzahl as anzahlText, datum, euro, OHNE_WERT, OPERATOR_TEXT } from "@/lib/format";
 import type {
   Liste,
@@ -344,6 +346,26 @@ export function Segmentliste({
           <Columns3 size={14} aria-hidden="true" />
           Spalten
         </button>
+
+        {EXPORTIERBAR.has(entity) && (
+          /* Ein gewöhnlicher Link, kein `fetch`: Der Keks geht von selbst
+             mit, und der Browser hält die Datei nie ganz im Speicher. */
+          <a
+            className="btn btn-sekundaer btn-klein"
+            download
+            href={ausfuhrPfad(entity, {
+              q: suche,
+              filter: scharf.length > 0 ? JSON.stringify(scharf) : "",
+              sort: lage?.sort_feld,
+              richtung: lage?.sort_richtung,
+              spalten: lage?.spalten,
+            })}
+            title="Diese Liste als CSV — mit Filter, Spalten und Sortierung von hier"
+          >
+            <Download size={14} aria-hidden="true" />
+            Exportieren
+          </a>
+        )}
 
         {abweichung && (
           <button
