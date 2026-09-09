@@ -54,7 +54,9 @@ def code_neu() -> str:
     return "-".join(roh[i:i + _JE_GRUPPE] for i in range(0, len(roh), _JE_GRUPPE))
 
 
-def anfordern(name: str, zugaenge: list[str], *, bekannt: bool) -> str | None:
+def anfordern(
+    name: str, zugaenge: list[str], *, bekannt: bool, passwoerter_ueberhaupt: bool = False
+) -> str | None:
     """Schreibt die Datei neben die Daten. Gibt den Code, wenn es einen gibt.
 
     **Die Datei entsteht auch, wenn der Name nicht stimmt.** Das ist kein
@@ -92,6 +94,20 @@ def anfordern(name: str, zugaenge: list[str], *, bekannt: bool) -> str | None:
             + "".join(f"  - {z}\n" for z in zugaenge)
             + "\nEinen davon auf der Seite eintragen und noch einmal auf\n"
               "„Code erzeugen\" drücken.\n"
+        )
+    elif passwoerter_ueberhaupt:
+        # Der bittere Fall: Es gibt Passwörter, aber keinen Zugang, der noch
+        # zu einer Organisation gehört. Dann lässt weder die Anmeldung
+        # jemanden herein noch die Olares-Sitzung — die Tür gilt als
+        # geschlossen, sobald irgendwo ein Passwort steht. Hier „öffnen Sie
+        # Beacon einfach von der Olares-Oberfläche" zu schreiben, wäre eine
+        # Sackgasse mit Wegweiser.
+        teil = (
+            "Auf dieser Box gibt es Zugänge mit Passwort, aber **keiner davon\n"
+            "gehört noch zu einer Organisation**. So kommt niemand mehr herein:\n"
+            "weder über die Anmeldung noch über die Olares-Sitzung.\n\n"
+            "Das lässt sich nur an der Box selbst reparieren. Der Weg steht in\n"
+            "docs/BETRIEB.md unter „Wenn niemand mehr hereinkommt\".\n"
         )
     else:
         teil = (

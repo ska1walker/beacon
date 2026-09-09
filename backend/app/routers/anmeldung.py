@@ -245,17 +245,31 @@ async def vergessen(
         # Alle Zugänge mit Passwort — sie kommen in die Datei, nicht in die
         # Antwort. Auf einer fremden Box weiß der Mensch oft nicht, wie
         # sein Zugang heißt; wer die Datei öffnen kann, darf es erfahren.
+        # Nur Zugänge, die eine Zurücksetzung auch wirklich wieder
+        # hereinlässt: mit Passwort, nicht gelöscht, und **in einer
+        # Organisation**. Ohne die letzte Bedingung nennte die Datei Namen,
+        # bei denen der Code später doch abgewiesen wird.
         zeilen = await conn.fetch(
-            "select olares_username from public.users "
-            "where deleted_at is null and passwort_hash is not null "
-            "order by created_at"
+            "select u.olares_username from public.users u "
+            "join public.user_org_roles r on r.user_id = u.id "
+            "where u.deleted_at is null and u.passwort_hash is not null "
+            "order by u.created_at"
         )
         zugaenge = [z["olares_username"] for z in zeilen]
         gibt_es = any(z.lower() == daten.name.strip().lower() for z in zugaenge)
+        # Dieselbe Frage, die `auth._noch_unbewohnt()` stellt: Steht
+        # irgendwo ein Passwort? Nur wenn nirgends eines steht, lässt die
+        # Anwendung die Olares-Sitzung noch durch.
+        passwoerter_ueberhaupt = await conn.fetchval(
+            "select exists(select 1 from public.users where passwort_hash is not null)"
+        )
         # Der Versuch zählt in jedem Fall. Zählte er nur beim Treffer,
         # ließe sich an der Bremse ablesen, welche Namen es gibt.
         await kern.versuch_merken(conn, kennungen)
-    zuruecksetzen.anfordern(daten.name.strip(), zugaenge, bekannt=gibt_es)
+    zuruecksetzen.anfordern(
+        daten.name.strip(), zugaenge,
+        bekannt=gibt_es, passwoerter_ueberhaupt=bool(passwoerter_ueberhaupt),
+    )
     return Ablageort(
         ordner=zuruecksetzen.wo_liegt_die_datei(), minuten=zuruecksetzen.GUELTIG_MINUTEN
     )

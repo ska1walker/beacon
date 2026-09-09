@@ -254,3 +254,37 @@ def test_die_datei_nennt_keine_absolute_uhrzeit():
     assert "Gültig bis" not in text
     assert "UTC" not in text
     assert f"Gültig {zuruecksetzen.GUELTIG_MINUTEN} Minuten" in text
+
+
+def test_zugaenge_ohne_organisation_bekommen_keine_sackgasse():
+    """Passwörter da, aber keiner gehört zu einer Organisation.
+
+    Dann kommt niemand mehr herein — auch nicht über die Olares-Sitzung,
+    denn die Tür gilt als geschlossen, sobald irgendwo ein Passwort steht.
+    „Öffnen Sie Beacon einfach von der Olares-Oberfläche" wäre hier ein
+    Wegweiser in eine Sackgasse.
+    """
+    assert zuruecksetzen.anfordern(
+        "wer-auch-immer", [], bekannt=False, passwoerter_ueberhaupt=True
+    ) is None
+    text = _datei().read_text(encoding="utf-8")
+    assert "keiner davon" in text
+    assert "an der Box selbst" in text
+    assert "Olares-Oberfläche dieser Box aus, dann sind Sie drin" not in text
+
+
+async def test_wer_aus_der_organisation_genommen_wurde_steht_nicht_in_der_liste(datenbank):
+    """Sonst nennte die Datei einen Namen, dessen Code später abgewiesen wird."""
+    await _zugang_mit_passwort("zur-raus", "ein-langes-passwort-14")
+    await _zugang_mit_passwort("zur-drin", "ein-langes-passwort-15")
+    async with acquire() as conn:
+        await conn.execute(
+            "delete from public.user_org_roles where user_id in "
+            "(select id from public.users where olares_username = $1)",
+            "zur-raus",
+        )
+    async with klient_fuer("zur-drin") as k:
+        await k.post("/api/anmeldung/vergessen", json={"name": "keine-ahnung"})
+    text = _datei().read_text(encoding="utf-8")
+    assert "zur-drin" in text
+    assert "zur-raus" not in text

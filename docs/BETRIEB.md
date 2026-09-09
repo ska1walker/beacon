@@ -1146,6 +1146,16 @@ und nennt den anderen Weg: Beacon von der Olares-Oberfläche der Box aus
 Box-Sitzung durch (`_noch_unbewohnt()`), und unter Einstellungen wird das
 erste gesetzt.
 
+**Der dritte Zustand ist der bittere:** Es gibt Zugänge mit Passwort, aber
+keiner gehört noch zu einer Organisation. Dann kommt niemand mehr herein —
+die Anmeldung findet keine Organisation, und die Olares-Sitzung greift
+auch nicht, weil `_noch_unbewohnt()` schon beim ersten Passwort irgendwo
+in der Datenbank auf „bewohnt" schaltet. Diese Strenge ist Absicht: Bei
+offenem Eingang ist `X-Bfl-User` von außen fälschbar, eine Box mit Daten
+darf durch verwaiste Rollen nicht wieder übernehmbar werden. Die Datei
+sagt in diesem Fall, dass es nur noch an der Box selbst geht, statt einen
+Wegweiser in die Sackgasse zu stellen.
+
 **Der Pfad, den man einem Menschen nennt, ist nicht `/app/data`.** Das
 ist der Pfad *im Container*; in der Dateien-App gibt es ihn nicht. Dort
 heißt derselbe Ordner `Data` und darunter der Name der App. 0.7.0 nannte
