@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Seitenkopf } from "@/components/seitenkopf";
+import { Knopfmenue } from "@/components/knopfmenue";
 import { Segmentliste } from "@/components/segmentliste";
 import { KontaktAnlegen } from "@/components/kontakt-anlegen";
 
@@ -13,9 +14,19 @@ export default function KontakteSeite() {
   return (
     <>
       <Seitenkopf titel="Kontakte">
-        <button type="button" className="btn btn-primaer" onClick={() => setOffen(true)}>
-          Kontakt anlegen
-        </button>
+        {/* Der zweite Weg gehört neben den ersten: Wer auf eine leere
+            Liste schaut, sucht den Import nicht in den Einstellungen. */}
+        <Knopfmenue
+          text="Kontakt anlegen"
+          eintraege={[
+            { text: "Neu anlegen", onWahl: () => setOffen(true) },
+            {
+              text: "Aus CSV importieren",
+              hinweis: "Mehrere auf einmal, aus einer Tabelle",
+              onWahl: () => router.push("/import?entity=contacts"),
+            },
+          ]}
+        />
       </Seitenkopf>
 
       {offen && (

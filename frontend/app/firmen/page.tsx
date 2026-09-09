@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Seitenkopf } from "@/components/seitenkopf";
+import { Knopfmenue } from "@/components/knopfmenue";
 import { Segmentliste } from "@/components/segmentliste";
 import { FirmaAnlegen } from "@/components/firma-anlegen";
 
@@ -13,9 +14,19 @@ export default function FirmenSeite() {
   return (
     <>
       <Seitenkopf titel="Firmen">
-        <button type="button" className="btn btn-primaer" onClick={() => setOffen(true)}>
-          Firma anlegen
-        </button>
+        {/* Der zweite Weg gehört neben den ersten: Wer auf eine leere
+            Liste schaut, sucht den Import nicht in den Einstellungen. */}
+        <Knopfmenue
+          text="Firma anlegen"
+          eintraege={[
+            { text: "Neu anlegen", onWahl: () => setOffen(true) },
+            {
+              text: "Aus CSV importieren",
+              hinweis: "Mehrere auf einmal, aus einer Tabelle",
+              onWahl: () => router.push("/import?entity=companies"),
+            },
+          ]}
+        />
       </Seitenkopf>
 
       {offen && (

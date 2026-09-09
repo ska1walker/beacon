@@ -1804,6 +1804,64 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   .person-pfeil { margin-left: auto; flex: none; color: var(--am-text-gedaempft); }
 
+  /* ── Knopf mit zweitem Weg ────────────────────────────────────────
+     Ein geteilter Knopf: links die Vorgabe, rechts der Pfeil. Die
+     Trennlinie dazwischen ist kein Zierrat — ohne sie sieht es aus wie
+     ein Knopf mit einem Pfeil darauf, und niemand klickt den Pfeil. */
+  .knopfmenue { position: relative; display: inline-flex; }
+
+  .knopfmenue-haupt {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .knopfmenue-pfeil {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid rgb(255 255 255 / 0.25);
+    padding-left: var(--am-raum-2);
+    padding-right: var(--am-raum-2);
+  }
+
+  .knopfmenue-feld {
+    position: absolute;
+    top: calc(100% + var(--am-raum-1));
+    right: 0;
+    min-width: 220px;
+    z-index: 60;
+    padding: var(--am-raum-1);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+    box-shadow: var(--am-schatten-1);
+    display: grid;
+    gap: 2px;
+  }
+
+  .knopfmenue-punkt {
+    display: grid;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    padding: var(--am-raum-2) var(--am-raum-3);
+    border: 0;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-primaer);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-height: var(--am-ziel-zeiger);
+  }
+
+  .knopfmenue-punkt:hover { background: var(--am-flaeche-2); }
+  .knopfmenue-punkt:focus-visible { outline: var(--am-fokus-ring); outline-offset: -2px; }
+
+  .knopfmenue-hinweis {
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+
   .person-liste {
     position: absolute;
     bottom: calc(100% + var(--am-raum-2));

@@ -22,6 +22,7 @@ import type {
   Einfuhrvorschau,
   EinfuhrGrund,
   Objektart,
+  Wer,
 } from "@/lib/typen";
 import { Erklaerung } from "@/components/erklaerung";
 import { Fehler } from "@/components/zustaende";
@@ -84,11 +85,13 @@ function Gruende({
   );
 }
 
-export function Einfuhrblock({ darfVerwalten }: { darfVerwalten: boolean }) {
+export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
   const client = useQueryClient();
+  const wer = useQuery({ queryKey: ["wer"], queryFn: () => api.get<Wer>("/api/mitglieder/wer") });
+  const darfVerwalten = wer.data?.rolle === "owner" || wer.data?.rolle === "admin";
   const feld = useRef<HTMLInputElement>(null);
   const [datei, setDatei] = useState<File | null>(null);
-  const [objekt, setObjekt] = useState<"" | Objektart>("");
+  const [objekt, setObjekt] = useState<"" | Objektart>(vorwahl ?? "");
   const [vorschau, setVorschau] = useState<Einfuhrvorschau | null>(null);
   const [ergebnis, setErgebnis] = useState<Einfuhrergebnis | null>(null);
   const [ueber, setUeber] = useState(false);

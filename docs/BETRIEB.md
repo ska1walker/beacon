@@ -1282,9 +1282,13 @@ Organisation, die weder sieht noch holt noch löscht.
 Seit 0.8.0 kommen Kontakte und Firmen als Tabelle herein und die Liste,
 die man gerade gefiltert hat, als Tabelle heraus.
 
-- **Hinein:** Einstellungen › Daten › „Import aus einer CSV". Nur
-  Eigentümer und Verwalter — ein Import schreibt tausendfach in einen
-  Bestand, den andere pflegen.
+- **Hinein:** auf der Liste selbst, hinter dem Hauptknopf —
+  „Kontakt anlegen ▾ → Aus CSV importieren", dasselbe bei den Firmen. Das
+  öffnet `/import`. Nur Eigentümer und Verwalter dürfen es: Ein Import
+  schreibt tausendfach in einen Bestand, den andere pflegen. Unter
+  Einstellungen › Daten steht nur noch der Wegweiser dorthin — wer auf
+  eine leere Kontaktliste schaut, sucht den Import nicht in den
+  Einstellungen (HubSpot macht es genauso, 9.9.2026).
 - **Hinaus:** der Knopf „Exportieren" neben „Spalten" in der Liste der
   Kontakte oder Firmen. Jedes Mitglied darf das; die Datei zeigt nur, was
   die Liste ohnehin zeigt.

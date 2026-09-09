@@ -10,7 +10,6 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
 import { Sicherungsblock } from "@/components/sicherung";
-import { Einfuhrblock } from "@/components/einfuhr";
 import { Absenderblock } from "@/components/absender";
 import { Quellenblock } from "@/components/quellen";
 import { Postfachblock } from "@/components/postfach";
@@ -151,11 +150,6 @@ function Inhalt() {
     queryFn: () => api.get<OrgSettings>("/api/settings"),
   });
 
-  // Dieselbe Abfrage, die auch der Rollenhinweis stellt — der Import
-  // schreibt tausendfach und bleibt Verwaltern vorbehalten.
-  const wer = useQuery({ queryKey: ["wer"], queryFn: () => api.get<Wer>("/api/mitglieder/wer") });
-  const darfVerwalten = wer.data?.rolle === "owner" || wer.data?.rolle === "admin";
-
   if (abfrage.isPending) return <Laedt />;
   if (abfrage.isError) return <Fehler text={(abfrage.error as Error).message} />;
   const e = abfrage.data!;
@@ -217,7 +211,7 @@ function Inhalt() {
         {bereich === "daten" && (
           <>
             <Sicherungsblock />
-            <Einfuhrblock darfVerwalten={darfVerwalten} />
+            <Einfuhrverweis />
             <Datenwege e={e} />
           </>
         )}
@@ -286,5 +280,37 @@ function Passworthinweis() {
         Beacon nicht mehr.
       </span>
     </div>
+  );
+}
+
+/**
+ * Der Import wohnt nicht hier.
+ *
+ * Er steht auf den Listen, wo man ihn braucht — wer auf eine leere
+ * Kontaktliste schaut, sucht ihn nicht in den Einstellungen. Hier steht
+ * nur der Wegweiser, damit er unter „Daten" trotzdem auffindbar bleibt.
+ */
+function Einfuhrverweis() {
+  return (
+    <section className="block">
+      <div className="block-kopf">
+        <h2>Import und Export</h2>
+      </div>
+      <div className="block-inhalt">
+        <p style={{ fontSize: "0.875rem", marginBottom: "var(--am-raum-3)" }}>
+          Kontakte und Firmen kommen als CSV herein und hinaus. Beides steht auf der Liste
+          selbst: <strong>Kontakt anlegen ▾ → Aus CSV importieren</strong>, und der Knopf{" "}
+          <strong>Exportieren</strong> neben „Spalten".
+        </p>
+        <div className="btn-reihe">
+          <Link className="btn btn-sekundaer btn-klein" href="/import?entity=contacts">
+            Kontakte importieren
+          </Link>
+          <Link className="btn btn-sekundaer btn-klein" href="/import?entity=companies">
+            Firmen importieren
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
