@@ -1293,6 +1293,27 @@ die man gerade gefiltert hat, als Tabelle heraus.
   Kontakte oder Firmen. Jedes Mitglied darf das; die Datei zeigt nur, was
   die Liste ohnehin zeigt.
 
+### „Dieser Sitzplatz gehört nicht zu Ihrer Organisation"
+
+Der Sitzplatz liegt in einem Cookie im Browser, die Personen liegen in
+der Datenbank. Eine Neuinstallation legt die Datenbank neu an — der
+Platz zeigt danach auf jemanden, den es nicht mehr gibt, und **jeder**
+Aufruf scheitert mit dieser Meldung. Die Oberfläche lädt, aber nichts
+geht, und an den Sitzplatz denkt in dem Moment niemand. Marc saß am
+9. September 2026 genau darin fest, nachdem er Beacon samt Datenordner
+gelöscht und neu installiert hatte.
+
+Seit 0.8.3 trägt die Abweisung den Kopf `X-Beacon-Sitzplatz: unbekannt`.
+Die Oberfläche erkennt daran genau diesen Fall, räumt den Platz weg und
+lädt einmal neu — danach ist man schlicht man selbst. **Am Meldungstext
+darf sie es nicht festmachen:** der ist für Menschen und ändert sich.
+
+Ohne Platz verliert niemand Rechte. Der Sitzplatz ist Zuschreibung, keine
+Anmeldung; ihn wegzuräumen gibt nur die Zuschreibung auf.
+
+Von Hand geht es weiterhin: unten links im Konto-Menü einen Platz wählen,
+oder im Browser den Keks `beacon-sitzplatz` löschen.
+
 ### Nach einem Neustart einmal 500
 
 Das Frontend ist nach einem Neustart der Box eher da als das Backend. Der

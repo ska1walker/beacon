@@ -133,6 +133,29 @@ async def test_fremder_sitzplatz_wird_abgewiesen(datenbank):
 
     assert antwort.status_code == 403
     assert "nicht zu Ihrer Organisation" in antwort.json()["detail"]
+    # Der Kopf ist das, woran die Oberfläche es erkennt. An der Meldung
+    # dürfte sie es nicht festmachen — die ist Text für Menschen.
+    assert antwort.headers["x-beacon-sitzplatz"] == "unbekannt"
+
+
+async def test_ein_platz_aus_einer_geloeschten_installation_meldet_sich(datenbank):
+    """Der Fall, in dem Marc am 9.9.2026 feststeckte.
+
+    Nach einer Neuinstallation ist die Datenbank neu, der Platz im
+    Browser aber noch der alte. Dann scheitert **jeder** Aufruf, und an
+    den Sitzplatz denkt in dem Moment niemand. Am Kopf räumt die
+    Oberfläche ihn selbst weg.
+    """
+    from uuid import uuid4
+
+    async with klient_fuer("team-neuinstallation") as klient:
+        await klient.get("/api/companies")
+
+    async with mit_sitzplatz("team-neuinstallation", str(uuid4())) as versuch:
+        antwort = await versuch.get("/api/companies")
+
+    assert antwort.status_code == 403
+    assert antwort.headers["x-beacon-sitzplatz"] == "unbekannt"
 
 
 async def test_unsinniger_sitzplatz_wird_abgewiesen(datenbank):

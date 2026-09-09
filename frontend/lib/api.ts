@@ -1,7 +1,7 @@
 // Ein Zugang zur API, nicht viele. Jeder Aufruf geht über denselben
 // Ursprung — auf der Box sieht der Envoy-Sidecar ihn dadurch und prüft ihn.
 
-import { liesSitzplatz } from "@/lib/sitzplatz";
+import { liesSitzplatz, setzeSitzplatz } from "@/lib/sitzplatz";
 
 export class ApiFehler extends Error {
   constructor(
@@ -25,6 +25,28 @@ export class ApiFehler extends Error {
  * ein 401, und es soll als Meldung im Formular stehen, nicht als Sprung.
  */
 let leitetUm = false;
+let raeumtAuf = false;
+
+/**
+ * Ein Sitzplatz, den es nicht mehr gibt, räumt sich selbst weg.
+ *
+ * Nach einer Neuinstallation ist die Datenbank neu — der Platz im
+ * Browser zeigt dann auf eine Person, die es nicht mehr gibt, und
+ * **jeder** Aufruf scheitert mit „Dieser Sitzplatz gehört nicht zu Ihrer
+ * Organisation". Marc saß am 9.9.2026 genau darin fest: Die Oberfläche
+ * lud, aber nichts ging, und an den Platz denkt in dem Moment niemand.
+ *
+ * Ohne Platz ist man schlicht man selbst — Wegräumen nimmt also keine
+ * Rechte, es gibt nur die Zuschreibung auf. Einmal, nicht je Kachel:
+ * Eine Seite stellt fünf Abfragen gleichzeitig und lüde sonst fünfmal
+ * neu.
+ */
+function platzRaeumen(): void {
+  if (typeof window === "undefined" || raeumtAuf || !liesSitzplatz()) return;
+  raeumtAuf = true;
+  setzeSitzplatz(null);
+  window.location.reload();
+}
 
 function zurZurAnmeldung(pfad: string): void {
   if (typeof window === "undefined" || leitetUm) return;
@@ -53,6 +75,7 @@ async function anfrage<T>(pfad: string, init?: RequestInit): Promise<T> {
   const antwort = await fetch(pfad, { ...init, headers: koepfe });
 
   if (antwort.status === 401) zurZurAnmeldung(pfad);
+  if (antwort.headers.get("X-Beacon-Sitzplatz") === "unbekannt") platzRaeumen();
 
   if (!antwort.ok) {
     // FastAPI legt den Grund unter `detail` ab. Steht dort nichts

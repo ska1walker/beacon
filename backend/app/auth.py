@@ -380,6 +380,14 @@ async def _sitzplatz_einnehmen(angemeldet: CurrentUser, sitzplatz_id: UUID) -> C
     Ein unbekannter oder fremder Sitzplatz wird abgewiesen und nicht
     stillschweigend ignoriert: Sonst schriebe die Oberfläche Arbeit der
     falschen Person zu und niemand würde es merken.
+
+    Die Abweisung trägt einen Kopf `X-Beacon-Sitzplatz: unbekannt`. Der
+    Grund steht in `frontend/lib/api.ts`: Nach einer Neuinstallation ist
+    die Datenbank neu, der Platz im Browser aber noch der alte — und dann
+    scheitert **jeder** Aufruf, ohne dass ein Mensch den Zusammenhang
+    sieht. Am Kopf erkennt die Oberfläche genau diesen Fall und räumt den
+    Platz selbst weg. An der Meldung dürfte sie es nicht festmachen; die
+    ist Text für Menschen und darf sich ändern.
     """
     async with acquire() as conn:
         person = await conn.fetchrow(
@@ -397,6 +405,7 @@ async def _sitzplatz_einnehmen(angemeldet: CurrentUser, sitzplatz_id: UUID) -> C
         raise HTTPException(
             status_code=403,
             detail="Dieser Sitzplatz gehört nicht zu Ihrer Organisation.",
+            headers={"X-Beacon-Sitzplatz": "unbekannt"},
         )
 
     return CurrentUser(
