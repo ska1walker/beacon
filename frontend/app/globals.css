@@ -1804,6 +1804,120 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   .person-pfeil { margin-left: auto; flex: none; color: var(--am-text-gedaempft); }
 
+  /* ── Import einer CSV ─────────────────────────────────────────────
+     Eine Seite, die eine Aufgabe ist, keine Einstellung. Deshalb keine
+     Block-Kachel um alles herum: Der Seitentitel sagt schon, worum es
+     geht, ein zweiter Rahmen mit derselben Überschrift wäre nur eine
+     Wand mehr. */
+  .einfuhr { display: grid; gap: var(--am-raum-5); }
+
+  .einfuhr-wahl {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+  }
+
+  .einfuhr-wahl-titel {
+    font-size: 0.8125rem;
+    color: var(--am-text-sekundaer);
+    margin-right: var(--am-raum-1);
+  }
+
+  .einfuhr-pille {
+    padding: 6px var(--am-raum-3);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-voll);
+    background: var(--am-flaeche-1);
+    color: var(--am-text-sekundaer);
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    min-height: 32px;
+  }
+
+  .einfuhr-pille:hover { border-color: var(--am-rand-betont); }
+  .einfuhr-pille:focus-visible { outline: var(--am-fokus-ring); outline-offset: 2px; }
+
+  .einfuhr-pille.aktiv {
+    border-color: var(--am-handlung);
+    background: var(--am-auswahl-flaeche);
+    color: var(--am-handlung);
+    font-weight: 600;
+  }
+
+  /* Die Ablagefläche ist der Hauptweg der Seite und darf so aussehen:
+     hoch genug, dass man sie trifft, nicht ein Streifen mit Knopf. */
+  .einfuhr-ablage {
+    display: grid;
+    justify-items: center;
+    gap: var(--am-raum-2);
+    padding: var(--am-raum-8) var(--am-raum-5);
+    border: 2px dashed var(--am-rand);
+    border-radius: var(--am-radius-gross);
+    background: var(--am-flaeche-1);
+    transition: border-color var(--am-dauer-kurz), background var(--am-dauer-kurz);
+  }
+
+  .einfuhr-ablage.ueber {
+    border-color: var(--am-handlung);
+    background: var(--am-auswahl-flaeche);
+  }
+
+  .einfuhr-ablage-zeichen { color: var(--am-text-gedaempft); }
+  .einfuhr-ablage-satz { margin: 0; font-size: 0.9375rem; color: var(--am-text-sekundaer); }
+  .einfuhr-ablage-klein { margin: 0; font-size: 0.75rem; color: var(--am-text-gedaempft); }
+
+  .einfuhr-vorlagen {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-2);
+    flex-wrap: wrap;
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  .einfuhr-gelesen {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--am-text-gedaempft);
+  }
+
+  /* Die Zahl trägt die Aussage, der Satz erklärt sie. Wer nur hinsieht,
+     soll „1.200" lesen und nicht erst einen Satz entziffern. */
+  .einfuhr-bilanz {
+    display: flex;
+    align-items: baseline;
+    gap: var(--am-raum-3);
+    padding: var(--am-raum-4);
+    border: 1px solid var(--am-rand);
+    border-radius: var(--am-radius-mittel);
+    background: var(--am-flaeche-1);
+    font-size: 0.9375rem;
+  }
+
+  .einfuhr-bilanz[data-fertig="ja"] {
+    border-color: var(--am-erfolg-rand);
+    background: var(--am-erfolg-flaeche);
+  }
+
+  .einfuhr-bilanz-zahl {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .einfuhr-protokoll { font-size: 0.8125rem; }
+
+  .einfuhr-fussnote {
+    margin: 0;
+    padding-top: var(--am-raum-4);
+    border-top: 1px solid var(--am-trennlinie);
+    font-size: 0.75rem;
+    color: var(--am-text-gedaempft);
+  }
+
   /* ── Knopf mit zweitem Weg ────────────────────────────────────────
      Ein geteilter Knopf: links die Vorgabe, rechts der Pfeil. Die
      Trennlinie dazwischen ist kein Zierrat — ohne sie sieht es aus wie

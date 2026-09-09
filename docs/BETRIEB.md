@@ -1293,6 +1293,20 @@ die man gerade gefiltert hat, als Tabelle heraus.
   Kontakte oder Firmen. Jedes Mitglied darf das; die Datei zeigt nur, was
   die Liste ohnehin zeigt.
 
+### Nach einem Neustart einmal 500
+
+Das Frontend ist nach einem Neustart der Box eher da als das Backend. Der
+Next-Proxy findet dann noch niemanden und antwortet **selbst** mit 500 —
+im Backend-Log steht davon nichts, was die Suche verwirrt. Auf dem
+Bildschirm stand „Anfrage fehlgeschlagen (500)", und erst ein Neuladen
+half.
+
+Seit 0.8.2 wiederholt die Oberfläche solche Abfragen: viermal mit
+wachsendem Abstand (0,4 s bis 3,2 s). Nach gut sechs Sekunden steht das
+Backend, und niemand merkt etwas. Alles Vierhundertere wird **nicht**
+wiederholt — ein 401 gehört zur Anmeldung, ein 403 zur Rolle, ein 404 zum
+Datensatz; sie fielen beim dritten Versuch nicht anders aus.
+
 ### Nichts wird überschrieben
 
 Eine Zeile, deren Kontakt es schon gibt, wird **übersprungen und

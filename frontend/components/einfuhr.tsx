@@ -88,7 +88,11 @@ function Gruende({
 export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
   const client = useQueryClient();
   const wer = useQuery({ queryKey: ["wer"], queryFn: () => api.get<Wer>("/api/mitglieder/wer") });
-  const darfVerwalten = wer.data?.rolle === "owner" || wer.data?.rolle === "admin";
+  // Solange die Rolle unterwegs ist, gilt sie als ausreichend. Sonst
+  // blitzte bei jedem Aufruf für einen Moment „darf nur der Eigentümer"
+  // auf — und der Knopf wäre grau, obwohl gleich alles erlaubt ist.
+  const rolleBekannt = wer.isSuccess;
+  const darfVerwalten = !rolleBekannt || wer.data?.rolle === "owner" || wer.data?.rolle === "admin";
   const feld = useRef<HTMLInputElement>(null);
   const [datei, setDatei] = useState<File | null>(null);
   const [objekt, setObjekt] = useState<"" | Objektart>(vorwahl ?? "");
@@ -152,11 +156,8 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
   const fehler = (lesen.error ?? anwenden.error) as Error | null;
 
   return (
-    <section className="block">
-      <div className="block-kopf">
-        <h2>Import aus einer CSV</h2>
-      </div>
-      <div className="block-inhalt">
+    <div className="einfuhr">
+      <div>
         <Erklaerung
           kurz="Kontakte oder Firmen aus einer Tabelle anlegen. Vorhandene Datensätze werden nie überschrieben — Dubletten werden übersprungen und genannt."
           lang={
@@ -169,7 +170,7 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
           }
         />
 
-        {!darfVerwalten && (
+        {rolleBekannt && !darfVerwalten && (
           <div className="hinweis" data-art="achtung">
             <AlertTriangle size={16} aria-hidden="true" />
             <span>Importieren darf nur der Eigentümer oder ein Verwalter.</span>
@@ -179,34 +180,29 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
         {/* Schritt 1: die Datei */}
         {!vorschau && !ergebnis && (
           <>
-            <div style={{ display: "flex", gap: "var(--am-raum-3)", alignItems: "center", marginBottom: "var(--am-raum-3)", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.8125rem", color: "var(--am-text-gedaempft)" }}>Was steht in der Datei?</span>
-              {([["", "erkennen"], ["contacts", "Kontakte"], ["companies", "Firmen"]] as const).map(
+            <div className="einfuhr-wahl" role="radiogroup" aria-label="Was steht in der Datei?">
+              <span className="einfuhr-wahl-titel">Was steht in der Datei?</span>
+              {([["", "Erkennen"], ["contacts", "Kontakte"], ["companies", "Firmen"]] as const).map(
                 ([wert, text]) => (
-                  <label key={wert} style={{ display: "flex", alignItems: "center", gap: "var(--am-raum-1)", fontSize: "0.8125rem" }}>
-                    <input
-                      type="radio"
-                      name="einfuhr-objekt"
-                      checked={objekt === wert}
-                      onChange={() => setObjekt(wert)}
-                    />
+                  <button
+                    key={wert}
+                    type="button"
+                    role="radio"
+                    aria-checked={objekt === wert}
+                    className={`einfuhr-pille${objekt === wert ? " aktiv" : ""}`}
+                    onClick={() => setObjekt(wert)}
+                  >
                     {text}
-                  </label>
+                  </button>
                 ),
               )}
             </div>
 
             <div
+              className={`einfuhr-ablage${ueber ? " ueber" : ""}`}
               onDragOver={(e) => { e.preventDefault(); setUeber(true); }}
               onDragLeave={() => setUeber(false)}
               onDrop={(e) => { e.preventDefault(); setUeber(false); waehlen(e.dataTransfer.files); }}
-              style={{
-                border: `1px dashed ${ueber ? "var(--am-handlung)" : "var(--am-rand)"}`,
-                borderRadius: "var(--am-radius-2)",
-                padding: "var(--am-raum-4)",
-                textAlign: "center",
-                background: ueber ? "var(--am-flaeche-2)" : "transparent",
-              }}
             >
               <input
                 ref={feld}
@@ -215,33 +211,39 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
                 hidden
                 onChange={(e) => { waehlen(e.target.files); e.target.value = ""; }}
               />
+              <Upload size={28} aria-hidden="true" className="einfuhr-ablage-zeichen" />
+              <p className="einfuhr-ablage-satz">CSV-Datei hierher ziehen</p>
               <button
                 type="button"
-                className="btn btn-sekundaer btn-klein"
+                className="btn btn-sekundaer"
                 disabled={!darfVerwalten || lesen.isPending}
                 onClick={() => feld.current?.click()}
               >
-                <Upload size={14} aria-hidden="true" />
-                {lesen.isPending ? "Wird gelesen …" : "CSV wählen"}
+                {lesen.isPending ? "Wird gelesen …" : "Datei auswählen"}
               </button>
-              <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", margin: "var(--am-raum-2) 0 0" }}>
-                oder hierher ziehen
+              <p className="einfuhr-ablage-klein">
+                Semikolon, Komma oder Tabulator · bis 10 MB
               </p>
             </div>
 
-            <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", marginTop: "var(--am-raum-3)" }}>
-              Leere Vorlage mit den richtigen Spaltennamen:{" "}
-              <a href="/api/einfuhr/vorlage?entity=contacts" download>Kontakte</a>
-              {" · "}
-              <a href="/api/einfuhr/vorlage?entity=companies" download>Firmen</a>
-            </p>
+            <div className="einfuhr-vorlagen">
+              <span>Noch keine Datei? Leere Vorlage mit den richtigen Spalten:</span>
+              <a className="btn btn-still btn-klein" href="/api/einfuhr/vorlage?entity=contacts" download>
+                <Download size={14} aria-hidden="true" />
+                Kontakte
+              </a>
+              <a className="btn btn-still btn-klein" href="/api/einfuhr/vorlage?entity=companies" download>
+                <Download size={14} aria-hidden="true" />
+                Firmen
+              </a>
+            </div>
           </>
         )}
 
         {/* Schritt 2: die Zuordnung prüfen */}
         {vorschau && (
           <>
-            <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", marginBottom: "var(--am-raum-3)" }}>
+            <p className="einfuhr-gelesen">
               {anzahl(vorschau.zeilen, "Zeile", "Zeilen")} · gelesen als{" "}
               {KODIERUNGSNAME[vorschau.kodierung] ?? vorschau.kodierung} · Trennzeichen{" "}
               <code>{vorschau.trenner === "\t" ? "Tabulator" : vorschau.trenner}</code> ·{" "}
@@ -298,15 +300,19 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
               </div>
             ))}
 
-            <p style={{ marginTop: "var(--am-raum-3)", fontSize: "0.875rem" }}>
-              <strong>{anzahl(vorschau.bilanz.anlegen, "Datensatz", "Datensätze")} anlegen</strong>
-              {vorschau.bilanz.firmen_anlegen > 0 &&
-                ` · ${anzahl(vorschau.bilanz.firmen_anlegen, "Firma", "Firmen")} dazu`}
-              {vorschau.bilanz.ueberspringen > 0 && ` · ${vorschau.bilanz.ueberspringen} überspringen`}
-            </p>
+            <div className="einfuhr-bilanz">
+              <span className="einfuhr-bilanz-zahl">{vorschau.bilanz.anlegen}</span>
+              <span>
+                {vorschau.bilanz.anlegen === 1 ? "Datensatz wird angelegt" : "Datensätze werden angelegt"}
+                {vorschau.bilanz.firmen_anlegen > 0 &&
+                  `, dazu ${anzahl(vorschau.bilanz.firmen_anlegen, "Firma", "Firmen")}`}
+                {vorschau.bilanz.ueberspringen > 0 &&
+                  ` · ${vorschau.bilanz.ueberspringen} übersprungen`}
+              </span>
+            </div>
             <Gruende gruende={vorschau.bilanz.gruende} details={vorschau.uebersprungen} />
 
-            <div style={{ display: "flex", gap: "var(--am-raum-2)", marginTop: "var(--am-raum-4)" }}>
+            <div className="btn-reihe" style={{ marginTop: "var(--am-raum-4)" }}>
               <button
                 type="button"
                 className="btn btn-primaer btn-klein"
@@ -331,16 +337,17 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
         {/* Schritt 3: was daraus geworden ist */}
         {ergebnis && (
           <>
-            <p style={{ fontSize: "0.875rem" }}>
-              <strong>
-                {anzahl(ergebnis.angelegt, "Datensatz", "Datensätze")} angelegt
-              </strong>
-              {ergebnis.firmen_angelegt > 0 &&
-                ` · ${anzahl(ergebnis.firmen_angelegt, "Firma", "Firmen")} dazu`}
-              {ergebnis.uebersprungen > 0 && ` · ${ergebnis.uebersprungen} übersprungen`}
-            </p>
+            <div className="einfuhr-bilanz" data-fertig="ja">
+              <span className="einfuhr-bilanz-zahl">{ergebnis.angelegt}</span>
+              <span>
+                {ergebnis.angelegt === 1 ? "Datensatz angelegt" : "Datensätze angelegt"}
+                {ergebnis.firmen_angelegt > 0 &&
+                  `, dazu ${anzahl(ergebnis.firmen_angelegt, "Firma", "Firmen")}`}
+                {ergebnis.uebersprungen > 0 && ` · ${ergebnis.uebersprungen} übersprungen`}
+              </span>
+            </div>
             <Gruende gruende={ergebnis.gruende} details={ergebnis.details} />
-            <div style={{ display: "flex", gap: "var(--am-raum-2)", marginTop: "var(--am-raum-4)" }}>
+            <div className="btn-reihe" style={{ marginTop: "var(--am-raum-4)" }}>
               <Link
                 className="btn btn-sekundaer btn-klein"
                 href={ergebnis.entity === "companies" ? "/firmen" : "/kontakte"}
@@ -357,7 +364,7 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
         {fehler && <Fehler text={fehler.message} />}
 
         {bisher.data && bisher.data.length > 0 && (
-          <details style={{ marginTop: "var(--am-raum-5)" }}>
+          <details className="einfuhr-protokoll">
             <summary style={{ cursor: "pointer", fontSize: "0.8125rem" }}>Bisherige Importe</summary>
             <div className="tabellenrahmen" style={{ overflowX: "auto", marginTop: "var(--am-raum-2)" }}>
               <table className="tabelle">
@@ -388,12 +395,11 @@ export function Einfuhrblock({ vorwahl }: { vorwahl?: Objektart }) {
           </details>
         )}
 
-        <p style={{ fontSize: "0.75rem", color: "var(--am-text-gedaempft)", marginTop: "var(--am-raum-4)" }}>
-          <Download size={12} aria-hidden="true" style={{ verticalAlign: "-1px" }} /> Hinaus geht es
-          über „Exportieren" in der Liste der Kontakte oder Firmen — mit Filter, Spalten und
-          Sortierung von dort.
+        <p className="einfuhr-fussnote">
+          Hinaus geht es über „Exportieren" in der Liste der Kontakte oder Firmen — mit Filter,
+          Spalten und Sortierung von dort.
         </p>
       </div>
-    </section>
+    </div>
   );
 }
