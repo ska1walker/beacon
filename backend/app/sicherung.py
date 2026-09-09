@@ -106,6 +106,42 @@ def ablage() -> pathlib.Path:
     return ordner
 
 
+# Was an einer Person hängt und mitkommt, wenn die Datenbank neu entsteht.
+# Der Rest von `users` fehlt mit Absicht, und `test_sicherung.py` hält
+# fest, welche Spalte warum: `created_at`, `last_seen_at` und `deleted_at`
+# entstehen neu; `gesperrt_bis` ist eine Bremse von gestern, die niemand
+# von damals erben soll.
+ABSENDERFELDER = (
+    "absender_email", "absender_name", "smtp_host", "smtp_port",
+    "smtp_benutzer", "smtp_passwort", "smtp_sicherheit",
+)
+
+
+async def _absender_zurueck(conn, user_id: UUID, eintrag: dict[str, Any]) -> None:
+    """Spielt die Absendereinstellungen zurück — nur in leere Felder."""
+    if not any(eintrag.get(f) for f in ABSENDERFELDER):
+        return
+    await conn.execute(
+        """
+        update public.users set
+            absender_email   = coalesce(absender_email, $2),
+            absender_name    = coalesce(absender_name, $3),
+            smtp_host        = coalesce(smtp_host, $4),
+            smtp_port        = coalesce(smtp_port, $5),
+            smtp_benutzer    = coalesce(smtp_benutzer, $6),
+            smtp_passwort    = coalesce(smtp_passwort, $7),
+            smtp_sicherheit  = coalesce(smtp_sicherheit, $8)
+        where id = $1
+        """,
+        user_id,
+        eintrag.get("absender_email"), eintrag.get("absender_name"),
+        eintrag.get("smtp_host"),
+        int(eintrag["smtp_port"]) if eintrag.get("smtp_port") else None,
+        eintrag.get("smtp_benutzer"), eintrag.get("smtp_passwort"),
+        eintrag.get("smtp_sicherheit"),
+    )
+
+
 def _zeit(wert: Any) -> datetime | None:
     """Ein Zeitstempel aus dem Abzug — dort steht er als ISO-Text."""
     if isinstance(wert, datetime):
@@ -149,7 +185,10 @@ async def abzug_erstellen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, A
     nutzer = await conn.fetch(
         """
         select u.id, u.olares_username, u.display_name, u.email, u.zugang, u.einstellungen,
-               u.passwort_hash, u.passwort_am, r.role
+               u.passwort_hash, u.passwort_am, u.totp_geheimnis,
+               u.absender_email, u.absender_name, u.smtp_host, u.smtp_port,
+               u.smtp_benutzer, u.smtp_passwort, u.smtp_sicherheit,
+               r.role
         from public.users u
         join public.user_org_roles r on r.user_id = u.id
         where r.org_id = $1
@@ -319,10 +358,17 @@ async def _nutzerzuordnung(
             # füllen, nie überschreiben; ein neu gesetztes Passwort gewinnt.
             if eintrag.get("passwort_hash"):
                 await conn.execute(
-                    "update public.users set passwort_hash = $2, passwort_am = $3 "
+                    "update public.users set passwort_hash = $2, passwort_am = $3, "
+                    "totp_geheimnis = coalesce(public.users.totp_geheimnis, $4) "
                     "where id = $1 and passwort_hash is null",
                     heutige, eintrag["passwort_hash"], _zeit(eintrag.get("passwort_am")),
+                    eintrag.get("totp_geheimnis"),
                 )
+            # Und womit diese Person schickt. Ohne das trüge nach einer
+            # Neuinstallation wieder jeder die Adresse der Organisation —
+            # die Einstellung wäre still verschwunden. Auch hier gilt:
+            # füllen, nicht überschreiben.
+            await _absender_zurueck(conn, heutige, eintrag)
 
         if heutige is not None:
             # Die Mitgliedschaft gehört dazu: Ohne sie könnte der Sitzplatz

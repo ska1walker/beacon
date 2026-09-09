@@ -128,6 +128,41 @@ Die Reihenfolge bei der ersten Installation: erst die Abbilder bauen und
 nach GHCR schieben, dann das Chart hochladen. Für den Ablauf gibt es im
 Insilo-Repo den Skill `olares-release`.
 
+## Was unter /app/data liegt
+
+Drei Dinge, und `/app/data` ist der einzige Pfad, den Olares als dauerhaft
+zusichert — er überlebt eine Deinstallation, die **Datenbank nicht**.
+
+| | Was |
+|---|---|
+| `sicherungen/` | Der Abzug als JSON, stündlich neu, die letzten Stände nebeneinander |
+| `podcasts/` | Die erzeugten Gesprächsvorbereitungen als MP3 |
+| `tresor.key` | Der Schlüssel für die Zugangsdaten, 0600 |
+
+**Der Abzug enthält alles, was ein Mensch in Beacon ändert.** Gemessen am
+9. September: 21 Tabellen mit Inhalt (Firmen, Kontakte, Geschäfte,
+Aufgaben, Tickets, Angebote, Kampagnen, Mails, Eigenschaftsdefinitionen,
+Webhook-Quellen, Protokoll), dazu die 66 Felder der Organisation
+(Briefkopf, SMTP, IMAP, Sprachmodell, Suche, Sprachausgabe, Fristen) und
+je Person Name, Kennung, Rolle, Favoriten, Passwort-Hash und die
+Absendereinstellungen.
+
+**Zwei Wachen halten das fest.** Auf Tabellenebene bricht ein Test ab,
+sobald eine neue Tabelle weder im Abzug steht noch ausdrücklich
+ausgenommen ist. Auf **Spaltenebene** dasselbe für `users` — und die
+zweite gibt es, weil die erste nicht ausreichte: Die Absenderadressen aus
+0.6.5 hingen an `users`, und `users` steht ausdrücklich in `AUSGENOMMEN`.
+Sie fehlten still im Abzug, bis jemand danach fragte.
+
+**Die Zugangsdaten stehen im Abzug verschlüsselt** (seit 0.6.6). Damit
+gehören Abzug und `tresor.key` zusammen: Wer den Ordner sichert, sichert
+beides — wer nur die JSON-Dateien mitnimmt, hat die Zugangsdaten nicht.
+
+Nicht im Abzug, mit Absicht: Sitzungen und Anmeldeversuche (eine
+zurückgespielte Sitzung wäre ein Wiedereinspielen von Zugängen),
+`created_at`, `last_seen_at` und `deleted_at` (entstehen neu) sowie
+`gesperrt_bis` (eine Bremse von gestern erbt niemand).
+
 ## Sicherung
 
 Eine Deinstallation über den Markt löscht die Datenbank. `/app/data`

@@ -487,3 +487,86 @@ async def test_passwoerter_ueberleben_eine_neuinstallation(datenbank, eigene_abl
             "select passwort_hash from public.users where id = $1", m["id"]
         )
     assert anmeldung.passwort_stimmt(wieder, "ein langes gutes Passwort")
+
+
+# Warum eine Spalte von `users` **nicht** in den Abzug gehört. Wer eine
+# Spalte ergänzt, muss sie entweder mitnehmen oder hier begründen — sonst
+# schlägt der Test unten fehl.
+NUTZER_NICHT_IM_ABZUG = {
+    "created_at": "entsteht beim Anlegen neu",
+    "last_seen_at": "entsteht beim ersten Aufruf neu",
+    "deleted_at": "wer entfernt wurde, kommt nicht zurück",
+    "gesperrt_bis": "eine Bremse von gestern erbt niemand",
+}
+
+
+async def test_jede_nutzerspalte_ist_im_abzug_oder_ausdruecklich_nicht(kai, eigene_ablage):
+    """Die Wache auf Spaltenebene.
+
+    Es gab schon eine auf Tabellenebene, und die hat trotzdem nicht
+    gemerkt, dass die Absenderadressen aus 0.6.5 im Abzug fehlten: Sie
+    hängen an `users`, und `users` steht ausdrücklich in `AUSGENOMMEN`.
+    Wer eine Spalte ergänzt und sie hier vergisst, verliert sie bei der
+    nächsten Neuinstallation still.
+    """
+    async with acquire_as(await _kennung(kai)) as conn:
+        org_id, _ = await _org_und_nutzer(conn)
+        abzug = await sicherung.abzug_erstellen(conn, org_id)
+        spalten = {
+            z["column_name"] for z in await conn.fetch(
+                "select column_name from information_schema.columns "
+                "where table_schema = 'public' and table_name = 'users'"
+            )
+        }
+
+    im_abzug = set(abzug["nutzer"][0])
+    fehlt = spalten - im_abzug - set(NUTZER_NICHT_IM_ABZUG)
+    assert not fehlt, f"nicht im Abzug und nicht begründet: {sorted(fehlt)}"
+    # Und umgekehrt: keine Begründung für eine Spalte, die es gar nicht gibt.
+    assert not set(NUTZER_NICHT_IM_ABZUG) - spalten
+
+
+async def test_die_absenderadresse_ueberlebt_eine_neuinstallation(datenbank, eigene_ablage):
+    """Ohne sie trüge nach einer Neuinstallation wieder jeder die Adresse
+    der Organisation — und niemand würde merken, dass die Einstellung weg
+    ist, bis eine Mail unter dem falschen Namen hinausgeht."""
+    from app.db import acquire
+
+    async with klient_fuer("sich-absender") as c:
+        await c.put("/api/settings", json={
+            "smtp_host": "send.one.com", "smtp_absender": "kai@aimighty.de",
+            "smtp_absender_name": "Kai Böhm",
+        })
+        m = (await c.post("/api/mitglieder", json={"display_name": "Absender Person"})).json()
+        gesetzt = await c.put(
+            "/api/mitglieder/wer/absender",
+            json={"absender_email": "absender.person@aimighty.de", "absender_name": "Absender Person"},
+            headers={"X-Beacon-Sitzplatz": m["id"]},
+        )
+        assert gesetzt.status_code == 200, gesetzt.text
+
+        ich = await _kennung(c)
+        async with acquire_as(ich) as conn:
+            org_id, _ = await _org_und_nutzer(conn)
+            abzug = await sicherung.abzug_erstellen(conn, org_id)
+
+    eintrag = next(n for n in abzug["nutzer"] if n["olares_username"] == m["olares_username"])
+    assert eintrag["absender_email"] == "absender.person@aimighty.de"
+
+    # Leeren, als wäre die Datenbank neu — und zurückspielen.
+    async with acquire() as conn:
+        await conn.execute(
+            "update public.users set absender_email = null, absender_name = null where id = $1",
+            m["id"],
+        )
+    async with klient_fuer("sich-absender") as c:
+        ich = await _kennung(c)
+        async with acquire_as(ich) as conn:
+            org_id, _ = await _org_und_nutzer(conn)
+            await sicherung.zurueckspielen(conn, abzug, org_id, ich)
+    async with acquire() as conn:
+        wieder = await conn.fetchrow(
+            "select absender_email, absender_name from public.users where id = $1", m["id"]
+        )
+    assert wieder["absender_email"] == "absender.person@aimighty.de"
+    assert wieder["absender_name"] == "Absender Person"
