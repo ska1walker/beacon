@@ -241,3 +241,16 @@ def test_ohne_ein_einziges_passwort_erklaert_die_datei_den_anderen_weg():
     text = _datei().read_text(encoding="utf-8")
     assert "noch niemand ein Passwort gesetzt" in text
     assert "Einstellungen" in text
+
+
+def test_die_datei_nennt_keine_absolute_uhrzeit():
+    """Der Container läuft auf UTC, die Box steht in Deutschland.
+
+    „Gültig bis 11:09" las sich um 13:20 wie längst abgelaufen, obwohl der
+    Code frisch war. Maßgeblich ist ohnehin die Schreibzeit der Datei.
+    """
+    zuruecksetzen.anfordern("jemand", ["jemand"], bekannt=True)
+    text = _datei().read_text(encoding="utf-8")
+    assert "Gültig bis" not in text
+    assert "UTC" not in text
+    assert f"Gültig {zuruecksetzen.GUELTIG_MINUTEN} Minuten" in text

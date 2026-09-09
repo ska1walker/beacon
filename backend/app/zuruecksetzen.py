@@ -68,14 +68,20 @@ def anfordern(name: str, zugaenge: list[str], *, bekannt: bool) -> str | None:
     prüfen können — an den Browser geht er nie.
     """
     code = code_neu() if bekannt else None
-    laeuft_ab = datetime.now(UTC) + timedelta(minutes=GUELTIG_MINUTEN)
 
     kopf = "Beacon — Passwort zurücksetzen\n==============================\n\n"
     if code is not None:
+        # **Keine absolute Uhrzeit.** Der Container läuft auf UTC, die
+        # Box steht in Deutschland: „gültig bis 11:09" las sich um 13:20
+        # wie längst abgelaufen, obwohl der Code frisch war. Und maßgeblich
+        # ist ohnehin nicht, was hier steht, sondern wann die Datei
+        # geschrieben wurde — genau das sagt der Satz jetzt.
         teil = (
-            f"Zugang:     {name}\n"
-            f"Code:       {code}\n"
-            f"Gültig bis: {laeuft_ab.astimezone().strftime('%d.%m.%Y %H:%M:%S %Z')}\n\n"
+            f"Zugang: {name}\n"
+            f"Code:   {code}\n\n"
+            f"Gültig {GUELTIG_MINUTEN} Minuten, gerechnet ab dem Zeitpunkt, an dem\n"
+            "diese Datei entstanden ist. Ist sie abgelaufen, einfach auf der\n"
+            "Seite noch einmal „Code erzeugen\" drücken.\n\n"
             "Diesen Code auf der Anmeldeseite von Beacon eingeben, zusammen\n"
             "mit dem Zugang oben und dem neuen Passwort.\n"
         )
