@@ -16,7 +16,7 @@ import {
   Megaphone,
   MessageCircleQuestion,
   Settings,
-  Star,
+  Bookmark,
   TrendingUp,
   Users,
   type LucideIcon,
@@ -170,7 +170,7 @@ export function Huelle({ children }: { children: React.ReactNode }) {
 
 /**
  * „Mehr“: alle Bereiche in vier Gruppen nebeneinander, je Eintrag der
- * Stern. Ein Feld, kein Untermenü — bei vierzehn Zielen ist alles auf
+ * Lesezeichen. Ein Feld, kein Untermenü — bei vierzehn Zielen ist alles auf
  * einen Blick da. Escape, ein Klick außerhalb oder ein Seitenwechsel
  * schließen es; der Fokus kehrt zum Knopf zurück.
  */
@@ -211,7 +211,7 @@ function MehrFeld({
 
   return (
     <div className="huelle-mehr" id="huelle-mehr" role="dialog" aria-label="Alle Bereiche" ref={wurzel}>
-      <p className="huelle-mehr-hinweis">Der Stern merkt einen Bereich in der Leiste.</p>
+      <p className="huelle-mehr-hinweis">Das Lesezeichen merkt einen Bereich in der Leiste.</p>
       <div className="huelle-mehr-spalten">
         {spalten.map((g) => (
           <NavGruppe key={g.titel} titel={g.titel} ziele={g.ziele} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={false} />
@@ -239,7 +239,7 @@ function NavLink({ ziel, aktuell, eingeklappt = false, nachrangig = false }: { z
 }
 
 /**
- * Eine Gruppe: Überschrift und Einträge. Der Stern steht **neben** dem
+ * Eine Gruppe: Überschrift und Einträge. Das Lesezeichen steht **neben** dem
  * Link, nicht darin — ein Knopf in einem Link ist kein gültiges HTML.
  */
 function NavGruppe({
@@ -276,7 +276,7 @@ function NavGruppe({
               title={istFavorit ? "Favorit entfernen" : "Als Favorit merken"}
               onClick={() => umschalten(z.pfad)}
             >
-              <Star size={14} strokeWidth={1.75} fill={istFavorit ? "currentColor" : "none"} aria-hidden="true" />
+              <Bookmark size={14} strokeWidth={1.75} fill={istFavorit ? "currentColor" : "none"} aria-hidden="true" />
             </button>
           </div>
         );

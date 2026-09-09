@@ -660,7 +660,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: none;
   }
 
-  /* Gruppen, Titel, Sterne und der Klappschalter gehören der Seitenspalte.
+  /* Gruppen, Titel, Lesezeichen und der Klappschalter gehören der Seitenspalte.
      Die schmale Leiste unten zeigt vier Ziele und „Mehr“. */
   .huelle-nav-gruppe,
   .huelle-nav-titel,
@@ -855,7 +855,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
     .huelle-nav-item:hover { background: var(--am-flaeche-2); }
 
-    /* Der Stern: unsichtbar, bis man hinzeigt — und stehend, wenn er gilt.
+    /* Das Lesezeichen: unsichtbar, bis man hinzeigt — und gefüllt, wenn es gilt.
        Gold zeichnet aus, es handelt nicht. */
     .huelle-nav-stern {
       display: inline-flex;
@@ -881,7 +881,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { opacity: 1; }
 
     /* „Mehr“: das Feld rechts neben der Leiste, alle vier Gruppen
-       nebeneinander. Sterne hier immer sichtbar — das Feld ist zum
+       nebeneinander. Lesezeichen hier immer sichtbar — das Feld ist zum
        Anheften da, nicht nur zum Hinkommen. */
     .huelle-nav .huelle-mehr-knopf { display: flex; }
     .huelle-mehr {

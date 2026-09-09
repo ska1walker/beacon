@@ -36,10 +36,10 @@ describe("Navigation", () => {
     ]);
   });
 
-  it("zeigt links die Vorgabe, bis der erste Stern sie ersetzt", () => {
+  it("zeigt links die Vorgabe, bis das erste Lesezeichen sie ersetzt", () => {
     expect(leisteZiele([]).map((z) => z.pfad)).toEqual(LEISTE_STANDARD);
     expect(LEISTE_STANDARD).toHaveLength(6);
-    // Ein einziger Stern genügt — die Vorgabe verschwindet ganz.
+    // Ein einziges Lesezeichen genügt — die Vorgabe verschwindet ganz.
     expect(leisteZiele(["/erkenntnisse"]).map((z) => z.pfad)).toEqual(["/erkenntnisse"]);
     // Nur Unbekanntes zählt wie nichts.
     expect(leisteZiele(["/nix"]).map((z) => z.pfad)).toEqual(LEISTE_STANDARD);

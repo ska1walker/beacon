@@ -24,7 +24,7 @@ export function useWer() {
 /**
  * Die Favoriten der handelnden Person — sofort sichtbar, dann gespeichert.
  *
- * Der Stern wirkt, bevor der Server geantwortet hat; scheitert das
+ * Das Lesezeichen wirkt, bevor der Server geantwortet hat; scheitert das
  * Speichern, springt er zurück. Gespeichert wird am Menschen auf der Box,
  * nicht im Browser: Auf jedem Gerät dieselben Favoriten.
  */

@@ -2,9 +2,9 @@
  * Die Navigation als Daten — ohne React, damit sie sich prüfen lässt.
  *
  * Die Leiste zeigt, was jemand sich gemerkt hat — in der Reihenfolge der
- * Sterne; solange niemand etwas gemerkt hat, sechs Vorgaben. Alles andere
+ * Lesezeichen; solange niemand etwas gemerkt hat, sechs Vorgaben. Alles andere
  * steht hinter „Mehr“: die vier Gruppen Verkauf, Bestand, Post, Wissen
- * nebeneinander, je Eintrag der Stern. So macht es HubSpot, und bei
+ * nebeneinander, je Eintrag ein Lesezeichen. So macht es HubSpot, und bei
  * vierzehn Zielen braucht es dafür kein Untermenü je Gruppe. Die Symbole
  * hängen in der Hülle an den Schlüsseln; hier steht nur, was wohin gehört.
  */
@@ -92,7 +92,7 @@ export function favoritenZiele(favoriten: string[]): NavZiel[] {
 
 /**
  * Die Leiste links: die Favoriten — oder, solange es keine gibt, die
- * Vorgabe. Der erste Stern ersetzt die Vorgabe ganz: Wer wählt, will
+ * Vorgabe. Das erste Lesezeichen ersetzt die Vorgabe ganz: Wer wählt, will
  * seine Auswahl sehen, nicht seine Auswahl plus unsere.
  */
 export function leisteZiele(favoriten: string[]): NavZiel[] {
