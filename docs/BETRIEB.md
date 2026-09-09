@@ -1143,6 +1143,52 @@ Tests: `backend/tests/test_anmeldung.py` — 29 Fälle, darunter der
 entscheidende, dass ein gefälschter `X-Bfl-User` im Modus `eigen` weder
 Zugang bringt noch einen Nutzer anlegt.
 
+## Dokumente am Datensatz
+
+Seit 0.6.8 kann an Firma, Kontakt, Geschäft und Ticket eine Datei liegen —
+das Angebot als PDF, der unterschriebene Vertrag, das Foto vom
+Zählerstand. Der Block steht rechts, unter allem anderen: Man sucht ihn
+selten, und wenn man ihn sucht, weiß man wo.
+
+**Die Datei liegt nicht in der Datenbank.** Sie steht unter
+`/app/data/dokumente/<org>/<kennung><endung>`, dem einzigen Pfad, den
+Olares als dauerhaft zusichert. Als `bytea` in der Datenbank wäre der
+stündliche Abzug nicht mehr 130 Kilobyte, sondern Hunderte Megabyte, und
+jede Auslieferung müsste vollständig durch den Arbeitsspeicher.
+
+**Der Dateiname kommt nie in einen Pfad.** Auf der Platte heißt die Datei
+nach ihrer Kennung; der Name, den ein Mensch sieht, steht in der
+Datenbank. `../../../../etc/passwort.txt` ist damit ein hässlicher
+Anzeigename und kein Angriff — `test_dokumente.py` lädt genau den hoch
+und prüft, wo die Datei landet.
+
+**Ausgeliefert wird als Anhang, nicht als Seite.** Nur Bild und PDF darf
+der Browser im Fenster zeigen. **SVG gehört ausdrücklich nicht dazu**: Es
+ist ein Dokument mit Skriptfähigkeit, und im Ursprung von Beacon
+angezeigt liefe fremdes Skript mit allen Rechten des Angemeldeten. Dazu
+kommen an jeder Auslieferung `X-Content-Type-Options: nosniff` (sonst
+könnte eine als PNG deklarierte HTML-Datei doch als Seite laufen) und
+`Content-Security-Policy: default-src 'none'; sandbox`.
+
+**Grenze 25 MB.** Darüber wird es ein Dateiserver, und dafür gibt es
+Drive auf der Box. Die Zahl steht in `backend/app/dokumente.py`, damit
+Test und Fehlermeldung dieselbe nennen.
+
+**Löschen löscht wirklich.** Anders als bei Kontakten gibt es keine
+dreißig Tage: Eintrag und Datei verschwinden zusammen. Bei einem Dokument
+ist „gelöscht, aber noch da" die Zusage, die man am wenigsten brechen
+will.
+
+**Im Abzug steht die Zeile, nicht der Inhalt.** `dokumente` ist Teil der
+Sicherung, mitsamt dem Pfad. Der Pfad wird beim Zurückspielen **nicht**
+umgeschrieben, obwohl er die alte Org-Kennung trägt: `/app/data`
+überlebt eine Neuinstallation, der alte Ordner steht also noch da, und
+ein umgeschriebener Pfad zeigte ins Leere.
+
+Tests: `backend/tests/test_dokumente.py` — 16 Fälle, darunter der
+Pfadausbruch, die SVG-Auslieferung, die Größengrenze und die fremde
+Organisation, die weder sieht noch holt noch löscht.
+
 ## Oberflächenfehler stehen im Pod-Log
 
 Zerbricht die Oberfläche („Application error: a client-side exception“),

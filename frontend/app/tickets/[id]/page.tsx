@@ -13,6 +13,7 @@ import { Ticketantwort } from "@/components/ticket-antwort";
 import { Stammdaten } from "@/components/stammdaten";
 import { Prioritaetspille } from "@/components/prioritaet";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Dokumente } from "@/components/dokumente";
 
 export default function TicketSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -252,6 +253,11 @@ export default function TicketSeite({ params }: { params: Promise<{ id: string }
           <Ticketantwort ticket={t} />
           <Notizkasten bezug={{ ticket_id: id }} />
           <Zeitleiste bezug={{ ticket_id: id }} />
+        </div>
+
+        {/* Die dritte Spalte war bisher leer — die Ablage füllt sie. */}
+        <div>
+          <Dokumente bezug={{ ticket_id: id }} />
         </div>
       </div>
     </>

@@ -1068,3 +1068,17 @@ export interface Geraet {
   /** Das Gerät, von dem diese Anfrage kommt. */
   aktuell: boolean;
 }
+
+/** Eine abgelegte Datei. Der Inhalt kommt über einen eigenen Aufruf. */
+export interface Dokument {
+  id: string;
+  name: string;
+  groesse: number;
+  typ: string | null;
+  notiz: string | null;
+  created_at: string;
+  hochgeladen_von: string | null;
+  hochgeladen_von_name: string | null;
+  /** Darf der Browser es zeigen, oder nur herunterladen? */
+  im_fenster: boolean;
+}

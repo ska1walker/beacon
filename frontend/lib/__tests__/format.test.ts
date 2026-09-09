@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anzahl, euro, euroGenau, firmenschluessel, initialen, initialenAusName, personName, prozent } from "@/lib/format";
+import { anzahl, dateigroesse, euro, euroGenau, firmenschluessel, initialen, initialenAusName, personName, prozent } from "@/lib/format";
 
 /**
  * Intl setzt vor das Währungszeichen ein geschütztes Leerzeichen (U+00A0),
@@ -107,5 +107,17 @@ describe("firmenschluessel", () => {
     expect(firmenschluessel("Nordwind Logistik")).not.toBe(
       firmenschluessel("Nordwind Logistik Nord"),
     );
+  });
+});
+
+describe("dateigroesse", () => {
+  it("nennt kleine Dateien in Bytes und große in Megabyte", () => {
+    expect(dateigroesse(512)).toBe("512 B");
+    expect(dateigroesse(2048)).toBe("2 KB");
+    expect(dateigroesse(2_411_724)).toBe("2,3 MB");
+  });
+
+  it("rundet auf eine Nachkommastelle, damit die Zahl lesbar bleibt", () => {
+    expect(dateigroesse(25 * 1024 * 1024)).toBe("25,0 MB");
   });
 });

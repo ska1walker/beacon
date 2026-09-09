@@ -26,6 +26,7 @@ import { Qualifizierungsblock } from "@/components/qualifizierung";
 import { Eigenschaftswerteblock } from "@/components/eigenschaften";
 import { Stammdaten } from "@/components/stammdaten";
 import { Notizkasten } from "@/components/notizkasten";
+import { Dokumente } from "@/components/dokumente";
 
 export default function DealSeite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -342,6 +343,9 @@ export default function DealSeite({ params }: { params: Promise<{ id: string }> 
               </dl>
             </div>
           </section>
+
+          {/* Dokumente ganz unten: gesucht wird hier selten, gefunden dafür immer. */}
+          <Dokumente bezug={{ deal_id: id }} />
         </div>
       </div>
     </>

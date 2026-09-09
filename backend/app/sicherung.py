@@ -56,6 +56,12 @@ TABELLEN: list[str] = [
     "auswertungen",
     "themenlaeufe",
     "tasks",
+    # Die Zeile trägt den Pfad, unter dem die Datei liegt — samt der
+    # alten Org-Kennung. Sie wird beim Zurückspielen **nicht**
+    # umgeschrieben: `/app/data` überlebt eine Neuinstallation, der
+    # alte Ordner steht also noch da, und ein umgeschriebener Pfad
+    # zeigte ins Leere.
+    "dokumente",
     "podcasts",
     "eingang",
     "ansichten",

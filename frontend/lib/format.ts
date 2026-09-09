@@ -291,3 +291,13 @@ export function vorgangswort(
   const wort = art === "won" ? "Deal" : "Lead";
   return mehrzahl ? `${wort}s` : wort;
 }
+
+/** Dateigröße, wie ein Mensch sie liest.
+
+    Gerundet auf eine Nachkommastelle ab einem Megabyte: „2,4 MB" sagt,
+    was man wissen will, „2.411.724 Bytes" nicht. */
+export function dateigroesse(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}

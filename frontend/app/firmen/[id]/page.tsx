@@ -24,6 +24,7 @@ import type { Pipeline } from "@/lib/typen";
 import { STUFEN_TEXT } from "@/lib/format";
 import { useState } from "react";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { Dokumente } from "@/components/dokumente";
 
 function Eigenschaft({ name, wert }: { name: string; wert: React.ReactNode }) {
   return (
@@ -221,6 +222,9 @@ export default function FirmaSeite({ params }: { params: Promise<{ id: string }>
               </dl>
             </div>
           </section>
+
+          {/* Dokumente ganz unten: gesucht wird hier selten, gefunden dafür immer. */}
+          <Dokumente bezug={{ company_id: id }} />
         </div>
       </div>
     </>
