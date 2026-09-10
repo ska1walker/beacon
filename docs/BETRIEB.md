@@ -1022,6 +1022,29 @@ Prompt, Sprecherwechsel, je Stimme ihr Modell, Verkettung ohne doppelte
 Köpfe, 0600, Range, Löschen, Automatik einmal je Termin, fremde
 Organisation sieht nichts.
 
+
+### Modell und Stimme sind zwei Dinge
+
+Bis 0.9.5 hatte jeder Sprecher **ein** Feld, beschriftet „Stimme".
+Gespeichert wurde darin aber das *Modell*. Das ging auf, solange am
+anderen Ende Speaches mit Piper-Modellen hängt: Dort ist die Stimme das
+Modell, und `_stimme_ermitteln` errät den Rest durch Probieren. Bei jedem
+anderen OpenAI-kompatiblen Dienst sind es zwei Angaben — Marc meldete am
+10.9.2026 von seiner Box mit Omnivoice: Modell `tts-voxtral`, Stimme
+`clone:new` —, und für das zweite gab es kein Feld. Der Server schickte
+die Stimme längst mit (`podcast.TTSConfig.fuer`), nur konnte sie niemand
+eintragen.
+
+Seit 0.9.6 hat jeder Sprecher beides, in einem eigenen Feldsatz. Die
+Stimme ist **optional**: Bleibt sie leer, errät Beacon sie wie bisher —
+der Piper-Weg ändert sich nicht.
+
+Das Modellfeld ist ein **Textfeld mit Vorschlagsliste**, keine Auswahl.
+Eine Auswahl kann nur anbieten, was der Dienst meldet, und die Liste ist
+auf deutsche Piper-Modelle gefiltert; an einem Dienst ohne solche war sie
+leer, und dann ließ sich nichts eintragen. Mit `<datalist>` bleiben die
+Vorschläge, wo es welche gibt, und tippen geht immer.
+
 ## Anmeldung — warum Beacon das doch selbst macht
 
 Die Hausregel lautet „keine eigene Authentifizierung, das macht Olares".

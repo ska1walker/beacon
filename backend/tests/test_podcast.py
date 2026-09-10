@@ -323,3 +323,52 @@ async def test_oberflaechenfehler_landen_im_protokoll(datenbank, capsys):
         assert (await k.post("/api/fehler", json={"nachricht": "x" * 3000})).status_code == 422
 
 
+
+
+# ---------------------------------------------------------------------------
+# Modell und Stimme sind zwei Dinge
+# ---------------------------------------------------------------------------
+
+async def test_eingetragene_stimme_wird_genommen_und_nicht_erraten(sprachausgabe):
+    """Für jeden Dienst, der nicht Speaches ist.
+
+    Bei Speaches steht die Stimme am Modell, und Beacon errät sie durch
+    Probieren. Bei einem anderen OpenAI-kompatiblen Dienst sind Modell und
+    Stimme zwei Angaben — Marc am 10.9.2026 auf seiner Box mit Omnivoice:
+    Modell `tts-voxtral`, Stimme `clone:new`. In der Maske gab es dafür
+    kein Feld, obwohl der Server sie längst mitschickt.
+    """
+    tts = podcast.TTSConfig(
+        endpoint_url="http://tts.local",
+        api_key="",
+        modell="tts-voxtral",
+        stimme="clone:new",
+        modell_2="tts-voxtral",
+        stimme_2="clone:maike",
+    )
+    await podcast.sprechen(tts, [
+        {"sprecher": "kollege", "text": "Guten Tag."},
+        {"sprecher": "moderatorin", "text": "Willkommen."},
+    ])
+
+    assert [(a["model"], a["voice"]) for a in sprachausgabe] == [
+        ("tts-voxtral", "clone:new"),
+        ("tts-voxtral", "clone:maike"),
+    ]
+
+
+async def test_ohne_stimme_wird_sie_weiter_erraten(sprachausgabe):
+    """Der Piper-Fall bleibt, wie er war — leer heißt „rate"."""
+    tts = podcast.TTSConfig(
+        endpoint_url="http://tts.local",
+        api_key="",
+        modell="speaches-ai/piper-de_DE-thorsten-high",
+        stimme="",
+        modell_2="speaches-ai/piper-de_DE-thorsten-high",
+        stimme_2="",
+    )
+    await podcast.sprechen(tts, [{"sprecher": "kollege", "text": "Guten Tag."}])
+
+    gesprochen = [a for a in sprachausgabe if a["input"].startswith("Guten Tag")]
+    assert gesprochen, "es wurde nichts gesprochen"
+    assert gesprochen[0]["voice"] == "de_DE-thorsten-high"

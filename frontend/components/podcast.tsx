@@ -189,33 +189,72 @@ export function HeuteVorbereitet() {
 
 // ── Einstellungen ────────────────────────────────────────────────────────
 
-function Stimmwahl({
-  id, label, wert, setWert, stand, hinweis,
+/**
+ * Ein Sprecher: Modell und Stimme.
+ *
+ * **Warum zwei Felder.** Bis 0.9.5 gab es nur eine Auswahl, beschriftet
+ * „Stimme" — gespeichert wurde darin aber das *Modell*. Das ging auf,
+ * solange am anderen Ende Speaches mit Piper-Modellen hängt: Dort ist die
+ * Stimme das Modell, und Beacon erriet den Rest. Bei jedem anderen
+ * OpenAI-kompatiblen Dienst sind es zwei Dinge — Modell `tts-voxtral`,
+ * Stimme `clone:new` —, und für das zweite gab es kein Feld. Marc meldete
+ * das am 10.9.2026 von seiner Box mit Omnivoice.
+ *
+ * **Warum ein Textfeld mit Vorschlagsliste und keine Auswahl.** Eine
+ * Auswahl kann nur anbieten, was der Dienst meldet, und die Liste ist auf
+ * deutsche Piper-Modelle gefiltert. An einem Dienst, der keine solchen
+ * führt, war sie leer — und dann ließ sich nichts eintragen. Mit
+ * `<datalist>` bleiben die Vorschläge, wo es welche gibt, und tippen geht
+ * immer.
+ */
+function Sprecherwahl({
+  id, label, modell, setModell, stimme, setStimme, stand, hinweis,
 }: {
-  id: string; label: string; wert: string; setWert: (w: string) => void; stand: Stimmenstand | undefined; hinweis?: string;
+  id: string;
+  label: string;
+  modell: string;
+  setModell: (w: string) => void;
+  stimme: string;
+  setStimme: (w: string) => void;
+  stand: Stimmenstand | undefined;
+  hinweis?: string;
 }) {
   const deutsch = (l: string[]) => l.filter(istDeutsch);
   const installiert = stand ? deutsch(stand.installiert) : [];
-  const verfuegbar = stand ? deutsch(stand.verfuegbar) : [];
-  const bekannt = installiert.includes(wert) || verfuegbar.includes(wert) || !stand;
+  const verfuegbar = stand ? deutsch(stand.verfuegbar).filter((m) => !installiert.includes(m)) : [];
+
   return (
-    <div className="feld">
-      <label htmlFor={id}>{label}</label>
-      <select id={id} value={wert} onChange={(ev) => setWert(ev.target.value)}>
-        {!bekannt && wert && <option value={wert}>{modellName(wert)}</option>}
-        {installiert.length > 0 && (
-          <optgroup label="Installiert">
-            {installiert.map((m) => <option key={m} value={m}>{modellName(m)}</option>)}
-          </optgroup>
-        )}
-        {verfuegbar.length > 0 && (
-          <optgroup label="Verfügbar — wird beim Einrichten geladen">
-            {verfuegbar.map((m) => <option key={m} value={m}>{modellName(m)}</option>)}
-          </optgroup>
-        )}
-      </select>
-      {hinweis && <p className="feld-hinweis">{hinweis}</p>}
-    </div>
+    <fieldset className="sprecherwahl">
+      <legend>{label}</legend>
+      {hinweis && <p className="feld-hinweis sprecherwahl-hinweis">{hinweis}</p>}
+      <div className="feld-paar">
+        <div className="feld">
+          <label htmlFor={`${id}-modell`}>Modell</label>
+          <input
+            id={`${id}-modell`}
+            list={`${id}-liste`}
+            value={modell}
+            onChange={(ev) => setModell(ev.target.value)}
+            placeholder="speaches-ai/piper-de_DE-thorsten-medium"
+          />
+          <datalist id={`${id}-liste`}>
+            {installiert.map((m) => <option key={m} value={m}>{`${modellName(m)} — installiert`}</option>)}
+            {verfuegbar.map((m) => <option key={m} value={m}>{`${modellName(m)} — wird beim Einrichten geladen`}</option>)}
+          </datalist>
+        </div>
+        <div className="feld">
+          <label htmlFor={`${id}-stimme`}>
+            Stimme <span className="optional">optional</span>
+          </label>
+          <input
+            id={`${id}-stimme`}
+            value={stimme}
+            onChange={(ev) => setStimme(ev.target.value)}
+            placeholder="leer lassen bei Piper"
+          />
+        </div>
+      </div>
+    </fieldset>
   );
 }
 
@@ -226,6 +265,10 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
   const [schluessel, setSchluessel] = useState("");
   const [modell1, setModell1] = useState(e.tts_modell);
   const [modell2, setModell2] = useState(e.tts_modell_2);
+  // Bei Speaches steht die Stimme am Modell und diese beiden bleiben leer;
+  // Beacon errät sie dann. Jeder andere Dienst braucht sie ausdrücklich.
+  const [stimme1, setStimme1] = useState(e.tts_stimme ?? "");
+  const [stimme2, setStimme2] = useState(e.tts_stimme_2 ?? "");
   const [automatisch, setAutomatisch] = useState(e.podcast_automatisch);
   const [probeUrl, setProbeUrl] = useState<string | null>(null);
   const probeRef = useRef<string | null>(null);
@@ -234,6 +277,8 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
     setAdresse(e.tts_endpoint_url ?? "");
     setModell1(e.tts_modell);
     setModell2(e.tts_modell_2);
+    setStimme1(e.tts_stimme ?? "");
+    setStimme2(e.tts_stimme_2 ?? "");
     setAutomatisch(e.podcast_automatisch);
   }, [e]);
 
@@ -255,6 +300,8 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
         tts_api_key: schluessel,
         tts_modell: modell1,
         tts_modell_2: modell2,
+        tts_stimme: stimme1.trim() || null,
+        tts_stimme_2: stimme2.trim() || null,
         podcast_automatisch: automatisch,
       }),
     onSuccess: () => {
@@ -324,8 +371,16 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
             />
           </div>
           {stimmen.isError && e.tts_ready && <Fehler text={(stimmen.error as Error).message} />}
-          <Stimmwahl id="tts-stimme-1" label="Stimme des Kollegen" wert={modell1} setWert={setModell1} stand={stimmen.data} hinweis="Kennt den Bestand und antwortet daraus." />
-          <Stimmwahl id="tts-stimme-2" label="Stimme der Moderatorin" wert={modell2} setWert={setModell2} stand={stimmen.data} hinweis="Führt durch die Folge und stellt die Fragen." />
+          <Sprecherwahl
+            id="tts-kollege" label="Der Kollege"
+            modell={modell1} setModell={setModell1} stimme={stimme1} setStimme={setStimme1}
+            stand={stimmen.data} hinweis="Kennt den Bestand und antwortet daraus."
+          />
+          <Sprecherwahl
+            id="tts-moderatorin" label="Die Moderatorin"
+            modell={modell2} setModell={setModell2} stimme={stimme2} setStimme={setStimme2}
+            stand={stimmen.data} hinweis="Führt durch die Folge und stellt die Fragen."
+          />
           <Schalter
             an={automatisch}
             umschalten={setAutomatisch}

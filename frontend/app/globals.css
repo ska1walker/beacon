@@ -4355,3 +4355,23 @@ select,
   background-size: 12px 8px;
   padding-right: calc(var(--am-raum-3) + 1.25rem);
 }
+
+/* ── Ein Sprecher der Podcast-Folge ───────────────────────────────────
+   Modell und Stimme gehören zusammen und sind trotzdem zwei Angaben. Ein
+   Feldsatz sagt das, ohne eine Überschrift zu brauchen: Die Beschriftung
+   steht am Rahmen, nicht über einem Feld, das sie nicht allein meint. */
+.sprecherwahl {
+  margin: 0 0 var(--am-raum-4);
+  padding: var(--am-raum-3) var(--am-raum-4) 0;
+  border: 1px solid var(--am-trennlinie);
+  border-radius: var(--am-radius-mittel);
+}
+
+.sprecherwahl legend {
+  padding: 0 var(--am-raum-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--am-text-primaer);
+}
+
+.sprecherwahl-hinweis { margin: 0 0 var(--am-raum-3); }
