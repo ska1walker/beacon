@@ -59,8 +59,12 @@ function NeuMenue() {
         aria-controls={id}
         onClick={() => setOffen((o) => !o)}
       >
-        <Plus size={16} aria-hidden="true" />
-        <span className="kopf-neu-text">Neu</span>
+        {/* Kein Plus davor: Ein Knopf, der „Erstellen" sagt und ein
+            Menü öffnet, trägt bei HubSpot die Beschriftung und den Pfeil
+            und sonst nichts. Auf dem Handy weicht das Wort und das
+            Zeichen bleibt — dort ist es der einzige Weg, es zu erkennen. */}
+        <Plus size={16} aria-hidden="true" className="kopf-neu-zeichen" />
+        <span className="kopf-neu-text">Erstellen</span>
         <ChevronDown size={14} aria-hidden="true" />
       </button>
 

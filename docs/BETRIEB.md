@@ -734,9 +734,32 @@ sonst öffnete ein Neuladen den Dialog ein zweites Mal. Aufgaben haben
 keinen Dialog, sondern eine Zeile über der Liste — dort springt „Neu“ ins
 Feld.
 
-**Auf dem Handy** weichen Produktwort, Klappschalter und die Beschriftung
-des Knopfes; die Wortmarke schrumpft von 28 auf 22 px Höhe. Bei 375 px
-stand sonst „Suchen oder fr…“ im Feld.
+**Die Suche öffnet sich unter dem Feld, nicht in der Bildmitte.** Bis
+0.9.2 war das Feld in der Leiste ein *Knopf*, der ein Fenster über allem
+öffnete — man klickte auf ein Feld, es verschwand, und ein zweites,
+gleich aussehendes erschien in der Mitte des Bildes. Seit 0.9.3 ist das
+Feld in der Leiste das echte Feld; die Treffer hängen als Klappfeld
+daran, in seiner Breite (gemessen: beide bei x = 240, Breite 520).
+⌘K / Strg+K führt zum Feld, statt ein zweites zu öffnen. Escape schließt
+das Klappfeld, der getippte Text bleibt stehen — wer zurückkommt, tippt
+weiter.
+
+Unter 40 rem hängt das Klappfeld nicht mehr am Eingabefeld, sondern an
+der Leiste (`position: fixed`, links und rechts das Polster der Leiste).
+Am Feld blieben bei 375 px nur 320 px, die genau bis an den rechten
+Bildrand stießen. **Die Medienabfrage muss dabei hinter der Grundregel
+stehen** — sie hat dieselbe Spezifität, und die spätere Regel gewinnt.
+Beim ersten Versuch stand sie davor und wirkte nicht.
+
+**Der Knopf trägt HubSpots Form:** ein Rechteck mit 4 px Radius und
+knappem Polster, 40 px hoch wie das Suchfeld daneben. Der weiche
+8-px-Knopf der Formulare mit 24 px Polster las sich neben dem Feld wie
+ein Fremdkörper. Er heißt „Erstellen" und zeigt kein Plus — auf dem Handy
+weicht das Wort und das Zeichen bleibt.
+
+**Auf dem Handy** weichen außerdem Produktwort und Klappschalter; die
+Wortmarke schrumpft von 28 auf 22 px Höhe. Bei 375 px stand sonst
+„Suchen oder fr…“ im Feld.
 
 ## Anlegen-Dialoge — Kopf, Mitte, Fuß
 

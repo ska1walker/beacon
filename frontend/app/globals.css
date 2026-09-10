@@ -680,7 +680,18 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     max-width: 520px;
   }
 
-  .kopf-neu { flex: none; gap: var(--am-raum-1); }
+  /* HubSpots Form: ein Rechteck mit kleinem Radius und knappem Polster,
+     nicht die weiche Kachel der Formularknöpfe. Neben einem Suchfeld von
+     40 px Höhe las sich der runde 24-px-Knopf wie ein Fremdkörper. */
+  .kopf-neu {
+    flex: none;
+    gap: var(--am-raum-2);
+    padding: 0 var(--am-raum-4);
+    border-radius: var(--am-radius-klein);
+    font-size: 0.875rem;
+  }
+  /* Das Zeichen trägt erst, wenn das Wort weicht. */
+  .kopf-neu-zeichen { display: none; }
 
 
   .huelle-nav {
@@ -709,6 +720,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .kopfleiste-marke .marke-produkt,
     .kopfleiste .huelle-klapp { display: none; }
     .kopf-neu-text { display: none; }
+    .kopf-neu-zeichen { display: block; }
+    .kopf-neu { padding: 0 var(--am-raum-3); }
     .kopfleiste-suche { max-width: none; }
   }
 
@@ -3962,26 +3975,67 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .unterpunkt:hover { color: var(--am-text-primaer); }
 .unterpunkt.aktiv { background: var(--am-gold-auszeichnung); border-color: var(--am-gold-auszeichnung); color: var(--am-blau-900); font-weight: 600; }
 
-/* ── Suchen oder fragen ──────────────────────────────────────────────── */
-.suchfeld-knopf {
-  display: flex; align-items: center; gap: var(--am-raum-2); inline-size: 100%; block-size: 40px;
-  padding: 0 var(--am-raum-3); border: var(--am-rand-ruhend) solid var(--am-rand); border-radius: var(--am-radius-mittel);
-  background: var(--am-flaeche-1); color: var(--am-text-gedaempft); font: inherit; font-size: 0.875rem; cursor: text; text-align: left;
-}
-.suchfeld-knopf:hover { border-color: var(--am-rand-betont-farbe); color: var(--am-text-sekundaer); }
-.suchfeld-knopf span { flex: 1; min-inline-size: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.suchfeld-knopf kbd { flex: 0 0 auto; }
-@media (max-width: 1100px) { .suchfeld-knopf kbd { display: none; } }
-.suchfeld-knopf kbd, .suchpalette kbd {
+.kopfsuche kbd, .kopfsuche-feld-auf kbd {
   font: inherit; font-size: 0.6875rem; color: var(--am-text-gedaempft);
   border: var(--am-rand-ruhend) solid var(--am-rand); border-radius: var(--am-radius-klein); padding: 0 6px; line-height: 1.6;
 }
-.suchpalette-schicht { align-items: flex-start; padding-top: 12vh; }
-.suchpalette { inline-size: min(680px, calc(100vw - var(--am-raum-8))); padding: 0; overflow: hidden; }
-.suchpalette-feld { display: flex; align-items: center; gap: var(--am-raum-3); padding: var(--am-raum-3) var(--am-raum-4); border-bottom: var(--am-rand-ruhend) solid var(--am-trennlinie); color: var(--am-text-gedaempft); }
-.suchpalette-feld input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 1rem; color: var(--am-text-primaer); outline: none; padding: 0; block-size: 32px; }
+/* ── Suchen oder fragen ───────────────────────────────────────────────
+   Das Feld sitzt in der Kopfleiste und ist das echte Feld. Bis 0.9.2 war
+   es ein Knopf, der ein Fenster in der Bildmitte öffnete — man klickte
+   auf ein Feld, es verschwand, und ein zweites erschien woanders. */
+.kopfsuche { position: relative; display: flex; align-items: center; width: 100%; }
+
+.kopfsuche-zeichen {
+  position: absolute;
+  left: var(--am-raum-3);
+  color: var(--am-text-gedaempft);
+  pointer-events: none;
+}
+
+.kopfsuche-feld {
+  width: 100%;
+  height: var(--am-ziel-zeiger);
+  padding: 0 3.25rem 0 calc(var(--am-raum-3) + 1.5rem);
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-mittel);
+  background: var(--am-seite);
+  color: var(--am-text-primaer);
+  font-family: var(--am-schrift-sans);
+  font-size: 0.9375rem;
+}
+.kopfsuche-feld::placeholder { color: var(--am-text-gedaempft); }
+.kopfsuche-feld:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+
+/* Das Kürzel steht im Feld, solange nichts darin steht — danach wäre es
+   nur noch ein Hindernis vor dem eigenen Text. */
+.kopfsuche-taste {
+  position: absolute;
+  right: var(--am-raum-3);
+  pointer-events: none;
+}
+
+/* Die Treffer hängen am Feld, in seiner Breite. Ausgeklappt reicht das
+   Feld bis zum Rand des Bildes; unter 40 rem ist die Leiste selbst so
+   schmal, dass ein Mindestmaß nötig ist. */
+.kopfsuche-feld-auf {
+  position: absolute;
+  top: calc(100% + var(--am-raum-1));
+  left: 0;
+  right: 0;
+  z-index: 70;
+  min-width: min(20rem, calc(100vw - var(--am-raum-6)));
+  max-height: min(70vh, 34rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--am-raum-1) 0;
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-mittel);
+  background: var(--am-flaeche-1);
+  box-shadow: var(--am-schatten-1);
+}
+
 .suchpalette-hinweis { margin: 0; padding: var(--am-raum-3) var(--am-raum-4); font-size: 0.8125rem; color: var(--am-text-gedaempft); }
-.suchpalette-liste { list-style: none; margin: 0; padding: var(--am-raum-2) 0; max-height: 50vh; overflow-y: auto; }
+.suchpalette-liste { list-style: none; margin: 0; padding: var(--am-raum-1) 0; }
 .suchpalette-zeile {
   display: flex; align-items: baseline; gap: var(--am-raum-3); inline-size: 100%; padding: var(--am-raum-2) var(--am-raum-4);
   border: 0; background: transparent; font: inherit; color: var(--am-text-primaer); text-decoration: none; text-align: left; cursor: pointer;
@@ -3992,8 +4046,31 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .suchpalette-unter { flex: 1; font-size: 0.8125rem; color: var(--am-text-gedaempft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suchpalette-frage { align-items: center; border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); color: var(--am-gold-beschriftung); }
 .suchpalette-frage .suchpalette-titel { flex: 1; }
-.suchpalette-antwort { padding: var(--am-raum-3) var(--am-raum-4) var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); font-size: 0.9375rem; line-height: 1.55; max-height: 40vh; overflow-y: auto; }
+.suchpalette-antwort { padding: var(--am-raum-3) var(--am-raum-4) var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); font-size: 0.9375rem; line-height: 1.55; }
 .suchpalette-fundstellen { margin: var(--am-raum-3) 0 0; padding-left: 1.2em; font-size: 0.8125rem; color: var(--am-text-sekundaer); }
+
+/* Schmal hängt das Feld nicht mehr am Eingabefeld, sondern an der
+   Leiste: Bei 375 px blieben dem Feld sonst 320 px, die genau bis an den
+   rechten Bildrand stießen. Fixiert unter der Leiste hat es die volle
+   Breite und beide Ränder. */
+@media (max-width: 40rem) {
+  .kopfsuche-feld-auf {
+    position: fixed;
+    top: calc(var(--am-leistenhoehe) + var(--am-raum-1));
+    left: var(--am-raum-3);
+    right: var(--am-raum-3);
+    min-width: 0;
+  }
+  .suchpalette-art { flex-basis: 4rem; }
+  .suchpalette-zeile { padding-inline: var(--am-raum-3); }
+}
+
+/* Ohne das Kürzel braucht das Feld rechts keinen Platz mehr dafür —
+   bei 375 px stand sonst „Suchen oder frag" im Feld. */
+@media (max-width: 1100px) {
+  .kopfsuche-taste { display: none; }
+  .kopfsuche-feld { padding-right: var(--am-raum-3); }
+}
 
 /* ── Gespräch vorbereiten — Podcast ──────────────────────────────────── */
 .podcast-folge + .podcast-folge { margin-top: var(--am-raum-4); padding-top: var(--am-raum-4); border-top: var(--am-rand-ruhend) solid var(--am-trennlinie); }
