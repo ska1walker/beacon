@@ -14,7 +14,7 @@ halten:
 import json
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,6 +36,13 @@ class MitgliedIn(BaseModel):
 class MitgliedPatch(BaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=120)
     email: str | None = None
+
+
+class RollePatch(BaseModel):
+    # `viewer` steht im Datenbank-Typ, bewirkt aber nichts: Für die Rechte
+    # ist es dasselbe wie `member` (auth.VERWALTET). Es hier anzubieten
+    # hieße, eine Abstufung zu versprechen, die es nicht gibt.
+    role: Literal["admin", "member"]
 
 
 class Mitglied(BaseModel):
@@ -360,6 +367,83 @@ async def entfernen(mitglied_id: UUID, user: CurrentUser = Depends(verwaltet)) -
         await audit.log_fuer(
             conn, user, action="delete", entity="users", entity_id=mitglied_id
         )
+
+
+@router.patch("/{mitglied_id}/rolle", response_model=Mitglied)
+async def rolle_setzen(
+    mitglied_id: UUID,
+    payload: RollePatch,
+    user: CurrentUser = Depends(get_current_user),
+) -> Mitglied:
+    """Macht jemanden zum Verwalter — oder nimmt es zurück.
+
+    **Nur die Eigentümerin.** Ein Verwalter darf schon alles, was ein
+    Eigentümer darf (`auth.VERWALTET`); dürfte er auch Rollen setzen,
+    könnte er die Eigentümerin herabstufen und sich die Organisation
+    aneignen. Der Eigentum bleibt der eine Punkt, an dem eine Rolle nicht
+    reicht.
+
+    Drei Dinge gehen deshalb nicht: die eigene Rolle ändern (der Weg,
+    sich selbst auszusperren), die Rolle der Eigentümerin ändern, und
+    `owner` vergeben — eine Übergabe des Eigentums ist etwas anderes als
+    eine Rolle und braucht ihren eigenen Weg.
+
+    Wofür das da ist: Auf einer fremden Box hilft nur jemand, der die
+    Einstellungen sieht. Bis 0.9.2 bekam jede angelegte Person fest
+    `member`, und es gab keinen Endpunkt, der das ändert — Hilfe hieß
+    dann, dem Helfer das Passwort der Eigentümerin zu geben.
+    """
+    async with acquire_as(user.user_id) as conn:
+        meine = await conn.fetchval(
+            "select role::text from public.user_org_roles where user_id = $1 and org_id = $2",
+            user.handelnder,
+            user.org_id,
+        )
+        if meine != "owner":
+            raise HTTPException(
+                403,
+                "Rollen vergibt nur die Person, der diese Organisation gehört.",
+            )
+        if mitglied_id == user.handelnder:
+            raise HTTPException(
+                400,
+                "Die eigene Rolle lässt sich nicht ändern — sonst könnte sich der "
+                "Eigentümer aus seiner eigenen Organisation aussperren.",
+            )
+
+        zeile = await conn.fetchrow(
+            """
+            update public.user_org_roles r
+               set role = $1::public.user_role
+              from public.users u
+             where r.user_id = $2 and r.org_id = $3 and u.id = r.user_id
+               and u.deleted_at is null and r.role <> 'owner'
+            returning u.id, u.display_name, u.email, u.olares_username, u.zugang,
+                      r.role::text as role, u.created_at, u.last_seen_at
+            """,
+            payload.role,
+            mitglied_id,
+            user.org_id,
+        )
+        if zeile is None:
+            # Beide Fälle einzeln zu unterscheiden hieße, einem Fremden zu
+            # verraten, wem die Organisation gehört. Hier ist niemand
+            # fremd — der Satz nennt deshalb beide Möglichkeiten.
+            raise HTTPException(
+                404,
+                "Nicht in dieser Organisation, oder es ist die Eigentümerin — "
+                "deren Rolle steht fest.",
+            )
+
+        await audit.log_fuer(
+            conn,
+            user,
+            action="update",
+            entity="users",
+            entity_id=mitglied_id,
+            diff={"role": payload.role},
+        )
+    return Mitglied(**dict(zeile))
 
 
 @router.post("/{mitglied_id}/einladung", status_code=201)

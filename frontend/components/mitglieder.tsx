@@ -45,6 +45,15 @@ export function Mitgliederblock() {
     },
   });
 
+  // Rollen vergibt nur die Eigentümerin. Ohne diesen Weg hieß Hilfe auf
+  // einer fremden Box: „gib mir dein Passwort" — jede angelegte Person
+  // war fest `member` und sah die Einstellungen nicht.
+  const rolleSetzen = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: "admin" | "member" }) =>
+      api.patch<Mitglied>(`/api/mitglieder/${id}/rolle`, { role }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["mitglieder"] }),
+  });
+
   const entfernen = useMutation({
     mutationFn: (id: string) => api.del(`/api/mitglieder/${id}`),
     onSuccess: () => client.invalidateQueries({ queryKey: ["mitglieder"] }),
@@ -78,6 +87,11 @@ export function Mitgliederblock() {
       });
     },
   });
+
+  // Nur die Eigentümerin. Ein Verwalter darf schon alles, was die
+  // Einstellungen schützen; dürfte er auch Rollen setzen, könnte er die
+  // Eigentümerin herabstufen und sich die Organisation aneignen.
+  const darfRollen = wer.data?.rolle === "owner";
 
   if (mitglieder.isPending) return <Laedt />;
 
@@ -164,8 +178,33 @@ export function Mitgliederblock() {
                   )}
                 </td>
                 <td>
-                  <span className="stufe" data-art={m.zugang === "olares" ? "won" : undefined}>
-                    {m.zugang === "olares" ? "eigener Zugang" : "Sitzplatz"}
+                  {/* Zwei Aussagen übereinander statt in zwei Spalten: Die
+                      Tabelle hat 638 px Rahmen, und eine fünfte Spalte
+                      schöbe die Knöpfe der ersten Zeile aus dem Bild
+                      (gemessen, siehe 0.5.0). */}
+                  <span className="mitglied-art">
+                    <span className="stufe" data-art={m.zugang === "olares" ? "won" : undefined}>
+                      {m.zugang === "olares" ? "eigener Zugang" : "Sitzplatz"}
+                    </span>
+                    {darfRollen && m.role !== "owner" ? (
+                      <select
+                        className="mitglied-rolle"
+                        aria-label={`Rolle von ${m.display_name ?? m.olares_username}`}
+                        value={m.role === "admin" ? "admin" : "member"}
+                        disabled={rolleSetzen.isPending}
+                        onChange={(e) =>
+                          rolleSetzen.mutate({
+                            id: m.id,
+                            role: e.target.value as "admin" | "member",
+                          })
+                        }
+                      >
+                        <option value="member">Mitglied</option>
+                        <option value="admin">Verwalter</option>
+                      </select>
+                    ) : (
+                      <span className="mitglied-rolle-fest">{ROLLENTEXT[m.role] ?? m.role}</span>
+                    )}
                   </span>
                 </td>
                 <td>{m.last_seen_at ? datumZeit(m.last_seen_at) : "—"}</td>
@@ -371,3 +410,13 @@ export function Passwortblock() {
     </section>
   );
 }
+
+/** Was eine Rolle im Satz heißt. „viewer" steht im Datenbank-Typ, bewirkt
+ *  aber nichts — es wird deshalb nirgends angeboten, nur benannt, falls
+ *  es aus einer alten Zeile kommt. */
+const ROLLENTEXT: Record<string, string> = {
+  owner: "Eigentümerin",
+  admin: "Verwalter",
+  member: "Mitglied",
+  viewer: "Mitglied",
+};

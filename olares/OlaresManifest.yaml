@@ -27,7 +27,7 @@ metadata:
   title: Beacon
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
-  version: 0.9.1
+  version: 0.9.2
   categories:
     - AI
 
@@ -100,7 +100,7 @@ permission:
   appData: true
 
 spec:
-  versionName: '0.9.1'
+  versionName: '0.9.2'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
   promoteImage:

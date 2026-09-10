@@ -1408,6 +1408,45 @@ Anmeldung; ihn wegzuräumen gibt nur die Zuschreibung auf.
 Von Hand geht es weiterhin: unten links im Konto-Menü einen Platz wählen,
 oder im Browser den Keks `beacon-sitzplatz` löschen.
 
+### Rollen — wer auf einer fremden Box helfen darf
+
+Bis 0.9.1 bekam jede angelegte Person fest die Rolle `member`, und es gab
+**keinen** Endpunkt, der sie ändert. Wer jemandem auf seiner Box helfen
+lassen wollte, hatte genau zwei Wege: sein eigenes Passwort weitergeben,
+oder es selbst tun. Kai konnte auf Marcs Box nichts prüfen, und Marc
+konnte ihn nicht dazu berechtigen (10.9.2026).
+
+Seit 0.9.2 gibt es `PATCH /api/mitglieder/{id}/rolle` mit `admin` oder
+`member`, und in der Mitgliederliste unter „Wer hier arbeitet" steht ein
+Schalter in der Zeile. Vier Riegel:
+
+- **Nur die Eigentümerin vergibt Rollen**, nicht `verwaltet`. Ein
+  Verwalter darf schon alles, was die Einstellungen schützen; dürfte er
+  auch Rollen setzen, könnte er die Eigentümerin herabstufen und sich die
+  Organisation aneignen. Das Eigentum ist der eine Punkt, an dem eine
+  Rolle nicht reicht.
+- **Die eigene Rolle bleibt stehen** — sonst sperrt sich die Eigentümerin
+  aus ihrer eigenen Organisation aus.
+- **Die Rolle der Eigentümerin bleibt stehen**, geprüft in der SQL
+  (`r.role <> 'owner'`), nicht nur im Vorspann.
+- **`owner` lässt sich nicht vergeben.** Eigentum zu übergeben ist etwas
+  anderes als eine Rolle zu setzen und braucht seinen eigenen Weg.
+
+Geprüft wird die Rolle der **angemeldeten** Person (`handelnder`), nicht
+die des gewählten Sitzplatzes. Wer auf dem Platz der Eigentümerin sitzt,
+handelt in ihrem Namen, hat aber ihre Rechte nicht — sonst wäre der Platz
+ein Weg, sich welche zu holen.
+
+`viewer` steht im Datenbank-Typ, bewirkt aber nichts: Für die Rechte ist
+es dasselbe wie `member` (`auth.VERWALTET`). Es wird deshalb nirgends
+angeboten — eine Abstufung zu versprechen, die es nicht gibt, wäre
+schlimmer als sie wegzulassen.
+
+Schalter und Zugangsart stehen **übereinander in einer Zelle**, nicht in
+zwei Spalten: Der Rahmen der Tabelle ist 638 px breit, und eine fünfte
+Spalte schöbe die Knöpfe der ersten Zeile unsichtbar nach rechts hinaus.
+Nachgemessen mit Schalter: 603 px, kein Überlauf.
+
 ### Nach einem Neustart einmal 500
 
 Das Frontend ist nach einem Neustart der Box eher da als das Backend. Der

@@ -4114,6 +4114,35 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .mitgliedertabelle th:last-child,
 .mitgliedertabelle td:last-child { width: 7.5rem; text-align: right; white-space: nowrap; }
 
+/* Zugangsart und Rolle stehen übereinander in einer Zelle. Eine fünfte
+   Spalte ginge nicht: Der Rahmen der Tabelle ist 638 px breit, und die
+   Knöpfe der ersten Zeile landeten unsichtbar rechts daneben — gemessen
+   auf der Box, siehe die Anmerkung an der letzten Spalte. */
+.mitglied-art {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--am-raum-1);
+}
+
+.mitglied-rolle {
+  max-width: 100%;
+  min-height: 1.75rem;
+  padding: 0 var(--am-raum-1);
+  border: var(--am-rand-ruhend) solid var(--am-rand);
+  border-radius: var(--am-radius-klein);
+  background: var(--am-seite);
+  color: var(--am-text-sekundaer);
+  font-family: var(--am-schrift-sans);
+  font-size: 0.75rem;
+}
+.mitglied-rolle:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+
+.mitglied-rolle-fest {
+  font-size: 0.75rem;
+  color: var(--am-text-gedaempft);
+}
+
 .mitglied-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
 .mitglied-name-zeile {

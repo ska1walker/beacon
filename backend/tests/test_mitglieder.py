@@ -6,8 +6,11 @@ fremde Mandanten ist. Das Zweite ist der Punkt, an dem ein Fehler hier
 teuer würde.
 """
 
+from uuid import UUID
+
 from httpx import ASGITransport, AsyncClient
 
+from app.db import acquire
 from app.main import app
 from tests.conftest import klient_fuer
 
@@ -259,3 +262,118 @@ async def test_einstellungen_werden_geprueft(datenbank):
         for schlecht in ({"favoriten": "x"}, {"favoriten": ["javascript:alert(1)"]}, {"unbekannt": 1}, {"favoriten": ["/a"] * 21 and [f"/p{i}" for i in range(21)]}):
             assert (await k.patch("/api/mitglieder/wer/einstellungen", json=schlecht)).status_code == 422, schlecht
         assert (await k.patch("/api/mitglieder/wer/einstellungen", json={})).status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Rollen — wer auf einer fremden Box helfen darf
+# ---------------------------------------------------------------------------
+
+async def test_eigentuemer_macht_jemanden_zum_verwalter(datenbank):
+    """Der Fall, für den es gebaut ist.
+
+    Kai soll auf Marcs Box die Einstellungen sehen können, ohne dass Marc
+    ihm sein eigenes Passwort gibt. Bis 0.9.2 bekam jede angelegte Person
+    fest `member`, und es gab keinen Endpunkt, der das ändert.
+    """
+    async with klient_fuer("rolle-eigner") as marc:
+        kai = (await marc.post("/api/mitglieder", json={"display_name": "Kai Böhm"})).json()
+        assert kai["role"] == "member"
+
+        antwort = await marc.patch(f"/api/mitglieder/{kai['id']}/rolle", json={"role": "admin"})
+        assert antwort.status_code == 200, antwort.text
+        assert antwort.json()["role"] == "admin"
+
+        liste = (await marc.get("/api/mitglieder")).json()
+        assert {m["olares_username"]: m["role"] for m in liste}["kai-boehm"] == "admin"
+
+        # Und wieder zurück.
+        zurueck = await marc.patch(f"/api/mitglieder/{kai['id']}/rolle", json={"role": "member"})
+        assert zurueck.json()["role"] == "member"
+
+
+async def test_verwalter_vergibt_keine_rollen(datenbank):
+    """Sonst könnte ein Verwalter die Eigentümerin herabstufen.
+
+    Ein Verwalter darf schon alles, was `verwaltet` schützt. Rollen zu
+    setzen wäre der eine Schritt darüber hinaus: Er endete damit, dass
+    sich jemand die Organisation aneignet.
+    """
+    async with klient_fuer("rolle-admin") as klient:
+        wer = (await klient.get("/api/mitglieder/wer")).json()
+        dritte = (await klient.post("/api/mitglieder", json={"display_name": "Ada Lovelace"})).json()
+
+        # Aus der Eigentümerin wird eine Verwalterin. Ein Zugang über den
+        # Kopf legt sonst immer die eigene Organisation an, mit `owner`.
+        async with acquire() as conn:
+            await conn.execute(
+                "update public.user_org_roles set role = 'admin' where user_id = $1",
+                UUID(wer["user_id"]),
+            )
+
+        # Was `verwaltet` schützt, darf sie weiterhin.
+        assert (await klient.get("/api/mitglieder")).status_code == 200
+        abgewiesen = await klient.patch(
+            f"/api/mitglieder/{dritte['id']}/rolle", json={"role": "admin"}
+        )
+
+    assert abgewiesen.status_code == 403
+    assert "gehört" in abgewiesen.json()["detail"]
+
+
+async def test_ein_sitzplatz_bringt_keine_rechte_mit(datenbank):
+    """Der Platz ist Zuschreibung, keine Anmeldung.
+
+    Wer auf dem Platz der Eigentümerin sitzt, handelt in ihrem Namen, hat
+    aber ihre Rechte nicht — geprüft wird `handelnder`, nicht der Platz.
+    """
+    async with klient_fuer("rolle-platz") as marc:
+        kai = (await marc.post("/api/mitglieder", json={"display_name": "Kai Böhm"})).json()
+        dritte = (await marc.post("/api/mitglieder", json={"display_name": "Ada Lovelace"})).json()
+        wer = (await marc.get("/api/mitglieder/wer")).json()
+        async with acquire() as conn:
+            await conn.execute(
+                "update public.user_org_roles set role = 'member' where user_id = $1",
+                UUID(wer["user_id"]),
+            )
+
+    # Der Zugang ist jetzt nur noch Mitglied, der Platz gehört Kai.
+    async with mit_sitzplatz("rolle-platz", kai["id"]) as klient:
+        antwort = await klient.patch(
+            f"/api/mitglieder/{dritte['id']}/rolle", json={"role": "admin"}
+        )
+    assert antwort.status_code == 403, antwort.text
+
+
+async def test_eine_zweite_eigentuemerin_laesst_sich_nicht_herabstufen(datenbank):
+    """Der Riegel in der SQL, nicht nur im Vorspann.
+
+    Zwei Eigentümerinnen entstehen im Betrieb nicht, aber der Riegel
+    `r.role <> 'owner'` ist die Stelle, an der Eigentum wirklich hängt —
+    und die gehört geprüft, nicht behauptet.
+    """
+    async with klient_fuer("rolle-zwei-eigner") as klient:
+        kai = (await klient.post("/api/mitglieder", json={"display_name": "Kai Böhm"})).json()
+        async with acquire() as conn:
+            await conn.execute(
+                "update public.user_org_roles set role = 'owner' where user_id = $1",
+                UUID(kai["id"]),
+            )
+        antwort = await klient.patch(f"/api/mitglieder/{kai['id']}/rolle", json={"role": "member"})
+
+    assert antwort.status_code == 404
+
+
+async def test_owner_laesst_sich_nicht_vergeben(datenbank):
+    """Eigentum zu übergeben ist etwas anderes als eine Rolle zu setzen."""
+    async with klient_fuer("rolle-owner") as marc:
+        kai = (await marc.post("/api/mitglieder", json={"display_name": "Kai Böhm"})).json()
+        antwort = await marc.patch(f"/api/mitglieder/{kai['id']}/rolle", json={"role": "owner"})
+    assert antwort.status_code == 422
+
+
+async def test_fremde_organisation_bleibt_unberuehrt(datenbank):
+    async with klient_fuer("rolle-fremd-a") as a:
+        ihre = (await a.post("/api/mitglieder", json={"display_name": "Ada Lovelace"})).json()
+    async with klient_fuer("rolle-fremd-b") as b:
+        antwort = await b.patch(f"/api/mitglieder/{ihre['id']}/rolle", json={"role": "admin"})
+    assert antwort.status_code == 404
