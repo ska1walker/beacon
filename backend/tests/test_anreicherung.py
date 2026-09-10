@@ -477,3 +477,64 @@ async def test_searxng_darf_ohne_schluessel():
     dienst = anreicherung.Suchdienst(endpoint_url="http://searxng.local:8080", api_key="")
     async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
         assert await anreicherung.suchen(klient, dienst, "irgendwas") == []
+
+
+# ---------------------------------------------------------------------------
+# Eine eigene SearXNG-Instanz, die von allen Anbietern gesperrt ist
+# ---------------------------------------------------------------------------
+
+async def test_searxng_bekommt_eine_ausdrueckliche_anbieterliste():
+    """Sonst bleibt die Instanz bei ihrer Vorgabe — und die ist gesperrt.
+
+    Gemessen am 10.9.2026 auf der Box in Munster: Mit der Vorgabe der
+    Instanz null Treffer bei jeder Frage, weil DuckDuckGo, Brave,
+    Startpage und Karmasearch sie abweisen und Google still nichts
+    liefert. Mit einer ausdrücklichen Liste zehn Treffer, und die
+    richtigen — Bing ist in der ausgelieferten Konfiguration abgeschaltet,
+    antwortet aber, und `engines` weckt auch Abgeschaltete.
+    """
+    gesehen: dict[str, object] = {}
+
+    def antworten(request: httpx.Request) -> httpx.Response:
+        gesehen["engines"] = request.url.params.get("engines")
+        return httpx.Response(200, json={"results": [
+            {"url": "https://www.swtenergie.de/", "title": "Stadtwerke Lüneburg", "content": "Energie"},
+        ]})
+
+    dienst = anreicherung.Suchdienst(endpoint_url="http://searxng.local:8080", api_key="")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        quellen = await anreicherung.suchen(klient, dienst, "Stadtwerke Lüneburg")
+
+    genannt = str(gesehen["engines"]).split(",")
+    assert "bing" in genannt, "Bing ist der einzige, der auf der Box noch antwortet"
+    assert "yandex" not in genannt, "Ein deutscher Firmenname geht nicht nach Russland"
+    assert quellen[0].url == "https://www.swtenergie.de/"
+
+
+async def test_gesperrte_instanz_bekommt_einen_ausweg_genannt():
+    """„Das gibt sich nach einigen Stunden" war falsch und ließ warten."""
+    def antworten(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "results": [],
+            "unresponsive_engines": [["duckduckgo", "CAPTCHA"], ["brave", "too many requests"]],
+        })
+
+    dienst = anreicherung.Suchdienst(endpoint_url="http://searxng.local:8080", api_key="")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        with pytest.raises(anreicherung.SucheGestoert) as fehler:
+            await anreicherung.suchen(klient, dienst, "irgendwas")
+
+    satz = str(fehler.value)
+    assert "duckduckgo" in satz and "brave" in satz
+    assert "Tavily" in satz, "Ohne Ausweg bleibt nur Warten"
+    assert "Stunden" not in satz
+
+
+async def test_leer_ohne_gesperrte_anbieter_ist_kein_fehler():
+    """Nichts gefunden ist nichts gefunden — und keine Störung."""
+    def antworten(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"results": [], "unresponsive_engines": []})
+
+    dienst = anreicherung.Suchdienst(endpoint_url="http://searxng.local:8080", api_key="")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        assert await anreicherung.suchen(klient, dienst, "irgendwas") == []

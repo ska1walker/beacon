@@ -161,13 +161,21 @@ async def test_ohne_suchdienst_keine_kandidaten(datenbank, welt):
         assert "Suchdienst" in r.json()["detail"]
 
 
-async def test_gesperrter_suchdienst_heisst_gesperrt(datenbank, welt):
+async def test_gesperrte_instanz_nennt_die_anbieter_und_einen_ausweg(datenbank, welt):
+    """Bis 0.9.3 hieß es „gesperrt … gibt sich nach einigen Stunden".
+
+    Es gibt sich nicht: Eine selbst betriebene Instanz wird dauerhaft
+    abgewiesen, und Marc wartete darauf, dass es von allein wiederkommt.
+    Der Satz nennt jetzt die Anbieter **und** den Weg heraus.
+    """
     async with klient_fuer("finden-gesperrt") as k:
         await _eingerichtet(k, suche="https://gesperrt.local")
         r = await k.post("/api/finden/kandidaten", json={"beschreibung": "Baustoffhandel Tecklenburg"})
         assert r.status_code == 503
-        assert "gesperrt" in r.json()["detail"]
-        assert "brave" in r.json()["detail"] and "duckduckgo" in r.json()["detail"]
+        satz = r.json()["detail"]
+        assert "brave" in satz and "duckduckgo" in satz
+        assert "Tavily" in satz
+        assert "Stunden" not in satz
 
 
 async def test_region_leer_geht_ohne_sprache(datenbank, welt):

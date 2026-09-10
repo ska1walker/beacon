@@ -142,6 +142,36 @@ class Suchdienst:
         return "searxng"
 
 
+# Welche Anbieter Beacon bei einer eigenen SearXNG-Instanz ausdrücklich
+# nennt — statt die Vorgabe der Instanz zu nehmen.
+#
+# **Warum das nötig ist.** Eine selbst betriebene Instanz wird mit der Zeit
+# von den großen Anbietern gesperrt: Sie fragt ohne Schlüssel an, wie ein
+# Mensch mit Browser, und die Anbieter erkennen den Selbstbetreiber an der
+# Adresse. Auf der Box in Munster verweigerten am 10.9.2026 alle vier
+# eingeschalteten Anbieter die Antwort — DuckDuckGo mit CAPTCHA, Brave mit
+# „zu viele Anfragen", Startpage mit CAPTCHA, Karmasearch mit „Zugriff
+# verweigert" —, und Google lieferte still nichts. Ergebnis: null Treffer,
+# bei jeder Frage. Marc erlebte dasselbe: „searXNG hat bei mir ja
+# funktioniert" — und dann nicht mehr.
+#
+# **Warum eine Liste hilft.** Der Parameter `engines` weckt auch Anbieter,
+# die in der Instanz **abgeschaltet** sind. Bing ist in der ausgelieferten
+# SearXNG-Konfiguration aus, antwortet aber. Gemessen auf derselben Box,
+# dieselbe Frage: Vorgabe der Instanz null Treffer, mit dieser Liste zehn —
+# und die richtigen (Stadtwerke Lüneburg → swtenergie.de).
+#
+# Gesperrte Anbieter kosten dabei nichts: Sie sind bereits stummgeschaltet
+# und fallen sofort durch. Gemessen 0,2 bis 0,4 Sekunden, mit und ohne
+# Liste. Kennt eine Instanz einen Namen gar nicht, nimmt sie ihre eigene
+# Vorgabe — die Liste kann also nichts kaputt machen.
+#
+# **Yandex bleibt draußen.** Es antwortet auf derselben Box, aber ein
+# deutscher Firmenname, der zur Anreicherung nach Russland geht, ist keine
+# Datensouveränität, sondern nur eine andere Adresse.
+SEARXNG_ANBIETER = ("bing", "duckduckgo", "brave", "startpage", "qwant", "mojeek", "wikipedia")
+
+
 # Wie der Dienst im Satz heißt. „searxng" steht klein in der Adresse, im
 # Satz heißt er beim Namen.
 DIENSTNAME = {"brave": "Brave Search", "tavily": "Tavily", "searxng": "Der Suchdienst"}
@@ -359,7 +389,7 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
         kopf = {"Accept": "application/json"}
         if suche.api_key:
             kopf["Authorization"] = f"Bearer {suche.api_key}"
-        params = {"q": anfrage, "format": "json"}
+        params = {"q": anfrage, "format": "json", "engines": ",".join(SEARXNG_ANBIETER)}
         if region:
             params["language"] = REGIONEN[region]
         antwort = await client.get(url, params=params, headers=kopf)
@@ -372,10 +402,17 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
                 if isinstance(e, list | tuple) and e
             ]
             if gesperrt:
+                # „Das gibt sich nach einigen Stunden" stand hier bis
+                # 0.9.4 und stimmte nicht: Eine selbst betriebene Instanz
+                # wird dauerhaft gesperrt, nicht vorübergehend. Marc
+                # wartete darauf, dass es von selbst wiederkommt.
                 raise SucheGestoert(
-                    "Der Suchdienst ist gerade gesperrt — "
+                    "Ihre eigene Suchinstanz kommt bei keinem Anbieter mehr durch — "
                     + ", ".join(sorted(set(gesperrt)))
-                    + " lassen ihn nicht mehr suchen. Das gibt sich meist nach einigen Stunden."
+                    + " weisen sie ab. Das trifft selbst betriebene Instanzen mit der Zeit "
+                    "regelmäßig, und es geht nicht von allein weg. Zwei Wege: in der "
+                    "SearXNG-Konfiguration einen Anbieter mit eigenem Schlüssel hinterlegen, "
+                    "oder unter Einstellungen › KI und Programme Tavily oder Brave eintragen."
                 )
         rohe = [(t.get("url"), t.get("title"), t.get("content")) for t in treffer]
 

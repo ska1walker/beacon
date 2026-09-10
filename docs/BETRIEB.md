@@ -547,22 +547,63 @@ allein sagt also nicht, ob Beacon überhaupt den Tavily-Weg genommen hat.
 Die Adresse muss genau `https://api.tavily.com/search` lauten; ein 401
 bei richtiger Adresse ist wirklich der Schlüssel.
 
-**SearXNG auf der eigenen Box ist für die Anreicherung meist untauglich**
-— gemessen am 9. September 2026 auf der Box in Munster: Der Dienst lief,
-war aus dem Beacon-Pod erreichbar und hatte JSON freigeschaltet, aber
-**alle vier allgemeinen Anbieter verweigerten die Antwort** (DuckDuckGo
-mit CAPTCHA, Brave mit „zu viele Anfragen", Startpage und Karmasearch mit
-Abruffehlern). Google war eingeschaltet und lieferte nichts. „Brinkmann
-Baustoffe Tecklenburg Impressum" ergab null Treffer, „Bundeskanzler"
-genau einen, und der kam aus Wikipedia.
+### SearXNG auf der eigenen Box — was wirklich hilft
 
-Das ist kein Konfigurationsfehler. SearXNG fragt diese Dienste ohne
+Am 9.9.2026 stand hier, SearXNG sei „meist untauglich". Das war zu früh
+aufgegeben. Nachgemessen am 10.9.2026 auf derselben Box, Anbieter für
+Anbieter:
+
+| Anbieter | Antwort auf dieselbe Frage |
+|---|---|
+| DuckDuckGo | CAPTCHA |
+| Brave | zu viele Anfragen |
+| Startpage | CAPTCHA |
+| Karmasearch | Zugriff verweigert |
+| Mojeek | Zugriff verweigert |
+| Qwant | Zugriff verweigert |
+| Google | 0 Treffer, ohne Fehler |
+| **Bing** | **10 Treffer** |
+| Yandex | 10 Treffer |
+| Seznam / Wiby | 5 / 12, beide Nischenindizes |
+
+**Der entscheidende Fund:** Bing ist in der ausgelieferten
+SearXNG-Konfiguration **abgeschaltet** — und der Parameter `engines`
+weckt auch Abgeschaltete. Dieselbe Frage, dieselbe Instanz: mit der
+Vorgabe der Instanz null Treffer, mit einer ausdrücklichen Liste zehn.
+Seit 0.9.4 nennt Beacon die Anbieter deshalb selbst
+(`anreicherung.SEARXNG_ANBIETER`): bing, duckduckgo, brave, startpage,
+qwant, mojeek, wikipedia.
+
+Gesperrte Anbieter kosten dabei nichts — sie sind bereits stummgeschaltet
+und fallen sofort durch. Gemessen 0,2 bis 0,4 Sekunden, mit und ohne
+Liste. Kennt eine Instanz einen Namen gar nicht, nimmt sie ihre eigene
+Vorgabe; die Liste kann also nichts kaputt machen.
+
+**Yandex bleibt draußen**, obwohl es antwortet. Ein deutscher Firmenname,
+der zur Anreicherung nach Russland geht, ist keine Datensouveränität,
+sondern nur eine andere Adresse.
+
+**Was das taugt.** Gegen echte Firmen geprüft: Stadtwerke Lüneburg →
+`swtenergie.de` ✓, Sennheiser Wedemark → `sennheiser.com` ✓, Rossmann
+Burgwedel → `rossmann.de` ✓. „Stadt Munster Örtze" ✗ — dort hängt sich
+Bing am Wort „Stadt" fest und liefert Oberzent. Mit `munster.de` oder
+„Munster Lüneburger Heide" steht die richtige Seite auf Platz drei. Bing
+ist also brauchbar, aber schwächer als Brave oder Tavily: bekannte Namen
+findet es, bei kleinen Betrieben mit ungünstiger Formulierung nicht.
+
+**Warum es überhaupt so weit kommt.** SearXNG fragt diese Dienste ohne
 Schlüssel ab, wie ein Mensch mit Browser, und sie erkennen einen
-Selbstbetreiber an der Adresse. Genau dafür gibt es seit 0.3.0 die
-Meldung „Der Suchdienst ist gerade gesperrt" statt „nichts gefunden".
-Wer SearXNG trotzdem will, hinterlegt in dessen `settings.yml` einen
-API-Schlüssel bei Google oder Brave — dann ist man aber wieder bei einem
-externen Konto, nur mit einer Zwischenstation.
+Selbstbetreiber an der Adresse. Das trifft eine Instanz **mit der Zeit**,
+nicht sofort — Marc schrieb am 10.9.2026: „searXNG hat bei mir ja
+funktioniert, zB munster.de hatte ich damit angelegt und war begeistert.
+Das geht nun auch nicht mehr." Genau das ist das Muster. Die Meldung sagt
+das seit 0.9.4 auch so; bis dahin stand dort „Das gibt sich meist nach
+einigen Stunden", und das stimmte nicht.
+
+**Wenn auch Bing wegfällt**, bleiben zwei Wege: in der `settings.yml` der
+SearXNG-Instanz einen Anbieter mit eigenem Schlüssel hinterlegen — dann
+liegt der Schlüssel auf der Box und nur SearXNG spricht nach außen —,
+oder unter Einstellungen Tavily oder Brave eintragen.
 
 Mit Suchdienst findet die Anreicherung die Website, wenn nur der Name
 bekannt ist, und holt die **LinkedIn-Treffer**: Unternehmensseite
