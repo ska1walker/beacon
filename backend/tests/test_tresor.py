@@ -8,6 +8,7 @@ ehrlich zu `None` statt zu Buchstabensalat?
 
 import base64
 import pathlib
+from uuid import UUID
 
 import pytest
 
@@ -193,3 +194,103 @@ async def test_die_maske_sagt_nicht_hinterlegt_wenn_der_schluessel_weg_ist(
 
     assert nachher["suche_api_key_set"] is False
     assert nachher["zugangsdaten_verloren"] == ["Schlüssel des Suchdienstes"]
+
+
+# ---------------------------------------------------------------------------
+# Ein Schlüssel gehört zu seiner Adresse
+# ---------------------------------------------------------------------------
+
+async def test_wechsel_des_dienstes_nimmt_den_alten_schluessel_mit(datenbank, eigener_schluessel):
+    """Marcs zweiter Befund, und vermutlich die Ursache seines 401.
+
+    „Musste nur aufpassen wenn du wechselst, weil der dann die Secret Keys
+    durcheinander bringt." Das Schlüsselfeld zeigt „hinterlegt" und lädt
+    dazu ein, es leer zu lassen. Bis 0.9.6 blieb dann der Schlüssel des
+    **vorherigen** Dienstes stehen und ging als Bearer an den neuen.
+    """
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("schluessel-wechsel") as k:
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.search.brave.com/res/v1/web/search",
+            "suche_api_key": "brave-schluessel",
+        })
+        assert (await k.get("/api/settings")).json()["suche_api_key_set"] is True
+
+        # Umstellen auf Tavily, Schlüsselfeld leer gelassen.
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/search",
+            "suche_api_key": "",
+        })
+        nachher = (await k.get("/api/settings")).json()
+
+    assert nachher["suche_endpoint_url"] == "https://api.tavily.com/search"
+    assert nachher["suche_api_key_set"] is False, "Der Brave-Schlüssel wäre an Tavily gegangen"
+
+
+async def test_neuer_schluessel_beim_wechsel_bleibt_stehen(datenbank, eigener_schluessel):
+    """Wer beim Umstellen gleich den richtigen einträgt, behält ihn."""
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("schluessel-mit") as k:
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.search.brave.com/res/v1/web/search",
+            "suche_api_key": "brave-schluessel",
+        })
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/search",
+            "suche_api_key": "tavily-schluessel",
+        })
+        assert (await k.get("/api/settings")).json()["suche_api_key_set"] is True
+        wer = (await k.get("/api/mitglieder/wer")).json()
+
+    # An die eigene Organisation gebunden: Die Tabelle trägt die Zeilen
+    # aller Tests, und eine fremde ist mit einem anderen Tresorschlüssel
+    # verschlüsselt — sie käme als None zurück und sähe aus wie ein Fehler.
+    async with acquire() as conn, conn.transaction():
+        await conn.execute("alter table public.org_settings disable row level security")
+        roh = await conn.fetchval(
+            "select suche_api_key from public.org_settings where org_id = $1",
+            UUID(wer["org_id"]),
+        )
+        await conn.execute("alter table public.org_settings enable row level security")
+    assert tresor.entschluesseln(roh) == "tavily-schluessel"
+
+
+async def test_derselbe_dienst_behaelt_seinen_schluessel(datenbank, eigener_schluessel):
+    """Ein Tippfehler im Pfad ist kein Dienstwechsel."""
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("schluessel-pfad") as k:
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/serch",
+            "suche_api_key": "tavily-schluessel",
+        })
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/search",
+            "suche_api_key": "",
+        })
+        assert (await k.get("/api/settings")).json()["suche_api_key_set"] is True
+
+
+async def test_die_regel_gilt_fuer_alle_vier_adressen(datenbank, eigener_schluessel):
+    """Sprachmodell, Sprachausgabe und Mail-Endpunkt haben dasselbe Muster."""
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("schluessel-alle") as k:
+        await k.put("/api/settings", json={
+            "llm_base_url": "https://alt.example.com/v1", "llm_api_key": "alt",
+            "tts_endpoint_url": "http://alt.svc.cluster.local:8000", "tts_api_key": "alt",
+            "mail_endpoint_url": "https://alt.example.com/hook", "mail_endpoint_secret": "alt",
+        })
+        vorher = (await k.get("/api/settings")).json()
+        assert (vorher["llm_api_key_set"], vorher["tts_api_key_set"], vorher["mail_endpoint_secret_set"]) == (True, True, True)
+
+        await k.put("/api/settings", json={
+            "llm_base_url": "https://neu.example.com/v1", "llm_api_key": "",
+            "tts_endpoint_url": "http://neu.svc.cluster.local:8000", "tts_api_key": "",
+            "mail_endpoint_url": "https://neu.example.com/hook", "mail_endpoint_secret": "",
+        })
+        nachher = (await k.get("/api/settings")).json()
+
+    assert (nachher["llm_api_key_set"], nachher["tts_api_key_set"], nachher["mail_endpoint_secret_set"]) == (False, False, False)

@@ -533,6 +533,22 @@ Einstellungen steht dann ein roter Hinweis. Die Suche geht ohne lesbaren
 Schlüssel für Tavily und Brave gar nicht erst hinaus — ein leerer Bearer
 sieht am anderen Ende aus wie ein falscher.
 
+**Ein Schlüssel gehört zu seiner Adresse.** Bis 0.9.6 stand er in einer
+Spalte, die den Dienst nicht kannte. Wer die Adresse von Brave auf Tavily
+umstellte und das Schlüsselfeld leer ließ — es zeigt „hinterlegt" und
+lädt genau dazu ein —, behielt den Brave-Schlüssel, und Beacon schickte
+ihn als Bearer an Tavily. Antwort: 401, und im Bildschirm stand weiter
+„hinterlegt". Marc am 10.9.2026: „Musste nur aufpassen wenn du wechselst,
+weil der dann die Secret Keys durcheinander bringt." Er hatte es sich in
+der Datenbank geradegerückt.
+
+Seit 0.9.7 verwirft `routers/settings.py` das Geheimnis, wenn die Adresse
+auf einen **anderen Rechner** zeigt und in derselben Anfrage kein neues
+mitkommt (`ADRESSE_ZU_GEHEIMNIS`). Verglichen wird der Rechnername, nicht
+die ganze Adresse: Ein Tippfehler im Pfad soll den Schlüssel nicht
+wegwerfen. Die Regel gilt für alle vier Paare — Suche, Sprachmodell,
+Sprachausgabe und Mail-Endpunkt.
+
 **Wenn der Suchdienst den Schlüssel ablehnt**, sagt Beacon seit 0.9.0,
 *welcher* Dienst das war und *welche Adresse* gefragt wurde
 (`anreicherung._suchantwort_pruefen`). Vorher stand da „Der Endpunkt hat

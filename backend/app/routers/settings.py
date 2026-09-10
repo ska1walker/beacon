@@ -1,5 +1,7 @@
 """Einstellungen der Organisation."""
 
+from urllib.parse import urlparse
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import postfach, tresor, versand
@@ -10,6 +12,34 @@ from app.schemas import Absender, OrgSettings, OrgSettingsIn
 
 # Was nie im Klartext gespeichert und nie zurückgegeben wird.
 GEHEIM = tresor.SPALTEN["org_settings"][1]
+
+# Welches Geheimnis zu welcher Adresse gehört.
+#
+# Ein Schlüssel gilt für **einen** Dienst. Bis 0.9.6 stand er in einer
+# Spalte, die den Dienst nicht kannte: Wer die Adresse von Brave auf
+# Tavily umstellte und das Schlüsselfeld leer ließ — es zeigt „hinterlegt"
+# und lädt genau dazu ein —, behielt den Brave-Schlüssel und schickte ihn
+# als Bearer an Tavily. Antwort: 401, und im Bildschirm stand weiter
+# „hinterlegt". Marc am 10.9.2026: „Musste nur aufpassen wenn du wechselst,
+# weil der dann die Secret Keys durcheinander bringt." Er hat es sich
+# damals in der Datenbank geradegerückt.
+ADRESSE_ZU_GEHEIMNIS = {
+    "suche_endpoint_url": "suche_api_key",
+    "llm_base_url": "llm_api_key",
+    "tts_endpoint_url": "tts_api_key",
+    "mail_endpoint_url": "mail_endpoint_secret",
+}
+
+
+def _wirt(adresse: str | None) -> str:
+    """Der Rechnername einer Adresse — daran hängt, ob es derselbe Dienst ist.
+
+    Ein Tippfehler im Pfad soll den Schlüssel nicht wegwerfen; ein
+    Wechsel von `api.search.brave.com` zu `api.tavily.com` schon.
+    """
+    if not adresse or not adresse.strip():
+        return ""
+    return (urlparse(adresse.strip()).hostname or adresse.strip()).lower()
 
 # Wie ein verlorenes Geheimnis im Satz heißt. Der Spaltenname hilft dem
 # Menschen vor dem Bildschirm nicht weiter.
@@ -119,6 +149,20 @@ async def update_settings(
             "insert into public.org_settings (org_id) values ($1) on conflict do nothing",
             user.org_id,
         )
+
+        # Zeigt eine Adresse auf einen anderen Rechner, gilt das
+        # hinterlegte Geheimnis nicht mehr. Kommt in derselben Anfrage ein
+        # neues mit, bleibt es dabei; sonst wird das alte gelöscht, damit
+        # die Maske ehrlich „keiner hinterlegt" zeigt statt den Schlüssel
+        # des Vorgängers an den neuen Dienst zu schicken.
+        vorher = await conn.fetchrow(
+            "select * from public.org_settings where org_id = $1", user.org_id
+        )
+        for adressfeld, geheimfeld in ADRESSE_ZU_GEHEIMNIS.items():
+            if adressfeld not in felder or felder.get(geheimfeld):
+                continue
+            if _wirt(felder[adressfeld]) != _wirt(vorher[adressfeld] if vorher else None):
+                felder[geheimfeld] = None
         for name, wert in felder.items():
             # Ein leer gesendetes Schlüsselfeld löscht den Schlüssel nicht
             # versehentlich: Die Oberfläche zeigt ihn nie an, also käme er

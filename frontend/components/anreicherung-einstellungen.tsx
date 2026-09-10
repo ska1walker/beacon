@@ -100,7 +100,11 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
               placeholder={einstellungen.suche_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
               autoComplete="off"
             />
-            <p className="feld-hinweis">Tavily und Brave verlangen einen; eine eigene SearXNG-Instanz meist nicht.</p>
+            <p className="feld-hinweis">
+              Tavily und Brave verlangen einen; eine eigene SearXNG-Instanz meist nicht.
+              Wechselt die Adresse den Dienst, wird der hinterlegte Schlüssel verworfen — er gilt
+              nur für den, bei dem er ausgestellt wurde.
+            </p>
           </div>
 
           <div className="feld">
