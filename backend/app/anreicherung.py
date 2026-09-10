@@ -142,6 +142,43 @@ class Suchdienst:
         return "searxng"
 
 
+# Wie der Dienst im Satz heißt. „searxng" steht klein in der Adresse, im
+# Satz heißt er beim Namen.
+DIENSTNAME = {"brave": "Brave Search", "tavily": "Tavily", "searxng": "Der Suchdienst"}
+
+
+def _suchantwort_pruefen(antwort: httpx.Response, suche: Suchdienst) -> None:
+    """Was der Suchdienst geantwortet hat — in einem Satz, der weiterhilft.
+
+    Vorher lief jeder Fehlschlag in `raise_for_status` und kam als „Der
+    Endpunkt hat mit 401 geantwortet" heraus. Beacon spricht aber mit
+    **zwei** Endpunkten, dem Sprachmodell und der Suche, und der Satz
+    ließ offen, welcher gemeint war. Wer den Suchschlüssel gerade neu
+    eingetragen hatte, suchte den Fehler zwangsläufig an der falschen
+    Stelle.
+
+    Tavily beantwortet außerdem jede Anfrage ohne gültigen Schlüssel mit
+    401 — auch eine, die im falschen Format gestellt wurde. Deshalb steht
+    die aufgerufene Adresse mit im Satz: An ihr sieht man, ob Beacon
+    überhaupt den richtigen Weg genommen hat.
+    """
+    if antwort.status_code not in (401, 403, 429):
+        antwort.raise_for_status()
+        return
+    name = DIENSTNAME.get(suche.art, "Der Suchdienst")
+    ziel = str(antwort.request.url).split("?")[0]
+    if antwort.status_code == 429:
+        raise SucheGestoert(
+            f"{name} nimmt gerade keine weiteren Anfragen an (429). "
+            "Das gibt sich meist nach einigen Minuten."
+        )
+    raise SucheGestoert(
+        f"{name} hat den Schlüssel abgelehnt ({antwort.status_code}). "
+        f"Gefragt wurde {ziel}. Der Schlüssel des Suchdienstes steht unter "
+        "Einstellungen › KI und Programme — er ist ein anderer als der des Sprachmodells."
+    )
+
+
 @dataclass(frozen=True)
 class Einrichtung:
     suche: Suchdienst
@@ -284,7 +321,7 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
             params=params,
             headers={"X-Subscription-Token": suche.api_key, "Accept": "application/json"},
         )
-        antwort.raise_for_status()
+        _suchantwort_pruefen(antwort, suche)
         treffer = (antwort.json().get("web") or {}).get("results") or []
         rohe = [(t.get("url"), t.get("title"), t.get("description")) for t in treffer]
     elif suche.art == "tavily":
@@ -301,7 +338,7 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
             json=koerper,
             headers={"Authorization": f"Bearer {suche.api_key}", "Accept": "application/json"},
         )
-        antwort.raise_for_status()
+        _suchantwort_pruefen(antwort, suche)
         treffer = antwort.json().get("results") or []
         rohe = [(t.get("url"), t.get("title"), t.get("content")) for t in treffer]
     else:
@@ -314,7 +351,7 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
         if region:
             params["language"] = REGIONEN[region]
         antwort = await client.get(url, params=params, headers=kopf)
-        antwort.raise_for_status()
+        _suchantwort_pruefen(antwort, suche)
         daten = antwort.json()
         treffer = daten.get("results") or []
         if not treffer:
@@ -611,7 +648,9 @@ async def firma_anreichern(
             return erg
         try:
             treffer = await suchen(client, einrichtung.suche, f'"{name}" {firma.get("city") or ""}'.strip())
-        except (httpx.HTTPError, SucheProblem) as exc:
+        except SucheProblem as exc:
+            erg.hinweise.append(str(exc))
+        except httpx.HTTPError as exc:
             erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
             treffer = []
         for t in treffer:
@@ -634,7 +673,9 @@ async def firma_anreichern(
     if einrichtung.suche.eingerichtet:
         try:
             erg.quellen.extend(await suchen(client, einrichtung.suche, f'"{name}" site:linkedin.com/company', anzahl=3))
-        except (httpx.HTTPError, SucheProblem) as exc:
+        except SucheProblem as exc:
+            erg.hinweise.append(str(exc))
+        except httpx.HTTPError as exc:
             erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
 
     gefunden = _linkedin_in(erg.quellen, "company/")
@@ -691,7 +732,10 @@ async def kontakt_anreichern(
         for anfrage in anfragen:
             try:
                 erg.quellen.extend(await suchen(client, einrichtung.suche, anfrage, anzahl=4))
-            except (httpx.HTTPError, SucheProblem) as exc:
+            except SucheProblem as exc:
+                erg.hinweise.append(str(exc))
+                break
+            except httpx.HTTPError as exc:
                 erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
                 break
     elif not website:

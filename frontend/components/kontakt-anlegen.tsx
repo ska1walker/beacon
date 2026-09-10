@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { firmenschluessel } from "@/lib/format";
@@ -108,9 +109,16 @@ export function KontaktAnlegen({
 
   return (
     <div className="dialog-schicht" role="dialog" aria-modal="true" aria-label="Kontakt anlegen">
-      <div className="karte dialog-karte" style={{ maxWidth: "520px", width: "100%" }}>
-        <h2 style={{ marginBottom: "var(--am-raum-4)", fontSize: "1.125rem" }}>Kontakt anlegen</h2>
+      <div className="karte dialog-karte" style={{ maxWidth: "560px", width: "100%" }}>
+        <div className="dialog-kopf">
+          <h2>Kontakt anlegen</h2>
+          <button type="button" className="dialog-zu" aria-label="Schließen" onClick={beiSchliessen}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
+        <form className="dialog-form" onSubmit={(e) => { e.preventDefault(); anlegen.mutate(); }}>
+          <div className="dialog-koerper">
         <Wegwahl weg={weg} setWeg={setWeg} />
         {weg === "finden" ? (
           <Finden
@@ -137,17 +145,16 @@ export function KontaktAnlegen({
         )}
         {firmaAnlegen.isError && <Fehler text={(firmaAnlegen.error as Error).message} />}
 
-        <form onSubmit={(e) => { e.preventDefault(); anlegen.mutate(); }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 var(--am-raum-4)" }}>
+          <div className="feld-paar">
             <div className="feld"><label htmlFor="k-vn">Vorname</label><input id="k-vn" value={werte.first_name} onChange={setze("first_name")} /></div>
             <div className="feld"><label htmlFor="k-nn">Nachname</label><input id="k-nn" value={werte.last_name} onChange={setze("last_name")} required /></div>
           </div>
           <div className="feld"><label htmlFor="k-mail">E-Mail <span className="optional">optional</span></label><input id="k-mail" type="email" value={werte.email} onChange={setze("email")} /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 var(--am-raum-4)" }}>
+          <div className="feld-paar">
             <div className="feld"><label htmlFor="k-tel">Telefon <span className="optional">optional</span></label><input id="k-tel" value={werte.phone} onChange={setze("phone")} /></div>
             <div className="feld"><label htmlFor="k-mob">Mobil <span className="optional">optional</span></label><input id="k-mob" value={werte.mobile} onChange={setze("mobile")} /></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 var(--am-raum-4)" }}>
+          <div className="feld-paar">
             <div className="feld"><label htmlFor="k-pos">Position</label><input id="k-pos" value={werte.job_title} onChange={setze("job_title")} placeholder="Partnerin" /></div>
             <div className="feld"><label htmlFor="k-rolle">Kaufrolle</label><input id="k-rolle" value={werte.buying_role} onChange={setze("buying_role")} placeholder="Entscheiderin" /></div>
           </div>
@@ -168,7 +175,9 @@ export function KontaktAnlegen({
             <textarea id="k-notiz" rows={2} value={werte.notes} onChange={setze("notes")} />
           </div>
           {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
-          <div className="btn-reihe" style={{ marginTop: "var(--am-raum-4)" }}>
+          </div>
+
+          <div className="dialog-fuss">
             <button type="submit" className="btn btn-primaer" disabled={anlegen.isPending || !werte.last_name.trim()}>{anlegen.isPending ? "Legt an …" : "Anlegen"}</button>
             <button type="button" className="btn btn-still" onClick={beiSchliessen}>Abbrechen</button>
           </div>

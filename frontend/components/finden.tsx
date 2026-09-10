@@ -164,7 +164,7 @@ export function Finden({
               {status.data?.suche_art === "brave" ? "Suche über Brave" : status.data?.suche_eingerichtet ? "Suche über SearXNG" : "Liest die Firmen-Website"} · Gefüllt wird nur, was leer ist
             </span>
             <span style={{ flex: 1 }} />
-            <button type="button" className="btn btn-primaer btn-klein" disabled={!bereit || laeuft} onClick={los}>
+            <button type="button" className="btn btn-sekundaer btn-klein" disabled={!bereit || laeuft} onClick={los}>
               <Search size={14} aria-hidden="true" />
               {suchen.isPending || personSuchen.isPending ? "Sucht …" : "Suchen"}
             </button>

@@ -1,15 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Knopfmenue } from "@/components/knopfmenue";
 import { Segmentliste } from "@/components/segmentliste";
 import { FirmaAnlegen } from "@/components/firma-anlegen";
+import { useNeuGewuenscht } from "@/lib/neu";
 
 export default function FirmenSeite() {
   const router = useRouter();
   const [offen, setOffen] = useState(false);
+  // „Neu" aus der Kopfleiste zeigt hierher und will den Dialog offen sehen.
+  const neu = useNeuGewuenscht();
+  useEffect(() => {
+    if (neu) setOffen(true);
+  }, [neu]);
 
   return (
     <>

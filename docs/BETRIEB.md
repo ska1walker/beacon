@@ -515,6 +515,20 @@ Kürzel als `country`, SearXNG die Sprache `de-DE`, Tavily den
 ausgeschriebenen Ländernamen (`germany`). Ohne diese Übersetzung
 lieferte „Baustoffhandel" wieder Fürth statt Tecklenburg.
 
+**Wenn der Suchdienst den Schlüssel ablehnt**, sagt Beacon seit 0.9.0,
+*welcher* Dienst das war und *welche Adresse* gefragt wurde
+(`anreicherung._suchantwort_pruefen`). Vorher stand da „Der Endpunkt hat
+mit 401 geantwortet" — und Beacon spricht mit **zwei** Endpunkten,
+Sprachmodell und Suche. Wer den Suchschlüssel gerade eingetragen hatte,
+suchte den Fehler zwangsläufig an der falschen Stelle (Marc, 10.9.2026).
+
+Bei Tavily ist die Adresse im Satz wichtig: Der Dienst antwortet auf
+**jede** Anfrage ohne gültigen Schlüssel mit 401 — auch auf eine im
+falschen Format, auch auf ein GET (nachgemessen am 10.9.2026). Ein 401
+allein sagt also nicht, ob Beacon überhaupt den Tavily-Weg genommen hat.
+Die Adresse muss genau `https://api.tavily.com/search` lauten; ein 401
+bei richtiger Adresse ist wirklich der Schlüssel.
+
 **SearXNG auf der eigenen Box ist für die Anreicherung meist untauglich**
 — gemessen am 9. September 2026 auf der Box in Munster: Der Dienst lief,
 war aus dem Beacon-Pod erreichbar und hatte JSON freigeschaltet, aber
@@ -670,6 +684,70 @@ die Seite fragt alle drei Sekunden nach. Jedes Thema zeigt die
 Gespräche dahinter mit Zitat, Firma und Datum — niemand muss dem Modell
 glauben. Die drei Tabellen stehen im Abzug.
 
+## Kopfleiste — suchen und anlegen, von überall
+
+Seit 0.9.0 steht über allem eine 56 px hohe Leiste
+(`components/kopfleiste.tsx`) mit genau drei Dingen: der Marke, dem
+Suchfeld und „Neu ▾“. Vorher saß die Suche zwischen Kopfecke und
+Navigation in der Seitenspalte, und Anlegen gab es nur je Seite — wer auf
+dem Lead-Brett stand und einen Kontakt brauchte, musste erst wechseln.
+
+**Warum nur diese drei.** HubSpots Leiste ist voll, weil dort acht
+Produkte, Telefonie und Hinweise unterzubringen sind. Beacon ist ein
+Produkt für ein kleines Team; wer den Behälter kopiert, ohne den Inhalt
+zu haben, bekommt eine leere Leiste. Konto und Datenweg-Nachweis bleiben
+deshalb unten in der Spalte: Der Nachweis ist kein Bedienelement, sondern
+die Aussage des Produkts — oben wäre er ein Symbol neben anderen.
+
+**Der Markenblock ist genau so breit wie die Navigationsspalte** minus
+Polster und Abstand. Dadurch beginnt das Suchfeld exakt an der Kante der
+Inhaltsspalte (gemessen: beide bei x = 240), und die senkrechte
+Trennlinie läuft von der Leiste bis nach unten durch. Eingeklappt (64 px)
+geht das nicht auf — dort bekommt der Block seine natürliche Breite.
+
+**„Neu“ öffnet keinen Dialog in der Hülle**, sondern zeigt auf die Liste,
+in der der Datensatz danach steht, mit `?neu=1` (`frontend/lib/neu.ts`).
+Grund: Die Anlegen-Dialoge brauchen Daten, die auf ihrer Seite ohnehin
+geladen sind — Pipelines und Stufen beim Lead, Kategorien beim Ticket. In
+die Hülle gezogen, stellten sie diese Abfragen auf **jeder** Seite, für
+ein Menü, das man selten öffnet. `useNeuGewuenscht()` liest den Parameter
+einmal und nimmt ihn per `history.replaceState` wieder aus der Adresse,
+sonst öffnete ein Neuladen den Dialog ein zweites Mal. Aufgaben haben
+keinen Dialog, sondern eine Zeile über der Liste — dort springt „Neu“ ins
+Feld.
+
+**Auf dem Handy** weichen Produktwort, Klappschalter und die Beschriftung
+des Knopfes; die Wortmarke schrumpft von 28 auf 22 px Höhe. Bei 375 px
+stand sonst „Suchen oder fr…“ im Feld.
+
+## Anlegen-Dialoge — Kopf, Mitte, Fuß
+
+Bis 0.8.4 war ein Anlegen-Dialog eine lange Rolle: Titel, Wegwahl,
+Beschreiben-Feld, Fundbericht und alle Felder scrollten gemeinsam, und
+„Anlegen“ wanderte mit nach unten aus dem Bild. Bei der Firma reichte ein
+Fenster von 800 px nicht mehr — man musste erst suchen, wo der Knopf
+geblieben war.
+
+Seit 0.9.0 hat jeder der vier Dialoge (Kontakt, Firma, Lead, Ticket)
+einen festen Rahmen: `.dialog-kopf` mit Titel und Schließkreuz,
+`.dialog-koerper` als einziger rollender Teil, `.dialog-fuss` mit den
+Knöpfen. Das `<form>` umschließt Mitte **und** Fuß — sonst löst der Knopf
+im Fuß kein `submit` aus. Höhe gedeckelt auf `min(100dvh − 32px, 46rem)`:
+Ein Dialog über die ganze Bildschirmhöhe liest sich wie eine Seite und
+nicht mehr wie eine Frage.
+
+Dazu drei Kleinigkeiten, die den Eindruck ausmachten:
+
+- **Kurze Felder stehen paarweise** (`.feld-paar`), unter 30 rem
+  untereinander. Fünf volle Zeilen mit je 24 px Luft waren eine halbe
+  Bildschirmhöhe für vier Wörter.
+- **Im Dialog stehen Felder enger** — `raum-4` statt `raum-6`.
+- **Es gibt genau einen schwarzen Knopf**, und das ist „Anlegen“.
+  „Suchen“, „Auslesen“ und „Personen suchen“ füllen nur die Maske; als
+  zweiter primärer Knopf sahen sie aus wie der Abschluss und zogen den
+  Blick vom eigentlichen Knopf weg. „Bild wählen“ ist ein Umweg und
+  entsprechend still.
+
 ## Navigation — kurze Leiste, „Mehr“, Favoriten, Einklappen
 
 Seit 0.5.3 macht es die Leiste wie HubSpot (`frontend/lib/navigation.ts`
@@ -698,15 +776,13 @@ Kein Protokolleintrag: eine Vorliebe ist kein Geschäftsdatum. In der
 Sicherung reist `einstellungen` im `nutzer`-Block mit und wird beim
 Wiederanlauf nur gefüllt, wo es leer ist.
 
-**Die Kopfecke** braucht 227 px für Wappen, Wortmarke, „Beacon“ und den
-Klappschalter; die Leiste war 220 px breit. Die Beschriftung lief deshalb
-elf Pixel aus ihrem Kasten und endete zwei Pixel vor dem Knopf, dessen
-Fokusring drei braucht — sichtbar als Rahmen über dem letzten Zeichen
-(0.5.7). Die Leiste ist jetzt 240 px breit (`--huelle-nav-breite`), und
-die Marke darf notfalls kürzen statt überzulaufen. Der Knopf bleibt bei
-40 px, der Zielgröße am Zeiger.
+**Die Kopfecke gibt es seit 0.9.0 nicht mehr** — Marke, Klappschalter und
+Suche sind in die Kopfleiste gezogen, und die Spalte beginnt mit
+Navigation. Ihre Breite von 240 px (`--huelle-nav-breite`) bleibt: Wappen,
+Wortmarke, „Beacon“ und der Klappschalter brauchen zusammen 227 px, und
+bei 220 lief die Beschriftung elf Pixel aus ihrem Kasten (0.5.7).
 
-**Einklappen** auf Symbole: Knopf in der Kopfecke oder ⌘B / Strg+B. Zustand
+**Einklappen** auf Symbole: Knopf in der Kopfleiste oder ⌘B / Strg+B. Zustand
 je Browser im Cookie `beacon-navigation`, vor dem ersten Anstrich per
 Inline-Script als `html[data-navigation="eingeklappt"]` gesetzt
 (`components/navigation.tsx`, wie die Darstellung). Eingeklappt zeigt jeder

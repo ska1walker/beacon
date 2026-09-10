@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { STUFEN_TEXT } from "@/lib/format";
@@ -82,65 +83,76 @@ export function FirmaAnlegen({
 
   return (
     <div className="dialog-schicht" role="dialog" aria-modal="true" aria-label="Firma anlegen">
-      <div className="karte dialog-karte" style={{ maxWidth: "480px", width: "100%" }}>
-        <h2 style={{ marginBottom: "var(--am-raum-4)", fontSize: "1.125rem" }}>Firma anlegen</h2>
+      <div className="karte dialog-karte" style={{ maxWidth: "560px", width: "100%" }}>
+        <div className="dialog-kopf">
+          <h2>Firma anlegen</h2>
+          <button type="button" className="dialog-zu" aria-label="Schließen" onClick={beiSchliessen}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
-        <Wegwahl weg={weg} setWeg={setWeg} />
-        {weg === "finden" ? <Finden art="company" beiErgebnis={uebernehmen} /> : <Erfassung art="company" beiErgebnis={uebernehmen} />}
-        {gefunden && (
-          <div className="erfassung">
-            <div className="erfassung-kopf">
-              <span>Ansprechpartner bei {gefunden.name}</span>
-            </div>
-            <PersonenFinden firma={gefunden} vonSelbst beiAuswahl={setPersonen} />
-          </div>
-        )}
         <form
+          className="dialog-form"
           onSubmit={(e) => {
             e.preventDefault();
             anlegen.mutate();
           }}
         >
+          <div className="dialog-koerper">
+          <Wegwahl weg={weg} setWeg={setWeg} />
+          {weg === "finden" ? <Finden art="company" beiErgebnis={uebernehmen} /> : <Erfassung art="company" beiErgebnis={uebernehmen} />}
+          {gefunden && (
+            <div className="erfassung">
+              <div className="erfassung-kopf">
+                <span>Ansprechpartner bei {gefunden.name}</span>
+              </div>
+              <PersonenFinden firma={gefunden} vonSelbst beiAuswahl={setPersonen} />
+            </div>
+          )}
           <div className="feld">
             <label htmlFor="firma-name">Name</label>
             <input id="firma-name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
-          <div className="feld">
-            <label htmlFor="firma-domain">
-              Domain <span className="optional">optional</span>
-            </label>
-            <input
-              id="firma-domain"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="beispiel.de"
-            />
+          <div className="feld-paar">
+            <div className="feld">
+              <label htmlFor="firma-domain">
+                Domain <span className="optional">optional</span>
+              </label>
+              <input
+                id="firma-domain"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="beispiel.de"
+              />
+            </div>
+            <div className="feld">
+              <label htmlFor="firma-ort">
+                Ort <span className="optional">optional</span>
+              </label>
+              <input id="firma-ort" value={ort} onChange={(e) => setOrt(e.target.value)} />
+            </div>
           </div>
-          <div className="feld">
-            <label htmlFor="firma-branche">
-              Branche <span className="optional">optional</span>
-            </label>
-            <input id="firma-branche" value={branche} onChange={(e) => setBranche(e.target.value)} />
-          </div>
-          <div className="feld">
-            <label htmlFor="firma-ort">
-              Ort <span className="optional">optional</span>
-            </label>
-            <input id="firma-ort" value={ort} onChange={(e) => setOrt(e.target.value)} />
-          </div>
-          <div className="feld">
-            <label htmlFor="firma-stufe">Stufe</label>
-            <select
-              id="firma-stufe"
-              value={stufe}
-              onChange={(e) => setStufe(e.target.value as LifecycleStage)}
-            >
-              {Object.entries(STUFEN_TEXT).map(([wert, text]) => (
-                <option key={wert} value={wert}>
-                  {text}
-                </option>
-              ))}
-            </select>
+          <div className="feld-paar">
+            <div className="feld">
+              <label htmlFor="firma-branche">
+                Branche <span className="optional">optional</span>
+              </label>
+              <input id="firma-branche" value={branche} onChange={(e) => setBranche(e.target.value)} />
+            </div>
+            <div className="feld">
+              <label htmlFor="firma-stufe">Stufe</label>
+              <select
+                id="firma-stufe"
+                value={stufe}
+                onChange={(e) => setStufe(e.target.value as LifecycleStage)}
+              >
+                {Object.entries(STUFEN_TEXT).map(([wert, text]) => (
+                  <option key={wert} value={wert}>
+                    {text}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {mit > 0 && (
@@ -151,8 +163,9 @@ export function FirmaAnlegen({
           )}
 
           {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
+          </div>
 
-          <div className="btn-reihe" style={{ marginTop: "var(--am-raum-6)" }}>
+          <div className="dialog-fuss">
             <button type="submit" className="btn btn-primaer" disabled={anlegen.isPending}>
               {anlegen.isPending ? "Wird angelegt …" : personen.length === 0 ? "Anlegen" : personen.length === 1 ? "Anlegen, mit 1 Kontakt" : `Anlegen, mit ${personen.length} Kontakten`}
             </button>

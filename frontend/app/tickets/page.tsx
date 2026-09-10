@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Columns3, Table2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { anzahl, frist } from "@/lib/format";
 import type { Mitglied, Ticket, Ticketbrett, Ticketpipeline } from "@/lib/typen";
@@ -13,6 +13,7 @@ import { Segmentliste } from "@/components/segmentliste";
 import { TicketAnlegen } from "@/components/ticket-anlegen";
 import { Prioritaetspille } from "@/components/prioritaet";
 import { Fehler, Laedt } from "@/components/zustaende";
+import { useNeuGewuenscht } from "@/lib/neu";
 
 type Sicht = "brett" | "tabelle";
 type Reiter = "alle" | "meine" | "offen";
@@ -29,6 +30,11 @@ export default function TicketsSeite() {
   const [sicht, setSicht] = useState<Sicht>("brett");
   const [reiter, setReiter] = useState<Reiter>("alle");
   const [offenFormular, setOffenFormular] = useState(false);
+  // „Neu" aus der Kopfleiste zeigt hierher und will den Dialog offen sehen.
+  const neu = useNeuGewuenscht();
+  useEffect(() => {
+    if (neu) setOffenFormular(true);
+  }, [neu]);
   const [ziel, setZiel] = useState<string | null>(null);
   const [pipelineId, setPipelineId] = useState("");
 

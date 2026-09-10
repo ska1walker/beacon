@@ -127,7 +127,7 @@ export function PersonenFinden({
       />
       <div className="personen-finden-zeile">
         <span className="erfassung-tipp">Leer heißt: alle, die Website und Suchtreffer nennen</span>
-        <button type="button" className="btn btn-primaer btn-klein" disabled={suchen.isPending} onClick={() => suchen.mutate()}>
+        <button type="button" className="btn btn-sekundaer btn-klein" disabled={suchen.isPending} onClick={() => suchen.mutate()}>
           <Search size={14} aria-hidden="true" />
           {suchen.isPending ? "Sucht …" : suchen.data ? "Erneut suchen" : "Suchen"}
         </button>

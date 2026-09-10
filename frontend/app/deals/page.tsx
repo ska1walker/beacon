@@ -2,18 +2,24 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { datum, euro } from "@/lib/format";
 import type { Board, Deal, Mitglied, Pipeline, Wer } from "@/lib/typen";
 import { Seitenkopf } from "@/components/seitenkopf";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { DealAnlegen } from "@/components/deal-anlegen";
+import { useNeuGewuenscht } from "@/lib/neu";
 
 export default function BoardSeite() {
   const client = useQueryClient();
   const [ziel, setZiel] = useState<string | null>(null);
   const [formularOffen, setFormularOffen] = useState(false);
+  // „Neu" aus der Kopfleiste zeigt hierher und will den Dialog offen sehen.
+  const neu = useNeuGewuenscht();
+  useEffect(() => {
+    if (neu) setFormularOffen(true);
+  }, [neu]);
   const [nurMeine, setNurMeine] = useState(false);
   // Leer = Standard-Pipeline. Die Wahl liegt in der Seite, nicht in der
   // Adresse: Wer zurückkommt, sieht wieder den Standard — das ist der

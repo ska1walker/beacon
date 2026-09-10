@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import {
   AUFGABEN_ART_TEXT,
@@ -18,6 +18,7 @@ import { Seitenkopf } from "@/components/seitenkopf";
 import { Prioritaetspille } from "@/components/prioritaet";
 import { Segmentliste } from "@/components/segmentliste";
 import { Fehler, Laedt, Leer } from "@/components/zustaende";
+import { useNeuGewuenscht } from "@/lib/neu";
 
 type Reiter = "heute" | "ueberfaellig" | "bevorstehend" | "alle" | "erledigt";
 
@@ -30,6 +31,13 @@ export default function AufgabenSeite() {
   // Schnellanlage: Titel und Art reichen. Wer erst ein Formular öffnen
   // muss, schreibt die Aufgabe auf einen Zettel.
   const [titel, setTitel] = useState("");
+  // Aufgaben haben keinen Dialog, sondern eine Zeile über der Liste.
+  // „Neu" springt deshalb ins Feld, statt etwas zu öffnen.
+  const titelfeld = useRef<HTMLInputElement>(null);
+  const neu = useNeuGewuenscht();
+  useEffect(() => {
+    if (neu) titelfeld.current?.focus();
+  }, [neu]);
   const [art, setArt] = useState<AufgabenArt>("todo");
   const [faellig, setFaellig] = useState("");
   const [dealId, setDealId] = useState("");
@@ -174,6 +182,7 @@ export default function AufgabenSeite() {
               }}
             >
               <input
+                ref={titelfeld}
                 style={{ flex: "2 1 220px" }}
                 value={titel}
                 onChange={(e) => setTitel(e.target.value)}

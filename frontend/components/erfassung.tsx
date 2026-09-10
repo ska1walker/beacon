@@ -146,7 +146,7 @@ export function Erfassung({
       <div className="erfassung-leiste">
         <button
           type="button"
-          className="btn btn-sekundaer btn-klein"
+          className="btn btn-still btn-klein"
           onClick={() => dateiwahl.current?.click()}
         >
           <ImageUp size={14} aria-hidden="true" />
@@ -159,7 +159,7 @@ export function Erfassung({
         <span style={{ flex: 1 }} />
         <button
           type="button"
-          className="btn btn-primaer btn-klein"
+          className="btn btn-sekundaer btn-klein"
           disabled={!bereit || lesen.isPending}
           onClick={() => lesen.mutate()}
         >

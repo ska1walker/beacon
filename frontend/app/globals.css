@@ -55,6 +55,7 @@
      man nicht benennen kann und trotzdem sieht. Wer hier etwas ändert,
      verschiebt beide Linien gemeinsam — das ist der Zweck. */
   --am-kopfhoehe: 5rem;
+  --am-leistenhoehe: 3.5rem;
 
   /* ── Radien — Vorschlag, siehe Paket-README "Was noch fehlt" ──────── */
   --am-radius-klein: 0.25rem;
@@ -634,13 +635,56 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     /* minmax(0, …), nicht 1fr: sonst darf ein breites Kind die Spalte
        aufdehnen und der Inhalt läuft seitlich aus dem Viewport. */
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    /* Kopfleiste, Inhalt, und unten die schmale Navigationsleiste. */
+    grid-template-rows: auto minmax(0, 1fr) auto;
     min-height: 100dvh;
     background: var(--am-seite);
   }
 
+  /* ── Kopfleiste ───────────────────────────────────────────────────
+     Die zwei Dinge, die man von überall tut: suchen und anlegen. Sie
+     spannt über beide Spalten, damit die Marke einen Anfang hat und die
+     Navigationsspalte mit Navigation beginnt. */
+  .kopfleiste {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    height: var(--am-leistenhoehe);
+    box-sizing: border-box;
+    padding: 0 var(--am-raum-4);
+    background: var(--am-flaeche-1);
+    border-bottom: 1px solid var(--am-trennlinie);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .kopfleiste-marke {
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    flex: none;
+  }
+
+  .kopfleiste-marke .marke { min-width: 0; }
+  .kopfleiste-marke .marke-produkt { overflow: hidden; text-overflow: ellipsis; }
+
+  /* Die Suche bekommt den Platz, den sie verdient — sie geht über den
+     ganzen Bestand, nicht über einen Bereich. Nach oben gedeckelt,
+     damit sie auf einem breiten Bildschirm nicht zum Balken wird. */
+  .kopfleiste-suche {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 520px;
+  }
+
+  .kopf-neu { flex: none; gap: var(--am-raum-1); }
+
+
   .huelle-nav {
-    grid-row: 2;
+    grid-row: 3;
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -654,10 +698,26 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     z-index: 40;
   }
 
-  /* Kopfecke und die Gruppierung tragen erst ab der Seitenspalte. */
-  .huelle-kopfecke,
+  /* Die Gruppierung trägt erst ab der Seitenspalte. */
   .huelle-nav-spacer {
     display: none;
+  }
+
+  /* Schmal: Der Produktname und der Klappschalter weichen, die Suche
+     bekommt die Zeile. Das Wappen bleibt — es ist die Herkunft. */
+  @media (max-width: 1023px) {
+    .kopfleiste-marke .marke-produkt,
+    .kopfleiste .huelle-klapp { display: none; }
+    .kopf-neu-text { display: none; }
+    .kopfleiste-suche { max-width: none; }
+  }
+
+  /* Auf dem Handy zählt jedes Pixel für das Suchfeld: Bei 375 px stand
+     dort „Suchen oder fr…". Die Wortmarke gibt 22 px her, ohne unter die
+     gelieferte Mindestgröße von 45 px Breite zu fallen. */
+  @media (max-width: 30rem) {
+    .kopfleiste { gap: var(--am-raum-2); padding: 0 var(--am-raum-3); }
+    .kopfleiste-marke .marke-logo-bild { height: 22px; }
   }
 
   /* Gruppen, Titel, Lesezeichen und der Klappschalter gehören der Seitenspalte.
@@ -728,13 +788,13 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
 
   .huelle-inhalt {
-    grid-row: 1;
+    grid-row: 2;
     min-width: 0;
     overflow-x: hidden;
   }
 
   .huelle-ablage {
-    grid-row: 3;
+    grid-row: 4;
     background: var(--am-flaeche-1);
     border-top: 1px solid var(--am-trennlinie);
     padding: var(--am-raum-4);
@@ -750,7 +810,16 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
          letzte Zeichen. */
       --huelle-nav-breite: 240px;
       grid-template-columns: var(--huelle-nav-breite) minmax(0, 1fr);
-      grid-template-rows: 1fr;
+      /* Zeile 1 die Kopfleiste über alles, Zeile 2 der Rest. */
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    /* Der Markenblock ist genau so breit wie die Navigationsspalte
+       (abzüglich Polster und Abstand). Dadurch beginnt die Suche exakt
+       an der Kante der Inhaltsspalte, und die senkrechte Trennlinie der
+       Spalte läuft von der Kopfleiste bis nach unten durch. */
+    .kopfleiste-marke {
+      width: calc(var(--huelle-nav-breite) - var(--am-raum-4) - var(--am-raum-3));
     }
 
     .huelle.hat-ablage {
@@ -764,7 +833,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     }
 
     .huelle-nav {
-      grid-row: 1;
+      grid-row: 2;
       grid-column: 1;
       flex-direction: column;
       align-items: stretch;
@@ -773,28 +842,13 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
       background: var(--am-flaeche-1);
       border-top: none;
       border-right: 1px solid var(--am-trennlinie);
-      /* Oben kein Polster: Die Kopfecke bringt ihre Höhe selbst mit und
-         muss bei y = 0 beginnen, sonst liegt ihre Linie tiefer als die
-         des Seitenkopfs. */
-      padding: 0 var(--am-raum-4) var(--am-raum-4);
+      padding: var(--am-raum-4);
+      /* Unter der Kopfleiste kleben, nicht unter ihr durchlaufen. */
       position: sticky;
-      top: 0;
+      top: var(--am-leistenhoehe);
       bottom: auto;
-      height: 100dvh;
-    }
-
-    /* Dieselbe Höhe wie der Seitenkopf — daran hängt, dass die beiden
-       Linien eine einzige durchgehende Linie ergeben. */
-    .huelle-kopfecke {
-      display: flex;
-      align-items: center;
-      gap: var(--am-raum-3);
-      /* Der Schalter behält seinen Platz, die Marke gibt notfalls nach —
-         sonst schiebt sich der Text unter den Knopf statt zu kürzen. */
-      height: var(--am-kopfhoehe);
-      box-sizing: border-box;
-      margin-bottom: var(--am-raum-4);
-      border-bottom: 1px solid var(--am-trennlinie);
+      height: calc(100dvh - var(--am-leistenhoehe));
+      overflow-y: auto;
     }
 
     .seitenkopf {
@@ -918,9 +972,6 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .huelle-nav-eintrag.ist-favorit .huelle-nav-stern { color: var(--am-gold-beschriftung); }
     .huelle-nav-stern:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
 
-    .huelle-kopfecke .marke { min-width: 0; }
-    .huelle-kopfecke .marke-produkt { overflow: hidden; text-overflow: ellipsis; }
-
     .huelle-klapp {
       display: inline-flex;
       align-items: center;
@@ -940,15 +991,10 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
     /* Eingeklappt: Symbole zentriert, Beschriftung als Tooltip, Gruppen
        durch eine Linie getrennt statt durch eine Überschrift. */
-    html[data-navigation="eingeklappt"] .huelle-nav { padding: 0 var(--am-raum-2) var(--am-raum-2); }
-    html[data-navigation="eingeklappt"] .huelle-kopfecke { justify-content: center; }
-    html[data-navigation="eingeklappt"] .huelle-kopfecke .marke { display: none; }
-    html[data-navigation="eingeklappt"] .huelle-klapp { margin-left: 0; }
-    html[data-navigation="eingeklappt"] .huelle-suche { display: flex; justify-content: center; padding-left: 0; padding-right: 0; }
-    html[data-navigation="eingeklappt"] .suchfeld-knopf { width: var(--am-ziel-zeiger); min-width: var(--am-ziel-zeiger); justify-content: center; padding: 0; }
-    html[data-navigation="eingeklappt"] .suchfeld-knopf svg { flex: none; width: 18px; height: 18px; }
-    html[data-navigation="eingeklappt"] .suchfeld-knopf span,
-    html[data-navigation="eingeklappt"] .suchfeld-knopf kbd { display: none; }
+    html[data-navigation="eingeklappt"] .huelle-nav { padding: var(--am-raum-2); }
+    /* Eingeklappt trägt der Markenblock nur noch Wappen und Schalter —
+       eine feste Breite von 64 px klemmte beide übereinander. */
+    html[data-navigation="eingeklappt"] .kopfleiste-marke { width: auto; }
     html[data-navigation="eingeklappt"] .huelle-nav-titel { display: none; }
     html[data-navigation="eingeklappt"] .huelle-nav-gruppe + .huelle-nav-gruppe { border-top: 1px solid var(--am-trennlinie); padding-top: var(--am-raum-2); }
     html[data-navigation="eingeklappt"] .huelle-nav-eintrag .huelle-nav-item { padding: var(--am-raum-2); justify-content: center; }
@@ -990,19 +1036,19 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     .nachweis[data-extern="true"] svg { color: var(--am-gold-beschriftung); }
 
     .huelle-inhalt {
-      grid-row: 1;
+      grid-row: 2;
       grid-column: 2;
       overflow-y: auto;
-      max-height: 100dvh;
+      max-height: calc(100dvh - var(--am-leistenhoehe));
     }
 
     .huelle-ablage {
-      grid-row: 1;
+      grid-row: 2;
       grid-column: 3;
       border-top: none;
       border-left: 1px solid var(--am-trennlinie);
       overflow-y: auto;
-      max-height: 100dvh;
+      max-height: calc(100dvh - var(--am-leistenhoehe));
     }
   }
 
@@ -3189,7 +3235,93 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      Sitzt oben im Anlegen-Dialog. Bewusst abgesetzt, aber nicht laut:
      Es ist eine Abkürzung, kein Assistent, der etwas von einem will. */
 
-  .dialog-karte { max-height: calc(100vh - var(--am-raum-8)); overflow-y: auto; }
+  /* ── Dialoge ──────────────────────────────────────────────────────
+     Ein Dialog ist ein Rahmen mit drei Teilen, nicht eine lange Rolle:
+     Kopf und Fuß stehen fest, nur die Mitte rollt. Vorher wanderte
+     „Anlegen“ mit dem Inhalt nach unten aus dem Bild — bei der Firma mit
+     Beschreiben-Feld, Fundbericht und sechs Feldern reichte ein Fenster
+     von 800 px nicht mehr, und man musste erst suchen, wo der Knopf
+     geblieben ist. */
+  .dialog-karte {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* 46rem gedeckelt: Ein Dialog, der die ganze Bildschirmhöhe nimmt,
+       liest sich wie eine Seite und nicht mehr wie eine Frage. */
+    max-height: min(calc(100dvh - var(--am-raum-8)), 46rem);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .dialog-kopf {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    padding: var(--am-raum-4) var(--am-raum-5);
+    border-bottom: 1px solid var(--am-trennlinie);
+  }
+
+  .dialog-kopf h2 {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.0625rem;
+  }
+
+  .dialog-zu {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--am-ziel-zeiger);
+    height: var(--am-ziel-zeiger);
+    border: 0;
+    border-radius: var(--am-radius-klein);
+    background: transparent;
+    color: var(--am-text-gedaempft);
+    cursor: pointer;
+  }
+  .dialog-zu:hover { background: var(--am-flaeche-2); color: var(--am-text-primaer); }
+  .dialog-zu:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
+
+  /* Das Formular muss Mitte und Fuß umschließen, sonst löst der Knopf im
+     Fuß kein submit aus. Es ist selbst der Flex-Behälter. */
+  .dialog-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .dialog-koerper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--am-raum-5);
+  }
+
+  /* Im Dialog stehen die Felder enger als auf einer Seite: raum-6 ergab
+     bei sechs Feldern eine halbe Bildschirmhöhe Luft. */
+  .dialog-koerper .feld { margin-bottom: var(--am-raum-4); }
+  .dialog-koerper .feld:last-child { margin-bottom: 0; }
+
+  .dialog-fuss {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--am-raum-3);
+    padding: var(--am-raum-4) var(--am-raum-5);
+    border-top: 1px solid var(--am-trennlinie);
+    background: var(--am-flaeche-1);
+  }
+
+  /* Zwei kurze Felder nebeneinander. Unter 30rem Fensterbreite gibt es
+     dafür keinen Platz — dann untereinander. */
+  .feld-paar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--am-raum-4); }
+  @media (max-width: 30rem) {
+    .feld-paar { grid-template-columns: minmax(0, 1fr); }
+  }
 
   .erfassung {
     border: var(--am-rand-ruhend) solid var(--am-rand);
@@ -3822,7 +3954,6 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .unterpunkt.aktiv { background: var(--am-gold-auszeichnung); border-color: var(--am-gold-auszeichnung); color: var(--am-blau-900); font-weight: 600; }
 
 /* ── Suchen oder fragen ──────────────────────────────────────────────── */
-.huelle-suche { padding: var(--am-raum-3) var(--am-raum-3) var(--am-raum-2); }
 .suchfeld-knopf {
   display: flex; align-items: center; gap: var(--am-raum-2); inline-size: 100%; block-size: 40px;
   padding: 0 var(--am-raum-3); border: var(--am-rand-ruhend) solid var(--am-rand); border-radius: var(--am-radius-mittel);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { PRODUKT_TEXT } from "@/lib/format";
@@ -78,15 +79,22 @@ export function DealAnlegen({
 
   return (
     <div className="dialog-schicht" role="dialog" aria-modal="true" aria-label="Lead anlegen">
-      <div className="karte" style={{ maxWidth: "480px", width: "100%", padding: "var(--am-raum-6)" }}>
-        <h2 style={{ marginBottom: "var(--am-raum-6)", fontSize: "1.125rem" }}>Lead anlegen</h2>
+      <div className="karte dialog-karte" style={{ maxWidth: "560px", width: "100%" }}>
+        <div className="dialog-kopf">
+          <h2>Lead anlegen</h2>
+          <button type="button" className="dialog-zu" aria-label="Schließen" onClick={beiSchliessen}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
         <form
+          className="dialog-form"
           onSubmit={(e) => {
             e.preventDefault();
             anlegen.mutate();
           }}
         >
+          <div className="dialog-koerper">
           <div className="feld">
             <label htmlFor="deal-name">Bezeichnung</label>
             <input
@@ -193,8 +201,9 @@ export function DealAnlegen({
           </div>
 
           {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
+          </div>
 
-          <div className="btn-reihe" style={{ marginTop: "var(--am-raum-6)" }}>
+          <div className="dialog-fuss">
             <button type="submit" className="btn btn-primaer" disabled={anlegen.isPending || !name.trim()}>
               {anlegen.isPending ? "Wird angelegt …" : "Anlegen"}
             </button>

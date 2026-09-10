@@ -381,3 +381,63 @@ async def test_ohne_region_nennt_tavily_kein_land():
 
     assert "country" not in gesehen["koerper"]
     assert "language" not in gesehen["koerper"]
+
+
+# ---------------------------------------------------------------------------
+# Was der Suchdienst antwortet, wenn er nicht sucht
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "adresse,name",
+    [
+        ("https://api.tavily.com/search", "Tavily"),
+        ("https://api.search.brave.com/res/v1/web/search", "Brave Search"),
+        ("http://searxng.example.svc.cluster.local:8080", "Der Suchdienst"),
+    ],
+)
+async def test_abgelehnter_schluessel_nennt_dienst_und_adresse(adresse, name):
+    """„Der Endpunkt hat mit 401 geantwortet" half niemandem.
+
+    Beacon spricht mit zwei Endpunkten — Sprachmodell und Suche. Wer den
+    Suchschlüssel gerade eingetragen hatte, suchte den Fehler an der
+    falschen Stelle. Tavily antwortet zudem auf **jede** Anfrage ohne
+    gültigen Schlüssel mit 401, auch auf eine im falschen Format; darum
+    steht die aufgerufene Adresse mit im Satz.
+    """
+    def antworten(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"detail": {"error": "Unauthorized"}})
+
+    dienst = anreicherung.Suchdienst(endpoint_url=adresse, api_key="falsch", region="DE")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        with pytest.raises(anreicherung.SucheGestoert) as fehler:
+            await anreicherung.suchen(klient, dienst, "irgendwas")
+
+    satz = str(fehler.value)
+    assert satz.startswith(name)
+    assert "401" in satz
+    assert adresse.split("?")[0] in satz
+    assert "Sprachmodell" in satz
+
+
+async def test_zu_viele_anfragen_ist_keine_schluesselfrage():
+    def antworten(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={})
+
+    dienst = anreicherung.Suchdienst(endpoint_url="https://api.tavily.com/search", api_key="x")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        with pytest.raises(anreicherung.SucheGestoert) as fehler:
+            await anreicherung.suchen(klient, dienst, "irgendwas")
+
+    assert "429" in str(fehler.value)
+    assert "Schlüssel" not in str(fehler.value)
+
+
+async def test_andere_fehler_bleiben_httpfehler():
+    """500 ist kein Schlüsselproblem — der Aufrufer soll es als solches sehen."""
+    def antworten(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="kaputt")
+
+    dienst = anreicherung.Suchdienst(endpoint_url="https://api.tavily.com/search", api_key="x")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        with pytest.raises(httpx.HTTPStatusError):
+            await anreicherung.suchen(klient, dienst, "irgendwas")

@@ -137,7 +137,10 @@ async def kandidaten(client: httpx.AsyncClient, cfg: LLMConfig, einr: Einrichtun
                     erg.quellen.append(q)
         except an.SucheGestoert:
             raise
-        except (httpx.HTTPError, SucheProblem) as exc:
+        except SucheProblem as exc:
+            erg.hinweise.append(str(exc))
+            break
+        except httpx.HTTPError as exc:
             erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
             break
 
@@ -278,8 +281,11 @@ async def person(
                 for q in await an.suchen(client, einr.suche, anfrage, anzahl=5):
                     if not any(q.url == v.url for v in erg.quellen):
                         erg.quellen.append(q)
-            except (httpx.HTTPError, SucheProblem) as exc:
-                erg.hinweise.append(f"Suchdienst: {exc}")
+            except SucheProblem as exc:
+                erg.hinweise.append(str(exc))
+                break
+            except httpx.HTTPError as exc:
+                erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
                 break
     elif not wurzel:
         erg.hinweise.append("Die Firma hat keine Website, und es ist kein Suchdienst hinterlegt.")
@@ -382,8 +388,11 @@ async def personen(
                 for q in await an.suchen(client, einr.suche, anfrage, anzahl=5):
                     if not any(q.url == v.url for v in erg.quellen):
                         erg.quellen.append(q)
-            except (httpx.HTTPError, SucheProblem) as exc:
-                erg.hinweise.append(f"Suchdienst: {exc}")
+            except SucheProblem as exc:
+                erg.hinweise.append(str(exc))
+                break
+            except httpx.HTTPError as exc:
+                erg.hinweise.append(f"Suchdienst nicht erreichbar: {exc}")
                 break
     elif not wurzel:
         erg.hinweise.append("Die Firma hat keine Website, und es ist kein Suchdienst hinterlegt.")

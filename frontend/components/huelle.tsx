@@ -23,10 +23,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Assistent } from "@/components/assistent";
-import { Marke } from "@/components/marke";
-import { Klappschalter, useNavigationKlapp } from "@/components/navigation";
+import { useNavigationKlapp } from "@/components/navigation";
 import { Kontozeile, Nachweiszeile } from "@/components/konto";
-import { Suchfeld } from "@/components/suche";
+import { Kopfleiste } from "@/components/kopfleiste";
 import {
   GRUPPEN,
   NACHRANGIG,
@@ -93,19 +92,9 @@ export function Huelle({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="huelle">
+      <Kopfleiste eingeklappt={eingeklappt} klappen={klappen} />
+
       <nav className="huelle-nav" aria-label="Hauptnavigation">
-        <div className="huelle-kopfecke">
-          <Link href="/" className="marke" aria-label="AImighty Beacon — zur Startseite">
-            <Marke />
-            <span className="marke-produkt" aria-hidden="true">Beacon</span>
-          </Link>
-          <Klappschalter eingeklappt={eingeklappt} umschalten={klappen} />
-        </div>
-
-        <div className="huelle-suche">
-          <Suchfeld />
-        </div>
-
         {/* Die Leiste: Favoriten — oder die Vorgabe, solange es keine gibt.
             Alles andere steht hinter „Mehr“, wie bei HubSpot. */}
         <NavGruppe ziele={leisteZiele(favoriten)} aktuell={aktuell} favoriten={favoriten} umschalten={umschalten} eingeklappt={eingeklappt === true} />
