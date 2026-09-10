@@ -2462,6 +2462,15 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     color: var(--am-text-sekundaer);
   }
 
+  /* Das Warnzeichen ist ein Flex-Kind und schrumpfte ohne diese Zeile auf
+     4,6 px zusammen — ein Strich, den niemand als Zeichen liest. Farbe
+     trägt eine Aussage nie allein (DESIGN.md), also muss das Zeichen da
+     sein. Zwei Pixel Versatz, damit es auf der ersten Zeile sitzt. */
+  .hinweis > svg {
+    flex: none;
+    margin-top: 2px;
+  }
+
   .hinweis[data-art="achtung"] {
     border-color: var(--am-achtung-rand);
     background: var(--am-achtung-flaeche);

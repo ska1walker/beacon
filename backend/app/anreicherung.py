@@ -310,6 +310,18 @@ async def suchen(client: httpx.AsyncClient, suche: Suchdienst, anfrage: str, *, 
     if not suche.eingerichtet:
         raise SucheNichtEingerichtet("Kein Suchdienst hinterlegt.")
 
+    # Tavily und Brave verlangen einen Schlüssel. Ohne ihn ging bisher
+    # eine Anfrage mit leerem `Bearer` hinaus, und die Antwort war ein
+    # 401, der wie ein falscher Schlüssel aussah. Das ist etwas anderes
+    # als ein fehlender, und der Unterschied entscheidet, wo man sucht.
+    if suche.art in ("tavily", "brave") and not suche.api_key:
+        raise SucheNichtEingerichtet(
+            f"{DIENSTNAME[suche.art]} verlangt einen Zugangsschlüssel, und es ist keiner "
+            "lesbar hinterlegt. Unter Einstellungen › KI und Programme eintragen — "
+            "steht dort „hinterlegt“ und es geht trotzdem nicht, ist der Tresorschlüssel "
+            "unter /app/data verloren und der Schlüssel muss neu eingegeben werden."
+        )
+
     region = suche.region if suche.region in REGIONEN else ""
     if suche.art == "brave":
         params: dict[str, Any] = {"q": anfrage, "count": anzahl}

@@ -11,6 +11,18 @@ from app.schemas import Absender, OrgSettings, OrgSettingsIn
 # Was nie im Klartext gespeichert und nie zurückgegeben wird.
 GEHEIM = tresor.SPALTEN["org_settings"][1]
 
+# Wie ein verlorenes Geheimnis im Satz heißt. Der Spaltenname hilft dem
+# Menschen vor dem Bildschirm nicht weiter.
+GEHEIMTEXT = {
+    "smtp_passwort": "Versandpasswort",
+    "imap_passwort": "Postfachpasswort",
+    "llm_api_key": "Schlüssel des Sprachmodells",
+    "suche_api_key": "Schlüssel des Suchdienstes",
+    "tts_api_key": "Schlüssel der Sprachausgabe",
+    "brevo_api_key": "Brevo-Schlüssel",
+    "mail_endpoint_secret": "Geheimnis des Mail-Endpunkts",
+}
+
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
@@ -27,11 +39,22 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         feld: (row[feld] if row and feld in row else None)
         for feld in Absender.model_fields
     }
+    # Steht in einer der Spalten ein verschlüsselter Wert, den der
+    # Tresorschlüssel nicht mehr aufbekommt, ist das keine Kleinigkeit:
+    # Der Dienst bekommt dann ein leeres Geheimnis und antwortet mit 401,
+    # während der Bildschirm „hinterlegt" zeigt.
+    verloren = sorted(
+        GEHEIMTEXT[spalte]
+        for spalte in GEHEIM
+        if row is not None and tresor.verloren(row[spalte])
+    )
+
     return OrgSettings(
+        zugangsdaten_verloren=verloren,
         **absender,
         mail_endpoint_url=(row["mail_endpoint_url"] if row else None),
         mail_absender=(row["mail_absender"] if row else None),
-        mail_endpoint_secret_set=bool(row and row["mail_endpoint_secret"]),
+        mail_endpoint_secret_set=tresor.lesbar(row["mail_endpoint_secret"] if row else None),
         llm_base_url=cfg.base_url,
         llm_model=cfg.model,
         # Der Schlüssel geht nie zurück — die Oberfläche muss nur wissen,
@@ -39,14 +62,14 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         llm_api_key_set=bool(cfg.api_key),
         llm_ready=cfg.eingerichtet,
         suche_endpoint_url=(row["suche_endpoint_url"] if row else None),
-        suche_api_key_set=bool(row and row["suche_api_key"]),
+        suche_api_key_set=tresor.lesbar(row["suche_api_key"] if row else None),
         suche_region=(row["suche_region"] if row else "DE"),
         anreicherung_automatisch=(row["anreicherung_automatisch"] if row else True),
         anreicherung_uebernahme=(row["anreicherung_uebernahme"] if row else "leere_felder"),
         imap_host=(row["imap_host"] if row else None),
         imap_port=(row["imap_port"] if row else 993),
         imap_benutzer=(row["imap_benutzer"] if row else None),
-        imap_passwort_set=bool(row and row["imap_passwort"]),
+        imap_passwort_set=tresor.lesbar(row["imap_passwort"] if row else None),
         imap_ordner=(row["imap_ordner"] if row else "INBOX"),
         imap_takt_minuten=(row["imap_takt_minuten"] if row else 5),
         imap_aktiv=bool(row and row["imap_aktiv"]),
@@ -55,7 +78,7 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         smtp_host=(row["smtp_host"] if row else None),
         smtp_port=(row["smtp_port"] if row else 587),
         smtp_benutzer=(row["smtp_benutzer"] if row else None),
-        smtp_passwort_set=bool(row and row["smtp_passwort"]),
+        smtp_passwort_set=tresor.lesbar(row["smtp_passwort"] if row else None),
         smtp_sicherheit=(row["smtp_sicherheit"] if row else "starttls"),
         smtp_absender=(row["smtp_absender"] if row else None),
         smtp_absender_name=(row["smtp_absender_name"] if row else None),
@@ -63,7 +86,7 @@ async def get_settings(user: CurrentUser = Depends(get_current_user)) -> OrgSett
         smtp_letzter_fehler=(row["smtp_letzter_fehler"] if row else None),
         smtp_ready=versand.smtp_aus(dict(row) if row else None) is not None,
         marketing_versand=(row["marketing_versand"] if row else "smtp"),
-        brevo_api_key_set=bool(row and row["brevo_api_key"]),
+        brevo_api_key_set=tresor.lesbar(row["brevo_api_key"] if row else None),
         marketing_absender=(row["marketing_absender"] if row else None),
         marketing_absender_name=(row["marketing_absender_name"] if row else None),
         links_basis_url=(row["links_basis_url"] if row else None),

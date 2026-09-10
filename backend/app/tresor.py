@@ -109,6 +109,30 @@ def entschluesseln(wert: str | None) -> str | None:
         return None
 
 
+def lesbar(wert: str | None) -> bool:
+    """Liegt hier ein Geheimnis, das sich **öffnen** lässt?
+
+    Der Unterschied kostete am 10.9.2026 einen Tag: Die Einstellungen
+    meldeten „hinterlegt", sobald in der Spalte etwas stand — auch wenn
+    der Tresorschlüssel den Wert nicht mehr aufbekam. Der Dienst bekam
+    dann einen leeren Schlüssel, Tavily antwortete mit 401, und im
+    Bildschirm stand weiterhin „hinterlegt". Es gibt drei Zustände, nicht
+    zwei: nichts da, da und lesbar, da und verloren.
+    """
+    return bool(entschluesseln(wert))
+
+
+def verloren(wert: str | None) -> bool:
+    """Verschlüsselt abgelegt, aber nicht mehr zu öffnen — neu eintragen.
+
+    Das passiert, wenn `tresor.key` unter `/app/data` weg ist, die
+    Datenbank aber bleibt: nach einem gelöschten Datenordner, einer
+    zurückgespielten Datenbank aus einer anderen Installation, oder einem
+    Abzug, der ohne die Schlüsseldatei gereist ist.
+    """
+    return bool(wert) and wert.startswith(MARKE) and entschluesseln(wert) is None
+
+
 # Was verschlüsselt liegt. Die Liste ist der Vertrag: Wer eine Spalte mit
 # einem Geheimnis ergänzt, trägt sie hier ein — sonst bleibt sie im
 # Klartext, und niemand merkt es.

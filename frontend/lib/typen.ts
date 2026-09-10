@@ -217,6 +217,12 @@ export interface Absender {
 }
 
 export interface OrgSettings extends Absender {
+  /**
+   * Geheimnisse, die verschlüsselt in der Datenbank stehen, sich aber
+   * nicht mehr öffnen lassen — der Tresorschlüssel unter /app/data ist
+   * weg. Sie müssen neu eingetragen werden.
+   */
+  zugangsdaten_verloren: string[];
   mail_endpoint_url: string | null;
   mail_absender: string | null;
   mail_endpoint_secret_set: boolean;

@@ -131,3 +131,65 @@ def test_der_schluessel_ist_keine_datei_die_woanders_landet(eigener_schluessel):
     dauerhaft zusichert und der eine Deinstallation überlebt."""
     tresor.verschluesseln("x")
     assert pathlib.Path(tresor._pfad()).parent == pathlib.Path(str(eigener_schluessel))
+
+
+# ---------------------------------------------------------------------------
+# Drei Zustände, nicht zwei
+# ---------------------------------------------------------------------------
+
+def test_lesbar_unterscheidet_die_drei_faelle(eigener_schluessel, monkeypatch):
+    """„Hinterlegt" ist keine Aussage darüber, ob sich etwas öffnen lässt.
+
+    Genau daran hing Marcs 401 am 10.9.2026: In der Spalte stand ein
+    Kryptotext, die Maske meldete „hinterlegt", der Tresorschlüssel war
+    aber weg. Tavily bekam einen leeren Bearer und lehnte ab.
+    """
+    geheim = tresor.verschluesseln("tvly-echt")
+    assert tresor.lesbar(geheim) is True
+    assert tresor.verloren(geheim) is False
+
+    assert tresor.lesbar(None) is False
+    assert tresor.verloren(None) is False
+    assert tresor.lesbar("") is False
+
+    # Klartext aus der Zeit vor dem Tresor bleibt lesbar und ist nicht verloren.
+    assert tresor.lesbar("sk-alt-im-klartext") is True
+    assert tresor.verloren("sk-alt-im-klartext") is False
+
+    # Und jetzt der Fall, der zählt: Der Schlüssel ist weg, der Wert bleibt.
+    (eigener_schluessel / tresor.DATEI).unlink()
+    monkeypatch.setattr(tresor, "_schluessel", None)
+    assert tresor.entschluesseln(geheim) is None
+    assert tresor.lesbar(geheim) is False
+    assert tresor.verloren(geheim) is True
+
+
+async def test_die_maske_sagt_nicht_hinterlegt_wenn_der_schluessel_weg_ist(
+    datenbank, eigener_schluessel, monkeypatch
+):
+    """Der Fehler, der Marc zwei Tage gekostet hat.
+
+    `suche_api_key_set` fragte nur, ob in der Spalte etwas steht. Nach dem
+    Verlust des Tresorschlüssels stand dort weiter ein Kryptotext, die
+    Maske zeigte „hinterlegt", der Suchdienst bekam einen leeren Bearer
+    und Tavily antwortete mit 401.
+    """
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("tresor-verloren") as k:
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/search",
+            "suche_api_key": "tvly-echt",
+        })
+        vorher = (await k.get("/api/settings")).json()
+        assert vorher["suche_api_key_set"] is True
+        assert vorher["zugangsdaten_verloren"] == []
+
+        # Der Schlüssel unter /app/data verschwindet, die Datenbank bleibt.
+        (eigener_schluessel / tresor.DATEI).unlink()
+        monkeypatch.setattr(tresor, "_schluessel", None)
+
+        nachher = (await k.get("/api/settings")).json()
+
+    assert nachher["suche_api_key_set"] is False
+    assert nachher["zugangsdaten_verloren"] == ["Schlüssel des Suchdienstes"]

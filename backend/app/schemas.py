@@ -387,6 +387,10 @@ class OrgSettings(Absender):
     mail_endpoint_url: str | None = None
     mail_absender: str | None = None
     mail_endpoint_secret_set: bool = False
+    # Geheimnisse, die verschlüsselt in der Datenbank stehen, sich aber
+    # nicht mehr öffnen lassen — der Tresorschlüssel unter /app/data ist
+    # weg. Sie müssen neu eingetragen werden; „hinterlegt" wäre gelogen.
+    zugangsdaten_verloren: list[str] = []
     llm_base_url: str = ""
     llm_model: str = ""
     # Der Schlüssel geht nie zurück an die Oberfläche. Sie erfährt nur,

@@ -515,6 +515,24 @@ Kürzel als `country`, SearXNG die Sprache `de-DE`, Tavily den
 ausgeschriebenen Ländernamen (`germany`). Ohne diese Übersetzung
 lieferte „Baustoffhandel" wieder Fürth statt Tecklenburg.
 
+**„Hinterlegt" hieß bis 0.9.0 nur „da", nicht „lesbar".** Zugangsdaten
+liegen verschlüsselt in der Datenbank, der Tresorschlüssel als Datei
+unter `/app/data` (`backend/app/tresor.py`). Fehlt die Datei und die
+Datenbank bleibt — gelöschter Datenordner, eine zurückgespielte Datenbank
+aus einer anderen Installation —, dann steht in der Spalte weiter ein
+Kryptotext. Die Einstellungen fragten `bool(row["suche_api_key"])` und
+meldeten „hinterlegt"; `entschluesseln` gab `None`, der Dienst bekam ein
+leeres Geheimnis, und Tavily antwortete mit 401. Marc suchte den Fehler
+zwei Tage beim Schlüssel.
+
+Seit 0.9.1 gibt es drei Zustände statt zwei (`tresor.lesbar`,
+`tresor.verloren`): nichts da, da und lesbar, da und verloren. Jedes
+`*_set` in `/api/settings` fragt jetzt, ob sich der Wert öffnen lässt,
+und `zugangsdaten_verloren` nennt die verlorenen beim Namen. Oben in den
+Einstellungen steht dann ein roter Hinweis. Die Suche geht ohne lesbaren
+Schlüssel für Tavily und Brave gar nicht erst hinaus — ein leerer Bearer
+sieht am anderen Ende aus wie ein falscher.
+
 **Wenn der Suchdienst den Schlüssel ablehnt**, sagt Beacon seit 0.9.0,
 *welcher* Dienst das war und *welche Adresse* gefragt wurde
 (`anreicherung._suchantwort_pruefen`). Vorher stand da „Der Endpunkt hat

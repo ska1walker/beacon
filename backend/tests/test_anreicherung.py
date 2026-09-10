@@ -441,3 +441,39 @@ async def test_andere_fehler_bleiben_httpfehler():
     async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
         with pytest.raises(httpx.HTTPStatusError):
             await anreicherung.suchen(klient, dienst, "irgendwas")
+
+
+async def test_ohne_lesbaren_schluessel_geht_gar_keine_anfrage_hinaus():
+    """Ein leerer Bearer sieht am anderen Ende aus wie ein falscher Schlüssel.
+
+    Marc hatte die richtige Adresse und laut Maske einen hinterlegten
+    Schlüssel; nur ließ der sich nicht mehr entschlüsseln. Beacon schickte
+    `Authorization: Bearer ` hinaus, Tavily antwortete mit 401, und der
+    Satz auf dem Bildschirm zeigte auf den Schlüssel statt auf den Tresor.
+    """
+    gefragt = False
+
+    def antworten(request: httpx.Request) -> httpx.Response:
+        nonlocal gefragt
+        gefragt = True
+        return httpx.Response(200, json={"results": []})
+
+    dienst = anreicherung.Suchdienst(endpoint_url="https://api.tavily.com/search", api_key="")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        with pytest.raises(anreicherung.SucheNichtEingerichtet) as fehler:
+            await anreicherung.suchen(klient, dienst, "irgendwas")
+
+    assert gefragt is False
+    assert "Tavily" in str(fehler.value)
+    assert "Tresorschlüssel" in str(fehler.value)
+
+
+async def test_searxng_darf_ohne_schluessel():
+    """Eine eigene Instanz auf der Box verlangt meist keinen."""
+    def antworten(request: httpx.Request) -> httpx.Response:
+        assert "authorization" not in request.headers
+        return httpx.Response(200, json={"results": []})
+
+    dienst = anreicherung.Suchdienst(endpoint_url="http://searxng.local:8080", api_key="")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(antworten)) as klient:
+        assert await anreicherung.suchen(klient, dienst, "irgendwas") == []

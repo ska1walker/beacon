@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -172,6 +173,7 @@ function Inhalt() {
       </nav>
 
       <Passworthinweis />
+      <Tresorhinweis e={e} />
       <Rollenhinweis />
 
       <div className="datensatz" style={{ gridTemplateColumns: "minmax(0, 640px)" }}>
@@ -278,6 +280,39 @@ function Passworthinweis() {
         herein, wer an dieser Box angemeldet ist. Setzen Sie eines über das Schlüsselsymbol
         in Ihrer eigenen Zeile unter „Wer hier arbeitet" — damit gilt der Olares-Zugang für
         Beacon nicht mehr.
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Wenn „hinterlegt" nicht mehr stimmt.
+ *
+ * Zugangsdaten liegen verschlüsselt in der Datenbank, der Schlüssel dazu
+ * als Datei unter `/app/data`. Fehlt die Datei und die Datenbank bleibt —
+ * gelöschter Datenordner, eine zurückgespielte Datenbank aus einer
+ * anderen Installation —, dann steht in der Spalte weiter etwas, aber es
+ * lässt sich nicht mehr öffnen. Bis 0.9.1 meldete die Maske dafür
+ * „hinterlegt", der Dienst bekam ein leeres Geheimnis, und Tavily
+ * antwortete mit 401. Marc suchte den Fehler zwei Tage beim Schlüssel.
+ */
+function Tresorhinweis({ e }: { e: OrgSettings }) {
+  const verloren = e.zugangsdaten_verloren;
+  if (!verloren || verloren.length === 0) return null;
+
+  return (
+    <div className="hinweis" data-art="fehler" role="alert" style={{ maxWidth: 640, marginBottom: "var(--am-raum-4)" }}>
+      <AlertTriangle size={16} aria-hidden="true" />
+      <span>
+        <strong>
+          {verloren.length === 1
+            ? "Ein hinterlegtes Geheimnis lässt sich nicht mehr öffnen"
+            : `${verloren.length} hinterlegte Geheimnisse lassen sich nicht mehr öffnen`}
+          :
+        </strong>{" "}
+        {verloren.join(", ")}. Der Tresorschlüssel unter <code>/app/data</code> ist weg,
+        die verschlüsselten Werte sind geblieben. Tragen Sie sie neu ein — sonst gehen die
+        Dienste mit einem leeren Schlüssel hinaus und antworten mit 401.
       </span>
     </div>
   );
