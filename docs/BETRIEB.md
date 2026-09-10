@@ -1506,10 +1506,28 @@ es dasselbe wie `member` (`auth.VERWALTET`). Es wird deshalb nirgends
 angeboten — eine Abstufung zu versprechen, die es nicht gibt, wäre
 schlimmer als sie wegzulassen.
 
-Schalter und Zugangsart stehen **übereinander in einer Zelle**, nicht in
-zwei Spalten: Der Rahmen der Tabelle ist 638 px breit, und eine fünfte
-Spalte schöbe die Knöpfe der ersten Zeile unsichtbar nach rechts hinaus.
-Nachgemessen mit Schalter: 603 px, kein Überlauf.
+In 0.9.2 stand der Schalter unter der Zugangsplakette in derselben
+Zelle. Das war falsch, aus zwei Gründen: Eine runde Plakette und ein
+eckiger Kasten übereinander sind zwei Sprachen, und der Kasten war mit
+28 px unter der Zielgröße von 40 px, die das Designsystem ohne Ausnahme
+vorschreibt. Seit 0.9.5 hat die Rolle eine eigene Spalte mit einem
+Auswahlfeld in voller Zielgröße; „zuletzt hier" ist unter die
+Zugangsplakette gerückt, wo es hingehört — beides sagt etwas über den
+Zugang. Vier Spalten bleiben es: Person, Zugang, Rolle, Handlungen.
+Nachgemessen: 603 px, kein Überlauf.
+
+**Nebenbei gefunden:** Irgendwo in der Grundlage steht `appearance: none`
+auf Formularfeldern. Damit hatte **jedes** Auswahlfeld der Anwendung sein
+Zeichen verloren und sah aus wie ein Textfeld — man sah der Rolle nicht
+an, dass man sie ändern kann, und dem Stufenfeld im Firmendialog nicht,
+dass es eine Liste öffnet. Seit 0.9.5 tragen sie wieder eines, als
+Data-URI ganz am Ende von `globals.css`. Zwei Fallen dabei: Das Zeichen
+muss als `background-image` gesetzt werden, weil `.feld select` mit der
+Kurzform `background:` arbeitet und ein Bild sonst wieder löscht — und es
+muss in derselben Regel stehen wie das Polster, sonst gewinnt die
+spezifischere. Die Farbe ist fest `#587898`, `--am-blau-500`: Ein
+Data-URI kennt keine CSS-Variablen, und dieser Wert ist als
+„Wendepunkt — in beiden Modi lesbar" genau dafür gewählt.
 
 ### Nach einem Neustart einmal 500
 

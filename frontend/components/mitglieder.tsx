@@ -5,7 +5,7 @@ import { Copy, KeyRound, Pencil, UserMinus } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { lage, passwortAendern } from "@/lib/anmeldung";
-import { datumZeit } from "@/lib/format";
+import { datum } from "@/lib/format";
 import type { Mitglied, Wer } from "@/lib/typen";
 import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
@@ -122,8 +122,8 @@ export function Mitgliederblock() {
           <thead>
             <tr>
               <th>Person</th>
-              <th>Art</th>
-              <th>Zuletzt</th>
+              <th>Zugang</th>
+              <th>Rolle</th>
               <th />
             </tr>
           </thead>
@@ -178,36 +178,40 @@ export function Mitgliederblock() {
                   )}
                 </td>
                 <td>
-                  {/* Zwei Aussagen übereinander statt in zwei Spalten: Die
-                      Tabelle hat 638 px Rahmen, und eine fünfte Spalte
-                      schöbe die Knöpfe der ersten Zeile aus dem Bild
-                      (gemessen, siehe 0.5.0). */}
-                  <span className="mitglied-art">
+                  {/* Zugangsart und „zuletzt hier" gehören zusammen: beides
+                      sagt etwas über den Zugang dieser Person. Die Rolle
+                      nicht — die bekommt eine eigene Spalte, weil sie hier
+                      als Bedienelement steht und keine Aussage ist. */}
+                  <span className="mitglied-zugang">
                     <span className="stufe" data-art={m.zugang === "olares" ? "won" : undefined}>
                       {m.zugang === "olares" ? "eigener Zugang" : "Sitzplatz"}
                     </span>
-                    {darfRollen && m.role !== "owner" ? (
-                      <select
-                        className="mitglied-rolle"
-                        aria-label={`Rolle von ${m.display_name ?? m.olares_username}`}
-                        value={m.role === "admin" ? "admin" : "member"}
-                        disabled={rolleSetzen.isPending}
-                        onChange={(e) =>
-                          rolleSetzen.mutate({
-                            id: m.id,
-                            role: e.target.value as "admin" | "member",
-                          })
-                        }
-                      >
-                        <option value="member">Mitglied</option>
-                        <option value="admin">Verwalter</option>
-                      </select>
-                    ) : (
-                      <span className="mitglied-rolle-fest">{ROLLENTEXT[m.role] ?? m.role}</span>
-                    )}
+                    <span className="mitglied-zuletzt">
+                      {m.last_seen_at ? `zuletzt ${datum(m.last_seen_at)}` : "noch nie hier"}
+                    </span>
                   </span>
                 </td>
-                <td>{m.last_seen_at ? datumZeit(m.last_seen_at) : "—"}</td>
+                <td>
+                  {darfRollen && m.role !== "owner" ? (
+                    <select
+                      className="mitglied-rolle"
+                      aria-label={`Rolle von ${m.display_name ?? m.olares_username}`}
+                      value={m.role === "admin" ? "admin" : "member"}
+                      disabled={rolleSetzen.isPending}
+                      onChange={(e) =>
+                        rolleSetzen.mutate({
+                          id: m.id,
+                          role: e.target.value as "admin" | "member",
+                        })
+                      }
+                    >
+                      <option value="member">Mitglied</option>
+                      <option value="admin">Verwalter</option>
+                    </select>
+                  ) : (
+                    <span className="mitglied-rolle-fest">{ROLLENTEXT[m.role] ?? m.role}</span>
+                  )}
+                </td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   {/* Beide Handlungen als Zeichen.
                       Gemessen auf der Box: Mit dem Wort „Entfernen" war die

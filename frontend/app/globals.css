@@ -4180,43 +4180,52 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   width: 100%;
 }
 
-/* Vier Spalten: Person (der Rest), Art, Zuletzt, Handlungen. Plakette und
+/* Vier Spalten: Person (der Rest), Zugang, Rolle, Handlungen. Plakette und
    Datum brechen nicht um — eine Plakette mit Zeilenumbruch ist keine
-   Plakette mehr, und „08.09.202 / 6, 14:09" liest niemand als Datum. */
+   Plakette mehr, und „08.09.202 / 6" liest niemand als Datum. */
 .mitgliedertabelle th:nth-child(2),
 .mitgliedertabelle td:nth-child(2) { width: 8.5rem; white-space: nowrap; }
 .mitgliedertabelle th:nth-child(3),
-.mitgliedertabelle td:nth-child(3) { width: 8rem; white-space: nowrap; }
+.mitgliedertabelle td:nth-child(3) { width: 9rem; white-space: nowrap; }
 /* Zwei Zeichenknöpfe zu je 51 px plus Innenabstand — gemessen, nicht geschätzt. */
 .mitgliedertabelle th:last-child,
 .mitgliedertabelle td:last-child { width: 7.5rem; text-align: right; white-space: nowrap; }
 
-/* Zugangsart und Rolle stehen übereinander in einer Zelle. Eine fünfte
-   Spalte ginge nicht: Der Rahmen der Tabelle ist 638 px breit, und die
-   Knöpfe der ersten Zeile landeten unsichtbar rechts daneben — gemessen
-   auf der Box, siehe die Anmerkung an der letzten Spalte. */
-.mitglied-art {
+/* Zugangsart und „zuletzt hier" stehen übereinander: beides sagt etwas
+   über den Zugang dieser Person. Die Rolle stand bis 0.9.5 mit darunter
+   und sah dort falsch aus — eine runde Plakette und ein eckiger Kasten
+   in einer Zelle sind zwei Sprachen, und als Bedienelement war der
+   Kasten mit 28 px unter der Zielgröße von 40 px. */
+.mitglied-zugang {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--am-raum-1);
+  gap: 3px;
 }
 
-.mitglied-rolle {
-  max-width: 100%;
-  min-height: 1.75rem;
-  padding: 0 var(--am-raum-1);
-  border: var(--am-rand-ruhend) solid var(--am-rand);
-  border-radius: var(--am-radius-klein);
-  background: var(--am-seite);
-  color: var(--am-text-sekundaer);
-  font-family: var(--am-schrift-sans);
-  font-size: 0.75rem;
+.mitglied-zuletzt {
+  font-size: 0.6875rem;
+  color: var(--am-text-gedaempft);
 }
+
+/* Die Rolle ist ein Bedienelement und sieht auch so aus: volle Zielgröße,
+   dieselbe Form wie jedes andere Auswahlfeld der Anwendung. */
+.mitglied-rolle {
+  width: 100%;
+  height: var(--am-ziel-zeiger);
+  padding: 0 var(--am-raum-3);
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-mittel);
+  background: var(--am-seite);
+  color: var(--am-text-primaer);
+  font-family: var(--am-schrift-sans);
+  font-size: 0.8125rem;
+}
+.mitglied-rolle:hover { border-color: var(--am-rand-betont-farbe); }
 .mitglied-rolle:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
 
 .mitglied-rolle-fest {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--am-text-gedaempft);
 }
 
@@ -4315,4 +4324,34 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   font-size: 0.8125rem;
   color: var(--am-text-gedaempft);
   overflow-wrap: anywhere;
+}
+
+/* ── Auswahlfelder haben ein Zeichen ──────────────────────────────────
+   Irgendwo in der Grundlage steht `appearance: none` auf Formularfeldern.
+   Damit verlor **jedes** Auswahlfeld der Anwendung sein Zeichen und sah
+   aus wie ein Textfeld: Man sah der Rolle in der Mitgliederliste nicht
+   an, dass man sie ändern kann, und dem Stufenfeld im Firmendialog nicht,
+   dass es eine Liste öffnet.
+
+   Die Farbe steht fest im Bild und folgt keinem Token — ein Data-URI
+   kennt keine CSS-Variablen. `--am-blau-500` ist genau dafür gewählt:
+   „Wendepunkt — als Text in beiden Modi lesbar". Ein Zeichen je
+   Darstellung wäre zwei Dateien für einen Haken.
+
+   Ganz am Ende der Datei, weil `.feld select` spezifischer ist als
+   `select`: Das Polster muss aus einer Regel kommen, die diese Auswahl
+   ebenfalls trifft, und die spätere gewinnt. */
+select,
+.feld select,
+.werkzeugleiste select,
+.mitglied-rolle {
+  /* `background-image`, nicht die Kurzform: `.feld select` setzt
+     `background: var(--am-seite)`, und eine Kurzform löscht das Bild
+     wieder. Beim ersten Versuch stand das Zeichen in einer eigenen
+     `select`-Regel und war deshalb unsichtbar. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23587898' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--am-raum-3) center;
+  background-size: 12px 8px;
+  padding-right: calc(var(--am-raum-3) + 1.25rem);
 }
