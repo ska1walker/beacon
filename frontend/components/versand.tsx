@@ -257,7 +257,7 @@ export function Marketingversandblock() {
               autoComplete="off"
               value={brevo}
               onChange={(x) => setBrevo(x.target.value)}
-              placeholder={e?.brevo_api_key_set ? "leer lassen, um ihn zu behalten" : "xkeysib-…"}
+              placeholder={e?.brevo_api_key_kennung ? `${e.brevo_api_key_kennung} — leer lassen, um ihn zu behalten` : "xkeysib-…"}
             />
           </div>
         )}

@@ -294,3 +294,48 @@ async def test_die_regel_gilt_fuer_alle_vier_adressen(datenbank, eigener_schlues
         nachher = (await k.get("/api/settings")).json()
 
     assert (nachher["llm_api_key_set"], nachher["tts_api_key_set"], nachher["mail_endpoint_secret_set"]) == (False, False, False)
+
+
+# ---------------------------------------------------------------------------
+# Woran man einen hinterlegten Schlüssel wiedererkennt
+# ---------------------------------------------------------------------------
+
+def test_kennung_zeigt_anfang_und_ende():
+    """„Hinterlegt" beantwortet nicht, **welcher** Schlüssel dort steht.
+
+    Der Anfang nennt Dienst und Art, das Ende unterscheidet zwei
+    Schlüssel desselben Kontos — dieselbe Form, in der die Dienste sie
+    in ihren eigenen Übersichten zeigen.
+    """
+    assert tresor.kennung(tresor.verschluesseln("tvly-dev-BEISPIELBEISPIEL01")) == "tvly-d…EL01"
+    assert tresor.kennung(tresor.verschluesseln("sk-proj-BEISPIELBEISPIEL02")) == "sk-pro…EL02"
+
+
+def test_kurze_geheimnisse_zeigen_nur_ihre_laenge():
+    """Bei zehn Zeichen wären von „Anfang und Ende" fast alle übrig."""
+    assert tresor.kennung(tresor.verschluesseln("kurz1234")) == "8 Zeichen"
+    assert tresor.kennung(tresor.verschluesseln("")) is None
+    assert tresor.kennung(None) is None
+
+
+def test_kennung_eines_verlorenen_schluessels_ist_keine(eigener_schluessel, monkeypatch):
+    verpackt = tresor.verschluesseln("tvly-dev-BEISPIELBEISPIEL01")
+    (eigener_schluessel / tresor.DATEI).unlink()
+    monkeypatch.setattr(tresor, "_schluessel", None)
+    assert tresor.kennung(verpackt) is None
+
+
+async def test_die_maske_bekommt_die_kennung(datenbank, eigener_schluessel):
+    """Damit sichtbar wird, dass unter der Tavily-Adresse Braves Schlüssel steht."""
+    from tests.conftest import klient_fuer
+
+    async with klient_fuer("kennung-maske") as k:
+        await k.put("/api/settings", json={
+            "suche_endpoint_url": "https://api.tavily.com/search",
+            "suche_api_key": "tvly-dev-BEISPIELBEISPIEL01",
+        })
+        g = (await k.get("/api/settings")).json()
+
+    assert g["suche_api_key_kennung"] == "tvly-d…EL01"
+    # Der Schlüssel selbst geht nie zurück.
+    assert "tvly-dev-BEISPIELBEISPIEL01" not in str(g)

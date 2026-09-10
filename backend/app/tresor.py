@@ -133,6 +133,37 @@ def verloren(wert: str | None) -> bool:
     return bool(wert) and wert.startswith(MARKE) and entschluesseln(wert) is None
 
 
+def kennung(wert: str | None) -> str | None:
+    """Woran man einen hinterlegten Schlüssel wiedererkennt.
+
+    „Hinterlegt" beantwortet nicht die Frage, die man wirklich hat:
+    **welcher** Schlüssel liegt hier? Marc hatte am 10.9.2026 den
+    Brave-Schlüssel unter der Tavily-Adresse stehen, die Maske sagte
+    „hinterlegt", und Tavily antwortete mit 401. Mit `tvly-de…1EtplV`
+    wäre in einer Sekunde klar gewesen, dass dort etwas anderes steht.
+
+    Anfang und Ende, die Mitte verdeckt — dieselbe Form, in der Tavily,
+    OpenAI und Brave die Schlüssel in ihren eigenen Übersichten zeigen,
+    sodass man vergleichen kann. Der Anfang nennt Dienst und Art
+    (`tvly-dev-`, `sk-proj-`), das Ende unterscheidet zwei Schlüssel
+    desselben Kontos.
+
+    **Nur für API-Schlüssel, nicht für Passwörter.** Ein Schlüssel ist
+    eine Kennung, die der Dienst selbst anzeigt; ein Postfachpasswort ist
+    keine. Und die Einstellungen darf jedes Mitglied lesen, nicht nur die
+    Verwaltung.
+
+    Zu kurz zum Verdecken heißt: gar nichts zeigen, nur die Länge. Bei
+    zehn Zeichen wären von „Anfang und Ende" fast alle übrig.
+    """
+    klar = entschluesseln(wert)
+    if not klar:
+        return None
+    if len(klar) < 16:
+        return f"{len(klar)} Zeichen"
+    return f"{klar[:6]}…{klar[-4:]}"
+
+
 # Was verschlüsselt liegt. Die Liste ist der Vertrag: Wer eine Spalte mit
 # einem Geheimnis ergänzt, trägt sie hier ein — sonst bleibt sie im
 # Klartext, und niemand merkt es.

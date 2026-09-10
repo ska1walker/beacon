@@ -97,7 +97,7 @@ export function AnreicherungEinstellungen({ einstellungen }: { einstellungen: Or
               type="password"
               value={schluessel}
               onChange={(ev) => setSchluessel(ev.target.value)}
-              placeholder={einstellungen.suche_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
+              placeholder={einstellungen.suche_api_key_kennung ? `${einstellungen.suche_api_key_kennung} — leer lassen, um ihn zu behalten` : "keiner hinterlegt"}
               autoComplete="off"
             />
             <p className="feld-hinweis">

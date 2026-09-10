@@ -101,7 +101,7 @@ function KIBlock({ e }: { e: OrgSettings }) {
               type="password"
               value={schluessel}
               onChange={(ev) => setSchluessel(ev.target.value)}
-              placeholder={e.llm_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"}
+              placeholder={e.llm_api_key_kennung ? `${e.llm_api_key_kennung} — leer lassen, um ihn zu behalten` : "keiner hinterlegt"}
               autoComplete="off"
             />
           </div>

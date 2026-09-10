@@ -549,6 +549,23 @@ die ganze Adresse: Ein Tippfehler im Pfad soll den Schlüssel nicht
 wegwerfen. Die Regel gilt für alle vier Paare — Suche, Sprachmodell,
 Sprachausgabe und Mail-Endpunkt.
 
+**Und die Maske sagt jetzt, welcher Schlüssel dort liegt.** „Hinterlegt"
+beantwortete die Frage nicht, die man wirklich hat. Seit 0.9.8 steht im
+Feld `tvly-d…EL01`: Anfang und Ende, die Mitte verdeckt — dieselbe Form,
+in der Tavily, OpenAI und Brave die Schlüssel in ihren eigenen
+Übersichten zeigen, sodass man vergleichen kann. Der Anfang nennt Dienst
+und Art, das Ende unterscheidet zwei Schlüssel desselben Kontos
+(`tresor.kennung`).
+
+Das gilt **nur für API-Schlüssel**, nicht für Passwörter: Ein Schlüssel
+ist eine Kennung, die der Dienst selbst anzeigt; ein Postfachpasswort ist
+keine. Und die Einstellungen darf jedes Mitglied lesen, nicht nur die
+Verwaltung. Unter sechzehn Zeichen zeigt Beacon nur die Länge — von
+„Anfang und Ende" wären sonst fast alle übrig.
+
+Nebenbei nachgezogen: `tts_api_key_set` meldete noch Anwesenheit statt
+Lesbarkeit; das war beim Tresorumbau in 0.9.1 übersehen worden.
+
 **Wenn der Suchdienst den Schlüssel ablehnt**, sagt Beacon seit 0.9.0,
 *welcher* Dienst das war und *welche Adresse* gefragt wurde
 (`anreicherung._suchantwort_pruefen`). Vorher stand da „Der Endpunkt hat

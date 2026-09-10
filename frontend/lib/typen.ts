@@ -229,9 +229,11 @@ export interface OrgSettings extends Absender {
   llm_base_url: string;
   llm_model: string;
   llm_api_key_set: boolean;
+  llm_api_key_kennung: string | null;
   llm_ready: boolean;
   suche_endpoint_url: string | null;
   suche_api_key_set: boolean;
+  suche_api_key_kennung: string | null;
   /** Länderkürzel für die Suche, leer für „keine Vorgabe“. */
   suche_region: string;
   anreicherung_automatisch: boolean;
@@ -260,6 +262,7 @@ export interface OrgSettings extends Absender {
   smtp_ready: boolean;
   marketing_versand: "smtp" | "brevo";
   brevo_api_key_set: boolean;
+  brevo_api_key_kennung: string | null;
   marketing_absender: string | null;
   marketing_absender_name: string | null;
   links_basis_url: string | null;
@@ -270,6 +273,7 @@ export interface OrgSettings extends Absender {
   // Sprachausgabe (0025). Adresse sichtbar, Schlüssel nur als „hinterlegt".
   tts_endpoint_url: string | null;
   tts_api_key_set: boolean;
+  tts_api_key_kennung: string | null;
   tts_modell: string;
   tts_stimme: string | null;
   tts_modell_2: string;

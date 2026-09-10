@@ -367,7 +367,7 @@ export function Sprachausgabeblock({ e }: { e: OrgSettings }) {
             <label htmlFor="tts-schluessel">Zugangsschlüssel <span className="optional">optional</span></label>
             <input
               id="tts-schluessel" type="password" value={schluessel} onChange={(ev) => setSchluessel(ev.target.value)}
-              placeholder={e.tts_api_key_set ? "hinterlegt — leer lassen, um ihn zu behalten" : "keiner hinterlegt"} autoComplete="off"
+              placeholder={e.tts_api_key_kennung ? `${e.tts_api_key_kennung} — leer lassen, um ihn zu behalten` : "keiner hinterlegt"} autoComplete="off"
             />
           </div>
           {stimmen.isError && e.tts_ready && <Fehler text={(stimmen.error as Error).message} />}

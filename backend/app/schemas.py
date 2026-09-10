@@ -396,11 +396,15 @@ class OrgSettings(Absender):
     # Der Schlüssel geht nie zurück an die Oberfläche. Sie erfährt nur,
     # ob einer hinterlegt ist.
     llm_api_key_set: bool = False
+    # Anfang und Ende des hinterlegten Schlüssels, die Mitte verdeckt —
+    # damit man sieht, **welcher** dort steht, nicht nur dass einer da ist.
+    llm_api_key_kennung: str | None = None
     llm_ready: bool = False
     # Der Suchdienst für die Anreicherung — gleiches Muster: Adresse
     # sichtbar, Schlüssel nur als „hinterlegt".
     suche_endpoint_url: str | None = None
     suche_api_key_set: bool = False
+    suche_api_key_kennung: str | None = None
     suche_region: str = "DE"
     anreicherung_automatisch: bool = True
     anreicherung_uebernahme: str = "leere_felder"
@@ -428,6 +432,7 @@ class OrgSettings(Absender):
     smtp_ready: bool = False
     marketing_versand: str = "smtp"
     brevo_api_key_set: bool = False
+    brevo_api_key_kennung: str | None = None
     marketing_absender: str | None = None
     marketing_absender_name: str | None = None
     links_basis_url: str | None = None
@@ -439,6 +444,7 @@ class OrgSettings(Absender):
     # „hinterlegt".
     tts_endpoint_url: str | None = None
     tts_api_key_set: bool = False
+    tts_api_key_kennung: str | None = None
     tts_modell: str = ""
     tts_stimme: str | None = None
     tts_modell_2: str = ""
