@@ -166,7 +166,7 @@ export function Finden({
             <span style={{ flex: 1 }} />
             <button type="button" className="btn btn-sekundaer btn-klein" disabled={!bereit || laeuft} onClick={los}>
               <Search size={14} aria-hidden="true" />
-              {suchen.isPending || personSuchen.isPending ? "Sucht …" : "Suchen"}
+              {suchen.isPending || personSuchen.isPending ? "Sucht …" : holen.isPending ? "Liest …" : "Suchen"}
             </button>
           </div>
         </>
@@ -178,43 +178,62 @@ export function Finden({
 
       {suchen.data && !fund && (
         <div className="finden-kandidaten">
-          {suchen.data.kandidaten.length > 0 && (
-            <p className="erfassung-hinweis">
-              {suchen.data.kandidaten.length === 1 ? "Eine Firma passt" : `${suchen.data.kandidaten.length} Firmen passen`} zur Beschreibung — welche meinen Sie?
-              {Object.keys(suchen.data.person).length > 0 && (
-                <> Gesucht wird danach: {personText(suchen.data.person)}.</>
+          {/* Läuft das Lesen, bleibt genau die gewählte Firma stehen. Die
+              anderen sind in diesem Moment nur Lärm — man kann sie nicht
+              anklicken, und sie schoben die eigentliche Maske aus dem
+              Bild. Dazu eine Leiste, die zeigt, dass etwas läuft: Eine
+              Minute ohne sichtbares Zeichen sieht aus wie ein Fehler. */}
+          {holen.isPending && gewaehlt ? (
+            <div className="finden-liest">
+              <p className="finden-liest-name">{gewaehlt.name}</p>
+              <div className="finden-balken" role="progressbar" aria-label="Liest die Firmenseiten" />
+              <p className="erfassung-hinweis" style={{ margin: 0 }}>
+                Liest Impressum, Kontakt- und Team-Seite und die Suchtreffer. Mit einem Modell
+                auf der Box dauert das bis zu einer Minute.
+              </p>
+            </div>
+          ) : (
+            <>
+              {suchen.data.kandidaten.length > 0 && (
+                <p className="erfassung-hinweis">
+                  {suchen.data.kandidaten.length === 1
+                    ? "Eine Firma passt zur Beschreibung."
+                    : `${suchen.data.kandidaten.length} Firmen passen zur Beschreibung — welche meinen Sie?`}
+                  {Object.keys(suchen.data.person).length > 0 && (
+                    <> Gesucht wird danach: {personText(suchen.data.person)}.</>
+                  )}
+                </p>
               )}
-            </p>
+              <ul>
+                {suchen.data.kandidaten.map((k) => (
+                  <li key={k.website}>
+                    <button
+                      type="button"
+                      className="finden-kandidat"
+                      onClick={() => waehlen(k)}
+                    >
+                      <span className="finden-kandidat-name">{k.name}</span>
+                      <span className="finden-kandidat-unter">
+                        {[k.ort, host(k.website)].filter(Boolean).join(" · ")}
+                      </span>
+                      <span className="finden-kandidat-aktion">Übernehmen</span>
+                    </button>
+                    {/* Die Begründung des Modells steht **unter** der Karte
+                        und nicht darin: In der Karte wuchs sie auf zwei
+                        Zeilen und drückte Name und Knopf auseinander. Bei
+                        nur einem Vorschlag gibt es nichts abzuwägen — dann
+                        bleibt sie weg. */}
+                    {k.grund && suchen.data!.kandidaten.length > 1 && (
+                      <p className="finden-kandidat-grund">{k.grund}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
-          <ul>
-            {suchen.data.kandidaten.map((k) => (
-              <li key={k.website}>
-                <button
-                  type="button"
-                  className={`finden-kandidat${gewaehlt?.website === k.website ? " aktiv" : ""}`}
-                  disabled={holen.isPending}
-                  onClick={() => waehlen(k)}
-                >
-                  <span className="finden-kandidat-name">{k.name}</span>
-                  <span className="finden-kandidat-unter">
-                    {[k.ort, host(k.website)].filter(Boolean).join(" · ")}
-                    {k.grund ? ` — ${k.grund}` : ""}
-                  </span>
-                  <span className="finden-kandidat-aktion">
-                    {holen.isPending && gewaehlt?.website === k.website ? "Liest …" : "Übernehmen"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
           {suchen.data.hinweise.map((h) => (
             <p key={h} className="erfassung-hinweis warnung">{h}</p>
           ))}
-          {holen.isPending && (
-            <p className="erfassung-hinweis">
-              Liest Impressum, Kontakt- und Team-Seite und die Suchtreffer — das dauert mit einem Modell auf der Box bis zu einer Minute.
-            </p>
-          )}
         </div>
       )}
 

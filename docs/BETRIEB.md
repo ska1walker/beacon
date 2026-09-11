@@ -748,6 +748,29 @@ unter Einstellungen eintragen, dann läuft der Dialog gegen bekannte
 Antworten. Die Tests in `backend/tests/test_finden.py` tun dasselbe
 mit `httpx.MockTransport`.
 
+
+### Während gelesen wird
+
+Das Lesen der Firmenseiten dauert mit einem Modell auf der Box bis zu
+einer Minute. Bis 0.9.8 stand in dieser Minute die volle Vorschlagsliste
+da, jede Karte ausgegraut, und rechts in der gewählten ein kleines
+„Liest …". Der Satz, was gerade passiert, hing lose darunter. Auf einem
+Fenster von 800 px drückte das die eigentliche Maske — Name, Domain, Ort
+— ganz aus dem Bild, und eine Minute ohne sichtbare Bewegung sieht aus
+wie ein Fehler.
+
+Seit 0.9.9 bleibt genau die gewählte Firma stehen, mit einer laufenden
+Leiste und dem Satz daneben. Die anderen Vorschläge sind in diesem Moment
+Lärm: Anklicken kann man sie ohnehin nicht. Die Leiste ist gold — dieselbe
+Auszeichnung, die das Designsystem der laufenden Aufnahme gibt; Rot bleibt
+dem Fehler. Bei `prefers-reduced-motion` steht sie still und zeigt nur an,
+dass etwas läuft.
+
+Die Begründung des Modells steht **unter** der Karte statt darin: In der
+Karte wuchs sie auf zwei Zeilen und drückte Name und Knopf auseinander.
+Bei nur einem Vorschlag bleibt sie ganz weg — es gibt nichts abzuwägen,
+und „welche meinen Sie?" ist bei einem Vorschlag keine Frage.
+
 ## Erkenntnisse — aus Gesprächsnotizen lernen
 
 Seit 0.3.6 gibt es die Seite *Erkenntnisse*: Was Kunden in Gesprächen

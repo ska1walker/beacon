@@ -3803,6 +3803,69 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .finden-person.aktiv { border-color: var(--am-gold-500); }
   .finden-person.schon-da { opacity: 0.6; cursor: default; }
   .finden-kandidat-unter a { color: inherit; }
+
+  /* Die Begründung des Modells — ein Satz unter der Karte, nicht darin.
+     In der Karte wuchs sie auf zwei Zeilen und drückte Name und Knopf
+     auseinander. */
+  .finden-kandidat-grund {
+    margin: 2px 0 0 var(--am-raum-3);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--am-text-gedaempft);
+  }
+
+  /* Während gelesen wird: nur die gewählte Firma und ein Zeichen dafür,
+     dass etwas läuft. Eine Minute ohne sichtbare Bewegung sieht aus wie
+     ein Fehler — und die anderen Vorschläge sind in diesem Moment nur
+     Lärm, den man ohnehin nicht anklicken kann. */
+  .finden-liest {
+    margin-top: var(--am-raum-2);
+    padding: var(--am-raum-3);
+    border: var(--am-rand-ruhend) solid var(--am-rand);
+    border-radius: var(--am-radius-klein);
+    background: var(--am-seite);
+  }
+
+  .finden-liest-name {
+    margin: 0 0 var(--am-raum-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--am-text-primaer);
+  }
+
+  .finden-balken {
+    height: 3px;
+    margin-bottom: var(--am-raum-2);
+    border-radius: 999px;
+    background: var(--am-flaeche-2);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Gold, weil hier gerade etwas läuft — dieselbe Auszeichnung wie an der
+     laufenden Aufnahme im Designsystem. Rot bleibt dem Fehler. */
+  .finden-balken::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    border-radius: inherit;
+    background: var(--am-gold-500);
+    animation: finden-laeuft 1.4s ease-in-out infinite;
+  }
+
+  @keyframes finden-laeuft {
+    0% { left: -40%; }
+    100% { left: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .finden-balken::after { animation: none; left: 0; width: 100%; opacity: 0.5; }
+  }
+
+  .dunkel .finden-liest { background: var(--am-flaeche-2); }
+  .dunkel .finden-balken { background: var(--am-flaeche-1); }
+  .dunkel .finden-balken::after { background: var(--am-gold-beschriftung); }
   .finden-person:hover { border-color: var(--am-handlung-ruhend); }
   .finden-person:focus-visible { outline: 2px solid var(--am-fokus-ring); outline-offset: 1px; }
   .dunkel .finden-person { background: var(--am-flaeche-2); }
