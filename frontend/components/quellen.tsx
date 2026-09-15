@@ -103,6 +103,13 @@ export function Quellenblock() {
                 Habe ich
               </button>
             </div>
+            {neu.kind === "insilo" && (
+              <p style={{ fontSize: "0.8125rem", marginTop: "var(--am-raum-3)" }}>
+                In Insilo unter <strong>Einstellungen › Webhooks</strong> eintragen, das Ereignis
+                „meeting.ready" wählen und die Auslösung auf <strong>automatisch</strong> stellen —
+                in der Vorgabe schickt Insilo nur auf Knopfdruck.
+              </p>
+            )}
             <p style={{ fontSize: "0.75rem", marginTop: "var(--am-raum-2)" }}>
               Das Geheimnis wird nicht wieder angezeigt. Wer es verliert, legt eine neue
               Quelle an und schaltet diese ab.
@@ -129,7 +136,7 @@ export function Quellenblock() {
                     <td className="haupt">{q.name}</td>
                     <td>{ART_TEXT[q.kind] ?? q.kind}</td>
                     <td style={{ fontSize: "0.8125rem" }}>
-                      {q.tickets_direkt ? "legt Tickets an" : "wartet im Eingang"}
+                      {q.kind === "insilo" ? "Besprechungen" : q.tickets_direkt ? "legt Tickets an" : "wartet im Eingang"}
                     </td>
                     <td>{q.last_seen_at ? datumZeit(q.last_seen_at) : "noch nie"}</td>
                     <td style={{ textAlign: "right" }}>
@@ -146,6 +153,10 @@ export function Quellenblock() {
             </tbody>
           </table>
         )}
+
+        {quellen.data
+          ?.filter((q) => q.is_active && q.kind === "insilo")
+          .map((q) => <InsiloAdresse key={q.id} quelle={q} />)}
 
         <form
           style={{ display: "flex", gap: "var(--am-raum-2)", alignItems: "flex-end" }}
@@ -194,5 +205,48 @@ export function Quellenblock() {
         {anlegen.isError && <Fehler text={(anlegen.error as Error).message} />}
       </div>
     </section>
+  );
+}
+
+/**
+ * Wo Insilo im Browser liegt — damit eine Besprechung auf den Wortlaut
+ * verlinken kann, den Beacon bewusst nicht aufbewahrt. Insilos Nutzlast
+ * trägt keine Adresse; sie steht deshalb an der Quelle.
+ */
+function InsiloAdresse({ quelle }: { quelle: Quelle }) {
+  const client = useQueryClient();
+  const [adresse, setAdresse] = useState(quelle.oberflaeche_url ?? "");
+  const speichern = useMutation({
+    mutationFn: () => api.patch<Quelle>(`/api/quellen/${quelle.id}`, { oberflaeche_url: adresse.trim() || null }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["quellen"] }),
+  });
+  const geaendert = (quelle.oberflaeche_url ?? "") !== adresse.trim();
+
+  return (
+    <form
+      className="feld"
+      onSubmit={(e) => {
+        e.preventDefault();
+        speichern.mutate();
+      }}
+    >
+      <label htmlFor={`insilo-${quelle.id}`}>
+        Adresse von Insilo für „{quelle.name}" <span className="optional">optional</span>
+      </label>
+      <div style={{ display: "flex", gap: "var(--am-raum-2)" }}>
+        <input
+          id={`insilo-${quelle.id}`}
+          value={adresse}
+          onChange={(e) => setAdresse(e.target.value)}
+          placeholder="https://e5d605f30.ihr-name.olares.de"
+          style={{ flex: 1 }}
+        />
+        <button type="submit" className="btn btn-sekundaer" disabled={!geaendert || speichern.isPending}>
+          {speichern.isSuccess && !geaendert ? "Gespeichert" : "Speichern"}
+        </button>
+      </div>
+      <p className="feld-hinweis">Dann führt jede Besprechung mit „In Insilo öffnen" zum Wortlaut.</p>
+      {speichern.isError && <Fehler text={(speichern.error as Error).message} />}
+    </form>
   );
 }

@@ -2,13 +2,21 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { api, suchparameter } from "@/lib/api";
 import { AKTIVITAET_TEXT, datumZeit } from "@/lib/format";
+import { anriss } from "@/lib/protokoll";
 import type { Activity, ActivityKind } from "@/lib/typen";
 import { Fehler, Laedt, Leer } from "@/components/zustaende";
 
 const ARTEN: ActivityKind[] = ["note", "call", "email", "meeting"];
+
+/** Die Besprechung hinter einer Aktivität, falls sie aus Insilo kommt. */
+function besprechungVon(a: Activity): string | null {
+  const id = a.payload?.besprechung_id;
+  return typeof id === "string" ? id : null;
+}
 
 export function Zeitleiste({
   bezug,
@@ -116,10 +124,20 @@ export function Zeitleiste({
                         <button type="button" className="btn btn-still btn-klein" onClick={() => setBearbeite(null)}>Abbrechen</button>
                       </div>
                     </div>
+                  ) : besprechungVon(a) ? (
+                    // Ein Protokoll aus Insilo ist lang. In der Zeitleiste steht
+                    // der Anfang und der Weg zur Besprechung — dort liest man es,
+                    // und dort wird es auch umgehängt oder gelöst.
+                    <>
+                      {a.body && <p className="zeitleiste-text">{anriss(a.body)}</p>}
+                      <Link href={`/besprechungen/${besprechungVon(a)}`} className="zeitleiste-link">
+                        Protokoll ansehen
+                      </Link>
+                    </>
                   ) : (
                     a.body && <p className="zeitleiste-text">{a.body}</p>
                   )}
-                  {MENSCHLICH.includes(a.kind) && bearbeite?.id !== a.id && (
+                  {MENSCHLICH.includes(a.kind) && !besprechungVon(a) && bearbeite?.id !== a.id && (
                     <div className="btn-reihe" style={{ marginTop: "var(--am-raum-1)" }}>
                       <button type="button" className="btn btn-still btn-klein" aria-label="Eintrag bearbeiten" onClick={() => setBearbeite({ id: a.id, body: a.body ?? "" })}><Pencil size={12} aria-hidden="true" /></button>
                       <button type="button" className="btn btn-still btn-klein" aria-label="Eintrag zurücknehmen" onClick={() => zuruecknehmen.mutate(a.id)}><Trash2 size={12} aria-hidden="true" /></button>

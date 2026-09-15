@@ -34,6 +34,8 @@ class Posten(BaseModel):
     company_id: str | None = None
     betrag_cents: int | None = None
     tage: int | None = None
+    # Wohin der Posten führt, wenn weder Lead noch Firma es sagen.
+    pfad: str | None = None
 
 
 class Briefing(BaseModel):
@@ -44,6 +46,7 @@ class Briefing(BaseModel):
     ablaufende_angebote: list[Posten] = []
     ohne_naechsten_schritt: list[Posten] = []
     offener_eingang: list[Posten] = []
+    besprechungen_ohne_kunde: list[Posten] = []
     # Wie viele Punkte insgesamt anstehen. Eine Zahl, die man morgens
     # ansieht und die einem sagt, ob es ein ruhiger Tag wird.
     gesamt: int = 0
@@ -117,6 +120,14 @@ async def _sammeln(user: CurrentUser) -> Briefing:
             from public.eingang e where e.status = 'offen' order by e.created_at desc limit 20
             """
         )
+        besprechungen = await conn.fetch(
+            """
+            select b.id, b.titel, b.recorded_at, b.created_at, b.vorschlag ->> 'grund' as grund
+            from public.besprechungen b
+            where b.status = 'offen' and b.deleted_at is null
+            order by b.recorded_at desc nulls last limit 20
+            """
+        )
         ohne_schritt = await conn.fetch(
             """
             select d.id, d.name, d.amount_cents, d.company_id, f.name as firma, s.name as stufe
@@ -187,6 +198,16 @@ async def _sammeln(user: CurrentUser) -> Briefing:
             )
             for z in eingang
         ],
+        besprechungen_ohne_kunde=[
+            Posten(
+                art="besprechung",
+                titel=z["titel"] or "Besprechung",
+                hinweis=z["grund"],
+                pfad=f"/besprechungen/{z['id']}",
+                tage=(datetime.now(z["created_at"].tzinfo) - (z["recorded_at"] or z["created_at"])).days,
+            )
+            for z in besprechungen
+        ],
         ohne_naechsten_schritt=[
             Posten(
                 art="ohne_schritt",
@@ -206,6 +227,7 @@ async def _sammeln(user: CurrentUser) -> Briefing:
         + len(briefing.ablaufende_angebote)
         + len(briefing.ohne_naechsten_schritt)
         + len(briefing.offener_eingang)
+        + len(briefing.besprechungen_ohne_kunde)
     )
     return briefing
 
@@ -252,6 +274,7 @@ async def briefing_text(
             *zeilen("Angebote, deren Bindefrist abläuft", daten.ablaufende_angebote),
             *zeilen("Fortgeschritten, aber ohne nächsten Schritt", daten.ohne_naechsten_schritt),
             *zeilen("Im Eingang, noch niemandem zugeordnet", daten.offener_eingang),
+            *zeilen("Besprechungen, die noch keinem Kunden zugeordnet sind", daten.besprechungen_ohne_kunde),
         ]
     )
 

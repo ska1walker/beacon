@@ -220,15 +220,97 @@ bleibt.
 ## Insilo anschließen
 
 Nach einer Besprechung schickt Insilo ein signiertes Ereignis mit dem
-fertigen Protokoll. In Beacon unter *Einstellungen → Eingehende Quellen*
-eine Quelle anlegen, Adresse und Geheimnis kopieren und in Insilo unter
-*Einstellungen → Webhooks* eintragen. Der Vertrag steht in
-`insilo/docs/WEBHOOKS.md` und wird eingehalten, nicht neu erfunden.
+fertigen Protokoll. Seit 0.10.0 landet es **unter Besprechungen**, nicht
+mehr im Eingang. Der Vertrag steht in `insilo/docs/WEBHOOKS.md` und wird
+eingehalten, nicht neu erfunden.
 
-Ein Protokoll landet direkt am Geschäft, wenn der Firmenname im Titel
-steht und genau ein offenes Geschäft dazu existiert. Alles andere wartet
-im Eingang — ein Protokoll am falschen Kunden ist schlimmer als eines,
-das eine Minute wartet.
+### Einrichten
+
+1. In Beacon unter *Einstellungen › KI und Programme › Verbundene
+   Programme* eine Quelle der Art „Insilo — Besprechungen" anlegen.
+   Adresse und Geheimnis werden **einmal** gezeigt.
+2. In Insilo unter *Einstellungen › Webhooks* beides eintragen, Ereignis
+   `meeting.ready`, **Auslösung automatisch**. In der Vorgabe steht ein
+   neuer Webhook in Insilo auf „manuell" (`trigger_mode = 'manual'`,
+   Migration 0008) — dann kommt nur an, was jemand in Insilo mit „An
+   externe Systeme senden" losschickt. Schnellnotizen gehen immer.
+3. Zurück in Beacon die **Adresse von Insilo** an der Quelle eintragen
+   (`https://e5d605f30.<nutzer>.olares.de`). Dann führt jede Besprechung
+   mit „In Insilo öffnen" nach `/m/<kennung>`.
+4. In Insilo „Test" drücken — Beacon antwortet 200 und legt nichts an.
+
+### Gemessen am 15. September 2026
+
+Der Webhook scheiterte am 5.9. an der Login-Umleitung des
+`internal`-Eingangs (siehe unten). Seit 0.6.9 ist Beacons Eingang
+`public`, und die Umleitung ist weg:
+
+| Weg | Antwort |
+|---|---|
+| Beacon-Pod → `insilo-backend.insilo-kaivostudio:8000` im Cluster | Zeitüberschreitung — NetworkPolicy |
+| Insilo-Pod → `https://41b89d100.kaivostudio.olares.de/api/eingang/<quelle>` | **401 „Unbekannte oder abgeschaltete Quelle"** — Beacon selbst |
+| Insilo-Pod → `…41b89d101…` (`beaconlinks`) | 404 — der Links-Dienst kennt den Eingang nicht |
+
+Die 401 kommt aus Beacons Code, nicht vom Gateway. Der Weg ist also offen,
+und die Signatur ist das Tor. Kein neuer Transport, kein
+Service-Provider, kein Abholen nötig.
+
+### Warum ein eigener Bereich und kein Eingang
+
+Der Eingang ist eine Warteschlange, die leer werden soll. Besprechungen
+sind ein Archiv, das man durchsucht und nach Datum liest. Im Eingang
+verschwand ein Gespräch nach dem Zuordnen, und wer es später suchte, fand
+es nur noch in der Zeitleiste irgendeines Kunden. Zuordnung ist hier eine
+**Eigenschaft** der Besprechung. Der Reiter „Ohne Kunde" ist die
+Aufräumansicht, die Marc vorschlug (15.9.2026). Der Eingang behält Post
+und Meldungen.
+
+### Zwei Regeln
+
+**Protokoll ja, Wortlaut nein.** Beacon behält Insilos Markdown ohne
+Frontmatter und ohne den Abschnitt `## Volltranskript`
+(`besprechungen.protokoll_aus`), dazu die strukturierte Zusammenfassung
+und die genannten Namen. Die rohe Nutzlast wird **nicht** abgelegt — sie
+enthielte den Wortlaut. Ein Vertrieb liest das Protokoll; wer den genauen
+Satz braucht, öffnet Insilo. Dieselbe Regel, die Insilo selbst für den
+Relay-Export hat (`relay_drop._inhalt`). Die Migration 0030 hat den
+Wortlaut auch aus den Aktivitäten entfernt, die vorher schon angelegt
+waren.
+
+**Nie automatisch zugeordnet.** Bis 0.9.9 legte ein Firmenname im Titel
+das Protokoll ungefragt an den Lead. Jetzt schlägt Beacon vor, ein Mensch
+bestätigt — ein eindeutiger Treffer ist vorausgewählt, Bestätigen ist ein
+Klick. Insilo kennt von den Beteiligten nur Namen, keine E-Mail, und zwei
+Kontakte heißen Meyer.
+
+### Wie der Vorschlag entsteht
+
+Zweistufig (`app/besprechungen.py`):
+
+1. **Über Namen, sofort beim Empfang.** Die Sprecher aus dem Frontmatter
+   (ohne `SPEAKER_00`) und die Vorlagenfelder `anwesende`, `kunde`,
+   `mandantenname` … gegen den Bestand. Der **Nachname** muss stimmen
+   (`namen.namensteile`); stimmt auch der Vorname, gewinnt der Treffer.
+   Firmen über `firmenschluessel` in Titel, Schlagworten und Kundenfeld.
+   Passt ein Name auf mehrere Kontakte, gibt es **keine Vorauswahl**, nur
+   die Kandidaten mit ihrer Firma — außer die übrigen Hinweise stehen auf
+   genau einer Firma, dann zählt der Meyer dieser Firma.
+2. **Über das Modell, im Hintergrund**, nur wenn die Namen gar nichts
+   ergaben. Es bekommt die Zusammenfassung und höchstens 40 Firmen, deren
+   Name mit dem Gespräch ein Wort teilt, samt deren Kontakten. Jede
+   Kennung in der Antwort muss aus dieser Liste stammen. Bei einer
+   Mehrdeutigkeit fragt Beacon das Modell nicht — es sähe dieselben zwei
+   Meyers und müsste raten.
+
+Zugeordnet wird als **eine** Aktivität `meeting` mit Firma, Lead und dem
+ersten Kontakt; an den übrigen Beteiligten steht sie über
+`besprechung_kontakte`. Eine Aktivität je Kontakt ergäbe an der Firma
+dasselbe Gespräch dreimal. In der Zeitleiste steht ein Anriss mit
+„Protokoll ansehen"; bearbeitet und gelöst wird an der Besprechung.
+
+Alte Insilo-Posten aus dem Eingang zieht die Migration 0030 um. Sie tragen
+keine Beteiligten, weil der Eingang die nie auswertete — dort hilft „Neu
+vorschlagen" nur über den Titel.
 
 > **Geprüft am 5. September 2026, zweimal — die erste Messung war
 > falsch, und zwar am Hostnamen.** Olares adressiert einen Entrance nicht
@@ -298,12 +380,9 @@ das eine Minute wartet.
 > Markts. Auf Kais Box wurde der Eintrag von Hand nachgetragen, so wie
 > eine Neuinstallation ihn schreiben würde.
 
-> **Ohne die Box zu öffnen bleiben zwei Wege**, und beide sind
-> tragfähiger, als sie klingen: der Service-Provider-Weg für Apps auf
-> derselben Box (Olares' eigener Mechanismus, Constraint 4), und —
-> naheliegender — **Beacon holt selbst**. Ausgehend sind 443 und 80 offen;
-> ein Postfach per IMAP abzufragen oder eine Formular-API zu pollen
-> braucht keine einzige offene Tür nach innen.
+> Bis 0.6.9 standen hier zwei Auswege — Service-Provider und „Beacon holt
+> selbst". Beide braucht es nicht mehr: Mit dem öffentlichen Eingang kommt
+> Insilos Webhook an (Messung vom 15.9.2026 oben).
 
 
 ## Versand — SMTP, Einwilligung, öffentliche Links
@@ -885,6 +964,18 @@ Dazu drei Kleinigkeiten, die den Eindruck ausmachten:
   zweiter primärer Knopf sahen sie aus wie der Abschluss und zogen den
   Blick vom eigentlichen Knopf weg. „Bild wählen“ ist ein Umweg und
   entsprechend still.
+
+
+**Bis 0.10.0 hatte keiner dieser Rahmen einen Innenabstand.** Kopf, Mitte
+und Fuß polsterten mit `var(--am-raum-5)` — die Raumskala springt aber von
+4 auf 6. Eine unbekannte CSS-Variable ist kein Fehler, sie ist einfach
+nichts: Titel, Felder und Knöpfe klebten am Rand, und der Browser meldete
+es nirgends. Seit 0.10.0 prüft `lib/__tests__/token.test.ts`, dass jede
+`var(--am-…)` in `app`, `components` und `lib` definiert ist. Er fand beim
+ersten Lauf drei weitere: `--am-handlung` (gemeint `--am-handlung-ruhend`;
+die Zählpille am Filterknopf trug weiße Schrift ohne Hintergrund),
+`--am-schatten-1` (Klappmenüs und Suchtreffer schwebten ohne Schatten —
+jetzt ein Token, hell und dunkel) und `--am-radius-2`.
 
 ## Navigation — kurze Leiste, „Mehr“, Favoriten, Einklappen
 

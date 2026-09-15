@@ -18,11 +18,11 @@ function laenge(zeichen: number): string {
 }
 
 /**
- * Was aus Insilo hereinkam und sich nicht von allein zuordnen ließ.
+ * Was hereinkam und noch einen Menschen braucht — Post und Meldungen.
  *
- * Eindeutiges landet direkt am Geschäft — hier steht nur, was
- * mehrdeutig war. Ein Protokoll am falschen Kunden ist schlimmer als
- * eines, das eine Minute wartet.
+ * Gespräche aus Insilo liegen seit 0.10.0 nicht mehr hier, sondern unter
+ * Besprechungen: Der Eingang ist eine Warteschlange, die leer werden soll,
+ * Besprechungen sind ein Archiv.
  */
 export default function EingangSeite() {
   const client = useQueryClient();
@@ -96,7 +96,7 @@ export default function EingangSeite() {
         {posten.data!.length === 0 && (
           <Leer
             titel="Nichts offen"
-            text="Besprechungen aus Insilo, die sich eindeutig zuordnen ließen, stehen direkt am Lead."
+            text="Post und Meldungen, die noch jemanden brauchen, stehen hier. Gespräche aus Insilo liegen unter Besprechungen."
           />
         )}
 

@@ -24,6 +24,7 @@ from app.routers import (
     angebote,
     anreicherung,
     ansichten,
+    besprechungen,
     briefing,
     companies,
     contacts,
@@ -394,6 +395,7 @@ app.include_router(ki.router)
 app.include_router(notiz.router)
 app.include_router(briefing.router)
 app.include_router(fragen.router)
+app.include_router(besprechungen.router)
 app.include_router(eingang.router)
 app.include_router(eingang.quellen_router)
 app.include_router(mitglieder.router)

@@ -130,8 +130,8 @@ export function Dokumente({ bezug }: { bezug: Dokumentbezug }) {
           onDragLeave={() => setUeber(false)}
           onDrop={(e) => { e.preventDefault(); setUeber(false); waehlen(e.dataTransfer.files); }}
           style={{
-            border: `1px dashed ${ueber ? "var(--am-handlung)" : "var(--am-rand)"}`,
-            borderRadius: "var(--am-radius-2)",
+            border: `1px dashed ${ueber ? "var(--am-handlung-ruhend)" : "var(--am-rand)"}`,
+            borderRadius: "var(--am-radius-mittel)",
             padding: "var(--am-raum-3)",
             textAlign: "center",
             background: ueber ? "var(--am-flaeche-2)" : "transparent",

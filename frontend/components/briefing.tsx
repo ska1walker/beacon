@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Clock, FileClock, Inbox, MessageSquareOff, Sparkles, Target } from "lucide-react";
+import { AlertTriangle, Clock, FileClock, Inbox, MessageSquareOff, MessagesSquare, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { anzahl, euro } from "@/lib/format";
@@ -42,7 +42,13 @@ const GRUPPEN: {
     schluessel: "offener_eingang",
     titel: "Im Eingang",
     Zeichen: Inbox,
-    erklaerung: "Protokolle und Post, die noch niemandem zugeordnet sind.",
+    erklaerung: "Post und Meldungen, die noch niemandem zugeordnet sind.",
+  },
+  {
+    schluessel: "besprechungen_ohne_kunde",
+    titel: "Besprechungen ohne Kunde",
+    Zeichen: MessagesSquare,
+    erklaerung: "Gespräche aus Insilo, die noch einen Klick zum Kunden brauchen.",
   },
   {
     schluessel: "ohne_naechsten_schritt",
@@ -53,7 +59,7 @@ const GRUPPEN: {
 ];
 
 function PostenZeile({ p }: { p: Posten }) {
-  const ziel = p.deal_id ? `/deals/${p.deal_id}` : p.company_id ? `/firmen/${p.company_id}` : p.art === "eingang" ? "/eingang" : null;
+  const ziel = p.pfad ?? (p.deal_id ? `/deals/${p.deal_id}` : p.company_id ? `/firmen/${p.company_id}` : p.art === "eingang" ? "/eingang" : null);
   const inhalt = (
     <>
       <span className="haupt">{p.titel}</span>

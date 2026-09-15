@@ -525,6 +525,8 @@ export interface Posten {
   company_id: string | null;
   betrag_cents: number | null;
   tage: number | null;
+  /** Wohin der Posten führt, wenn weder Lead noch Firma es sagen. */
+  pfad: string | null;
 }
 
 export interface Briefing {
@@ -535,6 +537,7 @@ export interface Briefing {
   ablaufende_angebote: Posten[];
   ohne_naechsten_schritt: Posten[];
   offener_eingang: Posten[];
+  besprechungen_ohne_kunde: Posten[];
   gesamt: number;
 }
 
@@ -564,6 +567,8 @@ export interface Quelle {
   is_active: boolean;
   created_at: string;
   last_seen_at: string | null;
+  /** Wo Insilo im Browser erreichbar ist — für „In Insilo öffnen". */
+  oberflaeche_url: string | null;
   pfad: string;
 }
 
@@ -1180,4 +1185,68 @@ export interface Einfuhr {
   fehler: string | null;
   created_at: string;
   von: string | null;
+}
+
+// ── Besprechungen aus Insilo ─────────────────────────────────────────────
+
+export interface Bezug {
+  id: string;
+  name: string;
+}
+
+export interface Besprechungskandidat {
+  contact_id: string;
+  name: string;
+  company_id: string | null;
+  company_name: string | null;
+  /** Der Name, wie er im Gespräch fiel. */
+  genannt: string;
+}
+
+export interface Besprechungsvorschlag {
+  /** `namen`: über Namen im Bestand; `modell`: vom Sprachmodell. */
+  quelle: "namen" | "modell" | string;
+  grund: string;
+  mehrdeutig: boolean;
+  company: Bezug | null;
+  kontakte: Bezug[];
+  deal: Bezug | null;
+  kandidaten: Besprechungskandidat[];
+  modell: string | null;
+}
+
+export type Besprechungsstatus = "offen" | "zugeordnet" | "verworfen";
+
+export interface Besprechung {
+  id: string;
+  titel: string | null;
+  recorded_at: string | null;
+  dauer_sek: number | null;
+  vorlage: string | null;
+  beteiligte: string[];
+  schlagworte: string[];
+  status: Besprechungsstatus;
+  company: Bezug | null;
+  kontakte: Bezug[];
+  deal: Bezug | null;
+  vorschlag: Besprechungsvorschlag | null;
+  created_at: string;
+}
+
+export interface BesprechungVoll extends Besprechung {
+  protokoll: string;
+  zusammenfassung: Record<string, unknown>;
+  sprecher: string[];
+  insilo_link: string | null;
+}
+
+export interface Besprechungsseite {
+  eintraege: Besprechung[];
+  gesamt: number;
+}
+
+export interface Besprechungsanzahl {
+  offen: number;
+  zugeordnet: number;
+  alle: number;
 }

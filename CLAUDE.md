@@ -42,12 +42,12 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 |---|---|
 | Schema + Zeilensicherheit | 12 Migrationen, alle Fachtabellen unter FORCE |
 | Backend | rund 100 API-Pfade, FastAPI + asyncpg |
-| Oberfläche | Start, Board, Angebote, Prognose, Firmen, Kontakte, Aufgaben, Fragen, Eingang, Einstellungen |
+| Oberfläche | Start, Board, Angebote, Prognose, Firmen, Kontakte, Aufgaben, Fragen, Eingang, Besprechungen, Einstellungen |
 | Angebote | Katalog, Positionen, Summen, Druckfassung mit Briefkopf |
 | Qualifizierung | sechs Felder, gerechnete Punktzahl, Verlustgründe |
 | Prognose | gewichtet, Trefferquote, Verlustanalyse, nach Produkt |
 | KI | Notiz→Struktur, Tagesbriefing, Fragen an den Bestand, Angebotsvorschlag, Qualifizierung aus dem Verlauf, Anschreiben |
-| Insilo-Kopplung | signierter Empfang, Zuordnung, Eingangskorb |
+| Insilo-Kopplung | signierter Empfang; Besprechungen als eigener Bereich mit Vorschlag, nie automatisch zugeordnet; Protokoll ohne Wortlaut (seit 0.10.0, `docs/BETRIEB.md` „Insilo anschließen") |
 | Zusammenarbeit | Sitzplätze am geteilten Olares-Zugang, Besitz, Filter „Nur meine" |
 | Eigene Eigenschaften | je Objekt: Text, Zahl, Datum, Ja/Nein, Auswahl — geprüft beim Schreiben |
 | Pipelines | mehrere nebeneinander, Stufen anlegen/ändern/ordnen/löschen mit Zielangabe |

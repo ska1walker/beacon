@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bookmark,
   Building2,
   CheckSquare,
   Ellipsis,
@@ -15,8 +16,8 @@ import {
   ListChecks,
   Megaphone,
   MessageCircleQuestion,
+  MessagesSquare,
   Settings,
-  Bookmark,
   TrendingUp,
   Users,
   type LucideIcon,
@@ -54,6 +55,7 @@ const ZEICHEN: Record<NavZeichen, LucideIcon> = {
   kontakte: Users,
   listen: ListChecks,
   eingang: Inbox,
+  besprechungen: MessagesSquare,
   tickets: LifeBuoy,
   kampagnen: Megaphone,
   fragen: MessageCircleQuestion,

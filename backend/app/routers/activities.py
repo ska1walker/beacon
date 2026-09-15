@@ -56,7 +56,16 @@ async def list_activities(
         """
     if contact_id:
         args.append(contact_id)
-        sql += f" and a.contact_id = ${len(args)}"
+        n = len(args)
+        # Eine Besprechung trägt als Aktivität nur einen Kontakt. An den
+        # übrigen Beteiligten steht sie über `besprechung_kontakte` — ein
+        # Gespräch mit drei Menschen gehört an alle drei.
+        sql += f"""
+          and (a.contact_id = ${n}
+               or a.id in (select b.activity_id from public.besprechungen b
+                           join public.besprechung_kontakte k on k.besprechung_id = b.id
+                           where k.contact_id = ${n} and b.deleted_at is null))
+        """
     if deal_id:
         args.append(deal_id)
         sql += f" and a.deal_id = ${len(args)}"

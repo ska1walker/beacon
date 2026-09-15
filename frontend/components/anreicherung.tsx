@@ -227,7 +227,7 @@ export function Anreicherungsblock({
         {letzter && letzter.quellen.length > 0 && (
           <details style={{ marginTop: "var(--am-raum-3)", fontSize: "0.8125rem" }}>
             <summary style={{ cursor: "pointer", color: "var(--am-text-sekundaer)" }}>Was gelesen wurde</summary>
-            <ul style={{ margin: "var(--am-raum-2) 0 0", paddingLeft: "var(--am-raum-5)" }}>
+            <ul style={{ margin: "var(--am-raum-2) 0 0", paddingLeft: "var(--am-raum-6)" }}>
               {letzter.quellen.map((q) => (
                 <li key={q.url + (q.anfrage ?? "")}>
                   <a href={q.url} target="_blank" rel="noreferrer noopener" style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>

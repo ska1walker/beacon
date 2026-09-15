@@ -20,7 +20,7 @@ import orjson
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import ticketeingang, tresor
+from app import besprechungen, ticketeingang, tresor
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire, acquire_als_quelle, acquire_as
 
@@ -48,6 +48,23 @@ class QuelleIn(BaseModel):
     # kann, darf es; ein öffentliches Formular kann kein Geheimnis
     # halten, und was von dort kommt, wartet im Eingang.
     tickets_direkt: bool = True
+    # Wo Insilo im Browser erreichbar ist — damit eine Besprechung auf den
+    # Wortlaut verlinken kann, den Beacon bewusst nicht aufbewahrt.
+    oberflaeche_url: str | None = Field(default=None, max_length=300)
+
+
+class QuelleAenderung(BaseModel):
+    oberflaeche_url: str | None = Field(default=None, max_length=300)
+
+
+def _adresse(wert: str | None) -> str | None:
+    """Eine Adresse für einen Link, oder nichts. Nur http und https."""
+    if wert is None or not wert.strip():
+        return None
+    wert = wert.strip().rstrip("/")
+    if not wert.startswith(("https://", "http://")):
+        raise HTTPException(400, "Die Adresse muss mit https:// beginnen.")
+    return wert
 
 
 class Quelle(BaseModel):
@@ -58,6 +75,7 @@ class Quelle(BaseModel):
     is_active: bool
     created_at: datetime
     last_seen_at: datetime | None = None
+    oberflaeche_url: str | None = None
     # Der Weg, den der Absender eintragen muss.
     pfad: str
 
@@ -122,59 +140,6 @@ def _zeitpunkt(wert: object) -> datetime | None:
         return datetime.fromisoformat(wert.replace("Z", "+00:00"))
     except ValueError:
         return None
-
-
-def _namen_aus_ereignis(daten: dict) -> list[str]:
-    """Woraus sich eine Zuordnung ableiten lässt: Titel und Schlagworte."""
-    besprechung = daten.get("meeting") or {}
-    teile = [besprechung.get("title") or ""]
-    teile += [str(t) for t in (besprechung.get("tags") or [])]
-    return [t for t in teile if t.strip()]
-
-
-async def _zuordnen(conn, org_id: UUID, texte: list[str]) -> tuple[UUID | None, UUID | None, str]:
-    """Sucht Firma und Geschäft — und sagt, warum.
-
-    Zugeordnet wird nur, wenn es eindeutig ist. Zwei mögliche Firmen sind
-    kein Grund, eine zu wählen: Ein Protokoll am falschen Kunden ist
-    schlimmer als eines im Eingangskorb.
-    """
-    if not texte:
-        return None, None, "kein Titel und keine Schlagworte"
-
-    firmen = await conn.fetch(
-        "select id, name from public.companies where deleted_at is null"
-    )
-    treffer = [
-        f for f in firmen if any(f["name"].lower() in t.lower() for t in texte)
-    ]
-
-    if len(treffer) != 1:
-        grund = (
-            "keine Firma im Titel gefunden"
-            if not treffer
-            else f"mehrdeutig: {', '.join(f['name'] for f in treffer)}"
-        )
-        return None, None, grund
-
-    firma = treffer[0]
-    offene = await conn.fetch(
-        """
-        select d.id, d.name from public.deals d
-        join public.pipeline_stages s on s.id = d.stage_id
-        where d.company_id = $1 and d.deleted_at is null and s.kind = 'open'
-        """,
-        firma["id"],
-    )
-    if len(offene) == 1:
-        return firma["id"], offene[0]["id"], f"{firma['name']} im Titel, ein offener Lead"
-    if not offene:
-        return firma["id"], None, f"{firma['name']} im Titel, kein offener Lead"
-    return (
-        firma["id"],
-        None,
-        f"{firma['name']} im Titel, aber {len(offene)} offene Leads",
-    )
 
 
 @router.post("/{source_id}", include_in_schema=True)
@@ -256,6 +221,25 @@ async def empfangen(
     if eigner is None:
         raise HTTPException(500, "Die Organisation dieser Quelle hat keinen Eigentümer.")
 
+    # ── Besprechungen aus Insilo ─────────────────────────────────────
+    # Sie landen nicht mehr im Eingang, sondern in ihrem eigenen Bereich
+    # (app/besprechungen.py). Wiederholungen sind dort harmlos: Angelegt
+    # wird über Insilos Besprechungskennung, nicht über die Lieferung.
+    if quelle["kind"] == "insilo" and (ereignis.startswith("meeting.") or ereignis == "test.ping"):
+        modell_fragen = False
+        async with acquire_as(eigner) as conn:
+            ergebnis = await besprechungen.empfangen(conn, org_id, source_id, ereignis, daten)
+            await conn.execute(
+                "update public.webhook_sources set last_seen_at = now() where id = $1", source_id
+            )
+            if ereignis == "meeting.ready" and ergebnis.get("besprechung_id"):
+                vorschlag = await besprechungen.vorschlagen(conn, UUID(ergebnis["besprechung_id"]))
+                ergebnis["vorschlag"] = vorschlag.get("grund") if vorschlag else None
+                modell_fragen = besprechungen.braucht_modell(vorschlag)
+        if modell_fragen:
+            besprechungen.modell_im_hintergrund(eigner, org_id, UUID(ergebnis["besprechung_id"]))
+        return ergebnis
+
     async with acquire_as(eigner) as conn:
         vorhanden = await conn.fetchval(
             "select id from public.eingang where source_id = $1 and delivery_id = $2",
@@ -268,7 +252,10 @@ async def empfangen(
             # weiter.
             return {"status": "schon empfangen", "eingang_id": str(vorhanden)}
 
-        company_id, deal_id, grund = await _zuordnen(conn, org_id, _namen_aus_ereignis(daten))
+        # Automatisch zugeordnet wird hier nichts mehr. Bis 0.9.9 legte ein
+        # Firmenname im Titel ein Ereignis an den Lead — das war für Insilo
+        # gedacht, und Insilo hat jetzt seinen eigenen Bereich.
+        company_id, deal_id, grund = None, None, "wartet auf Zuordnung"
 
         posten = await conn.fetchval(
             """
@@ -335,16 +322,10 @@ async def empfangen(
                 "grund": ticketgrund,
             }
 
-        # Nur ein fertiges Protokoll wird von allein zur Aktivität. Ein
-        # „angelegt" oder „fehlgeschlagen" hat am Deal nichts verloren.
-        aktivitaet = None
-        if ereignis == "meeting.ready" and (deal_id or company_id):
-            aktivitaet = await _als_aktivitaet(conn, org_id, eigner, posten)
-
     return {
         "status": "angenommen",
         "eingang_id": str(posten),
-        "zugeordnet": bool(aktivitaet),
+        "zugeordnet": False,
         "grund": grund,
     }
 
@@ -489,7 +470,7 @@ quellen_router = APIRouter(prefix="/api/quellen", tags=["eingang"])
 async def quellen(user: CurrentUser = Depends(get_current_user)) -> list[Quelle]:
     async with acquire_as(user.user_id) as conn:
         zeilen = await conn.fetch(
-            "select id, name, kind, tickets_direkt, is_active, created_at, last_seen_at "
+            "select id, name, kind, tickets_direkt, is_active, created_at, last_seen_at, oberflaeche_url "
             "from public.webhook_sources order by created_at"
         )
     return [Quelle(**dict(z), pfad=_pfad(z["kind"], z["id"])) for z in zeilen]
@@ -506,9 +487,9 @@ async def quelle_anlegen(
     geheim = secrets.token_urlsafe(32)
     async with acquire_as(user.user_id) as conn:
         zeile = await conn.fetchrow(
-            "insert into public.webhook_sources (org_id, name, kind, secret, tickets_direkt) "
-            "values ($1,$2,$3,$4,$5) returning id, name, kind, tickets_direkt, is_active, "
-            "created_at, last_seen_at",
+            "insert into public.webhook_sources (org_id, name, kind, secret, tickets_direkt, oberflaeche_url) "
+            "values ($1,$2,$3,$4,$5,$6) returning id, name, kind, tickets_direkt, is_active, "
+            "created_at, last_seen_at, oberflaeche_url",
             user.org_id,
             payload.name,
             payload.kind,
@@ -516,8 +497,28 @@ async def quelle_anlegen(
             # Geheimnis genau einmal, hier, im Klartext.
             tresor.verschluesseln(geheim),
             payload.tickets_direkt,
+            _adresse(payload.oberflaeche_url),
         )
     return QuelleNeu(**dict(zeile), pfad=_pfad(zeile["kind"], zeile["id"]), secret=geheim)
+
+
+@quellen_router.patch("/{quelle_id}", response_model=Quelle)
+async def quelle_aendern(
+    quelle_id: UUID,
+    payload: QuelleAenderung,
+    user: CurrentUser = Depends(get_current_user),
+) -> Quelle:
+    """Trägt die Adresse von Insilo nach — für Quellen von vor 0.10.0."""
+    async with acquire_as(user.user_id) as conn:
+        zeile = await conn.fetchrow(
+            "update public.webhook_sources set oberflaeche_url = $1 where id = $2 "
+            "returning id, name, kind, tickets_direkt, is_active, created_at, last_seen_at, oberflaeche_url",
+            _adresse(payload.oberflaeche_url),
+            quelle_id,
+        )
+    if zeile is None:
+        raise HTTPException(404, "Quelle nicht gefunden")
+    return Quelle(**dict(zeile), pfad=_pfad(zeile["kind"], zeile["id"]))
 
 
 @quellen_router.delete("/{quelle_id}", status_code=204)

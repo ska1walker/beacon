@@ -5,14 +5,14 @@
  * Lesezeichen; solange niemand etwas gemerkt hat, sechs Vorgaben. Alles andere
  * steht hinter „Mehr“: die vier Gruppen Verkauf, Bestand, Post, Wissen
  * nebeneinander, je Eintrag ein Lesezeichen. So macht es HubSpot, und bei
- * vierzehn Zielen braucht es dafür kein Untermenü je Gruppe. Die Symbole
+ * fünfzehn Zielen braucht es dafür kein Untermenü je Gruppe. Die Symbole
  * hängen in der Hülle an den Schlüsseln; hier steht nur, was wohin gehört.
  */
 
 export type NavZeichen =
   | "start" | "leads" | "angebote" | "prognose" | "aufgaben"
   | "firmen" | "kontakte" | "listen"
-  | "eingang" | "tickets" | "kampagnen"
+  | "eingang" | "besprechungen" | "tickets" | "kampagnen"
   | "fragen" | "erkenntnisse" | "einstellungen";
 
 export interface NavZiel {
@@ -49,6 +49,9 @@ export const GRUPPEN: NavGruppe[] = [
     titel: "Post",
     ziele: [
       { pfad: "/eingang", text: "Eingang", zeichen: "eingang" },
+      // Gespräche aus Insilo. Nicht im Eingang: Der ist eine Warteschlange,
+      // die leer werden soll — Besprechungen sind ein Archiv.
+      { pfad: "/besprechungen", text: "Besprechungen", zeichen: "besprechungen" },
       { pfad: "/tickets", text: "Tickets", zeichen: "tickets" },
       { pfad: "/kampagnen", text: "Kampagnen", zeichen: "kampagnen" },
     ],

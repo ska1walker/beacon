@@ -21,6 +21,7 @@ from app import qualifizierung
 from app.auth import CurrentUser, get_current_user
 from app.db import acquire_as
 from app.llm import LLMNichtEingerichtet, chat, json_aus_antwort, load_llm_config
+from app.namen import ist_bekannt, namensteile
 from app.routers.ki import SYSTEM
 from app.schemas import ActivityKind, Qualifizierung
 
@@ -76,31 +77,9 @@ class Uebernahmebilanz(BaseModel):
     qualifizierung_gesetzt: bool
 
 
-# Anreden, die kein Namensteil sind. Ohne sie gilt „Frau Lohse" als
-# unbekannt, obwohl Katrin Lohse im CRM steht.
-ANREDEN = {"herr", "frau", "dr", "prof", "dipl", "ing", "herrn"}
-
-
-def _namensteile(name: str) -> set[str]:
-    return {
-        teil.strip(".,").lower()
-        for teil in name.split()
-        if teil.strip(".,").lower() not in ANREDEN and len(teil.strip(".,")) > 1
-    }
-
-
-def _ist_bekannt(genannt: str, bekannte: list[str]) -> bool:
-    """Ist diese Person im CRM zu finden?
-
-    Verglichen werden Namensteile, nicht ganze Zeichenketten. „Frau Lohse"
-    und „Katrin Lohse" sind dieselbe Person; ein Vergleich auf Gleichheit
-    hätte sie als unbekannt gemeldet — und der Vertriebler hätte den
-    Hinweis nach dem dritten Mal ignoriert.
-    """
-    teile = _namensteile(genannt)
-    if not teile:
-        return False
-    return any(teile & _namensteile(bekannt) for bekannt in bekannte)
+# Namensabgleich: app/namen.py — dieselbe Antwort wie bei Besprechungen.
+_namensteile = namensteile
+_ist_bekannt = ist_bekannt
 
 
 def _relative_frist(hinweis: str | None) -> date | None:

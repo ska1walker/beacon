@@ -13,11 +13,11 @@ import {
 } from "@/lib/navigation";
 
 describe("Navigation", () => {
-  it("führt alle dreizehn Ziele genau einmal in vier Gruppen", () => {
+  it("führt alle vierzehn Ziele genau einmal in vier Gruppen", () => {
     expect(GRUPPEN.map((g) => g.titel)).toEqual(["Verkauf", "Bestand", "Post", "Wissen"]);
     const pfade = ALLE_ZIELE.map((z) => z.pfad);
-    expect(pfade).toHaveLength(13);
-    expect(new Set(pfade).size).toBe(13);
+    expect(pfade).toHaveLength(14);
+    expect(new Set(pfade).size).toBe(14);
     expect(pfade).not.toContain("/einstellungen");
   });
 
@@ -65,6 +65,6 @@ describe("Navigation", () => {
     const rest = mobilRest([]).map((z) => z.pfad);
     expect(rest.some((p) => unten.has(p))).toBe(false);
     expect(rest).toContain("/einstellungen");
-    expect(unten.size + rest.length).toBe(14);
+    expect(unten.size + rest.length).toBe(15);
   });
 });

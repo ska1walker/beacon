@@ -34,7 +34,7 @@ SCHRITTE_HOECHSTENS = 5
 
 SEITEN = {
     "start": "/", "leads": "/deals", "angebote": "/angebote", "prognose": "/prognose", "aufgaben": "/aufgaben",
-    "firmen": "/firmen", "kontakte": "/kontakte", "listen": "/listen", "eingang": "/eingang", "tickets": "/tickets",
+    "firmen": "/firmen", "kontakte": "/kontakte", "listen": "/listen", "eingang": "/eingang", "besprechungen": "/besprechungen", "tickets": "/tickets",
     "kampagnen": "/kampagnen", "fragen": "/fragen", "erkenntnisse": "/erkenntnisse", "einstellungen": "/einstellungen",
 }
 

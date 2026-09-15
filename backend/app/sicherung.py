@@ -64,6 +64,10 @@ TABELLEN: list[str] = [
     "dokumente",
     "podcasts",
     "eingang",
+    # Hinter Aktivitäten, Firmen, Kontakten und Leads — die Besprechung
+    # zeigt auf alle vier.
+    "besprechungen",
+    "besprechung_kontakte",
     "ansichten",
     "listen",
     "listen_mitglieder",

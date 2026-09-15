@@ -182,7 +182,7 @@ async def test_briefingtext_bei_leerer_lage_ruft_kein_modell(datenbank, monkeypa
     assert "Nichts liegt an" in antwort.json()["text"]
 
 
-async def test_offener_eingang_steht_im_briefing(datenbank):
+async def test_besprechung_ohne_kunde_steht_im_briefing(datenbank):
     """Was niemandem zugeordnet ist, darf morgens nicht unsichtbar sein."""
     import hashlib
     import hmac
@@ -201,5 +201,9 @@ async def test_offener_eingang_steht_im_briefing(datenbank):
             await maschine.post(f"/api/eingang/{q['id']}", content=body, headers={"X-Insilo-Event": "meeting.ready", "X-Insilo-Delivery-ID": uuid4().hex, "X-Insilo-Signature": sig})
         b = (await klient.get("/api/briefing")).json()
 
-    assert [p["titel"] for p in b["offener_eingang"]] == ["Ohne Firma"]
+    # Seit 0.10.0 liegt ein Insilo-Gespräch nicht mehr im Eingang, sondern
+    # unter Besprechungen — und steht morgens trotzdem da.
+    assert b["offener_eingang"] == []
+    assert [p["titel"] for p in b["besprechungen_ohne_kunde"]] == ["Ohne Firma"]
+    assert b["besprechungen_ohne_kunde"][0]["pfad"].startswith("/besprechungen/")
     assert b["gesamt"] == 1

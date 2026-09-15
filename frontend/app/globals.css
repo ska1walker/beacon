@@ -128,6 +128,11 @@
   --am-handlung-aktiv: #002140;
   --am-handlung-text: #ffffff;
 
+  /* Der Schatten schwebender Felder — Klappmenüs, Suchtreffer. Drei
+     Bauteile verwendeten ihn, bevor es ihn gab, und schwebten deshalb
+     ohne (gefunden am 15.9.2026 vom Tokentest). */
+  --am-schatten-1: 0 8px 24px rgb(5 23 41 / 12%), 0 1px 2px rgb(5 23 41 / 8%);
+
   --am-gold-auszeichnung: var(--am-gold-500);
   --am-fokus-ring: #002f56;
   --am-deckschicht: rgb(5 23 41 / 60%);
@@ -167,6 +172,7 @@ html.dunkel {
   --am-handlung-hover: var(--am-gold-400);
   --am-handlung-aktiv: var(--am-gold-600);
   --am-handlung-text: var(--am-blau-900);
+  --am-schatten-1: 0 8px 24px rgb(0 0 0 / 40%), 0 1px 2px rgb(0 0 0 / 30%);
 
   --am-erfolg: #55c483;
   --am-hinweis: #60b0ff;
@@ -1868,7 +1874,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
      Block-Kachel um alles herum: Der Seitentitel sagt schon, worum es
      geht, ein zweiter Rahmen mit derselben Überschrift wäre nur eine
      Wand mehr. */
-  .einfuhr { display: grid; gap: var(--am-raum-5); }
+  .einfuhr { display: grid; gap: var(--am-raum-6); }
 
   .einfuhr-wahl {
     display: flex;
@@ -1899,9 +1905,9 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .einfuhr-pille:focus-visible { outline: var(--am-fokus-ring); outline-offset: 2px; }
 
   .einfuhr-pille.aktiv {
-    border-color: var(--am-handlung);
+    border-color: var(--am-handlung-ruhend);
     background: var(--am-auswahl-flaeche);
-    color: var(--am-handlung);
+    color: var(--am-handlung-ruhend);
     font-weight: 600;
   }
 
@@ -1911,7 +1917,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: grid;
     justify-items: center;
     gap: var(--am-raum-2);
-    padding: var(--am-raum-8) var(--am-raum-5);
+    padding: var(--am-raum-8) var(--am-raum-6);
     border: 2px dashed var(--am-rand);
     border-radius: var(--am-radius-gross);
     background: var(--am-flaeche-1);
@@ -1919,7 +1925,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   }
 
   .einfuhr-ablage.ueber {
-    border-color: var(--am-handlung);
+    border-color: var(--am-handlung-ruhend);
     background: var(--am-auswahl-flaeche);
   }
 
@@ -2593,7 +2599,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   .ansicht-reiter.aktiv {
     color: var(--am-text-primaer);
     font-weight: 600;
-    border-bottom-color: var(--am-handlung);
+    border-bottom-color: var(--am-handlung-ruhend);
   }
 
   .dunkel .ansicht-reiter.aktiv { border-bottom-color: var(--am-gold-500); }
@@ -2623,8 +2629,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 
   /* Ein Filter, der greift, muss man sehen, ohne ihn zu öffnen. */
   .btn.traegt {
-    border-color: var(--am-handlung);
-    color: var(--am-handlung);
+    border-color: var(--am-handlung-ruhend);
+    color: var(--am-handlung-ruhend);
   }
 
   .dunkel .btn.traegt { border-color: var(--am-gold-500); color: var(--am-gold-400); }
@@ -2637,7 +2643,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     height: 1.125rem;
     padding: 0 4px;
     border-radius: var(--am-radius-voll);
-    background: var(--am-handlung);
+    background: var(--am-handlung-ruhend);
     color: #fff;
     font-size: 0.625rem;
     font-weight: 600;
@@ -2748,7 +2754,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     flex-wrap: wrap;
     margin: 0 var(--am-raum-8) var(--am-raum-3);
     padding: var(--am-raum-2) var(--am-raum-3);
-    border: 1px solid var(--am-handlung);
+    border: 1px solid var(--am-handlung-ruhend);
     border-radius: var(--am-radius-mittel);
     background: var(--am-flaeche-1);
     font-size: 0.8125rem;
@@ -2923,8 +2929,8 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
   }
 
   .stufenschritt.aktiv {
-    background: var(--am-handlung);
-    border-color: var(--am-handlung);
+    background: var(--am-handlung-ruhend);
+    border-color: var(--am-handlung-ruhend);
     color: #fff;
     font-weight: 600;
     cursor: default;
@@ -2969,7 +2975,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     cursor: pointer;
   }
 
-  .aufgabe-haken:hover { color: var(--am-handlung); }
+  .aufgabe-haken:hover { color: var(--am-handlung-ruhend); }
   .aufgabe[data-erledigt="true"] .aufgabe-haken { color: var(--am-erfolg); }
 
   .aufgabe-haken:focus-visible {
@@ -3280,7 +3286,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: flex;
     align-items: center;
     gap: var(--am-raum-3);
-    padding: var(--am-raum-4) var(--am-raum-5);
+    padding: var(--am-raum-4) var(--am-raum-6);
     border-bottom: 1px solid var(--am-trennlinie);
   }
 
@@ -3320,7 +3326,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: var(--am-raum-5);
+    padding: var(--am-raum-6);
   }
 
   /* Im Dialog stehen die Felder enger als auf einer Seite: raum-6 ergab
@@ -3333,7 +3339,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
     display: flex;
     align-items: center;
     gap: var(--am-raum-3);
-    padding: var(--am-raum-4) var(--am-raum-5);
+    padding: var(--am-raum-4) var(--am-raum-6);
     border-top: 1px solid var(--am-trennlinie);
     background: var(--am-flaeche-1);
   }
@@ -4145,7 +4151,7 @@ html[data-dichte="kompakt"] { --am-skalierung: 0.9; }
 .podcast-player { display: block; width: 100%; height: 40px; }
 .podcast-aktionen { margin-top: var(--am-raum-2); flex-wrap: wrap; }
 .podcast-skript { display: contents; }
-.podcast-skript-text { flex-basis: 100%; margin: var(--am-raum-2) 0 0; padding: var(--am-raum-3); background: var(--am-flaeche-2); border-radius: var(--am-radius-2); font-size: 0.875rem; line-height: 1.55; max-height: 24rem; overflow-y: auto; }
+.podcast-skript-text { flex-basis: 100%; margin: var(--am-raum-2) 0 0; padding: var(--am-raum-3); background: var(--am-flaeche-2); border-radius: var(--am-radius-mittel); font-size: 0.875rem; line-height: 1.55; max-height: 24rem; overflow-y: auto; }
 .podcast-absatz + .podcast-absatz { margin-top: var(--am-raum-3); }
 .podcast-absatz dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--am-text-gedaempft); margin-bottom: 2px; }
 .podcast-absatz[data-sprecher="moderatorin"] dt { color: var(--am-gold-beschriftung); }
@@ -4438,3 +4444,88 @@ select,
 }
 
 .sprecherwahl-hinweis { margin: 0 0 var(--am-raum-3); }
+
+/* ── Besprechungen ────────────────────────────────────────────────────
+   Ein Archiv, keine Warteschlange: Datum vorn, damit man nach Zeit liest,
+   und die Kundenspalte trägt entweder die Zuordnung oder den Vorschlag —
+   gedämpft, mit Grund und Knopf, nie als Tatsache. */
+.besprechungstabelle td { vertical-align: top; }
+.besprechungstabelle th:first-child,
+.besprechungstabelle td:first-child { width: 7.5rem; white-space: nowrap; }
+.besprechungstabelle th:last-child,
+.besprechungstabelle td:last-child { width: 40%; cursor: default; }
+
+.besprechung-datum { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.besprechung-datum span,
+.besprechung-beteiligte,
+.kundenzelle-unter { font-size: 0.75rem; color: var(--am-text-gedaempft); line-height: 1.45; }
+.besprechung-beteiligte { display: block; margin-top: 2px; }
+
+.kundenzelle { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.kundenzelle a.haupt { color: var(--am-text-primaer); text-decoration: none; }
+.kundenzelle a.haupt:hover { text-decoration: underline; }
+.kundenzelle-vorschlag { font-size: 0.875rem; color: var(--am-text-sekundaer); }
+/* Klein, versal, gold: dasselbe Zeichen, das das Designsystem einer
+   Auszeichnung gibt. Ein Vorschlag ist ausgezeichnet, nicht entschieden. */
+.kundenzelle-marke {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--am-gold-beschriftung);
+  margin: 0 0 1px;
+}
+.kundenzelle-knoepfe { display: flex; gap: var(--am-raum-2); margin-top: var(--am-raum-1); flex-wrap: wrap; }
+
+.besprechung-zeitraum { display: inline-flex; align-items: center; gap: var(--am-raum-2); font-size: 0.8125rem; color: var(--am-text-sekundaer); }
+.besprechung-zeitraum input {
+  height: var(--am-ziel-zeiger);
+  padding: 0 var(--am-raum-3);
+  border: 1px solid var(--am-rand);
+  border-radius: var(--am-radius-mittel);
+  background: var(--am-seite);
+  color: var(--am-text-primaer);
+  font-family: var(--am-schrift-sans);
+  font-size: 0.875rem;
+}
+.besprechung-treffer { margin-left: auto; font-size: 0.8125rem; color: var(--am-text-gedaempft); font-variant-numeric: tabular-nums; }
+
+.ansicht-zahl {
+  margin-left: var(--am-raum-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--am-text-gedaempft);
+}
+
+.besprechung-seite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--am-raum-6);
+  padding: var(--am-raum-6) var(--am-raum-8) var(--am-raum-16);
+  align-items: start;
+}
+.besprechung-seite aside { display: grid; gap: var(--am-raum-6); }
+@media (min-width: 1100px) {
+  .besprechung-seite { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+
+/* Das Protokoll liest man — Lesebreite, ruhige Abstände. */
+.protokoll .block-inhalt { max-width: 70ch; font-size: 0.9375rem; line-height: 1.65; }
+.protokoll h3 { margin: var(--am-raum-6) 0 var(--am-raum-2); font-size: 1rem; }
+.protokoll h3:first-child { margin-top: 0; }
+.protokoll h4 { margin: var(--am-raum-4) 0 var(--am-raum-1); font-size: 0.9375rem; }
+.protokoll p { margin: 0 0 var(--am-raum-3); }
+.protokoll ul { margin: 0 0 var(--am-raum-3); padding-left: 1.25rem; }
+.protokoll li[data-erledigt] { list-style: none; margin-left: -1.25rem; }
+.protokoll-haken { display: inline-block; width: 1.25rem; color: var(--am-text-gedaempft); }
+.protokoll li[data-erledigt="true"] { color: var(--am-text-gedaempft); }
+.protokoll-fuss { margin-top: var(--am-raum-6); padding-top: var(--am-raum-3); border-top: 1px solid var(--am-trennlinie); font-size: 0.75rem; color: var(--am-text-gedaempft); }
+
+.besprechung-bezug { margin: 0; display: grid; gap: var(--am-raum-3); }
+.besprechung-bezug div { display: grid; gap: 2px; }
+.besprechung-bezug dt { font-size: 0.6875rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--am-text-gedaempft); }
+.besprechung-bezug dd { margin: 0; font-size: 0.875rem; }
+.besprechung-vorschlag p { margin: 0 0 3px; }
+
+.zeitleiste-link { display: inline-block; margin-top: var(--am-raum-1); font-size: 0.8125rem; font-weight: 500; }
