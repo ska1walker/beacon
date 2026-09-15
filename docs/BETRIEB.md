@@ -219,12 +219,73 @@ bleibt.
 
 ## Insilo anschließen
 
-Nach einer Besprechung schickt Insilo ein signiertes Ereignis mit dem
-fertigen Protokoll. Seit 0.10.0 landet es **unter Besprechungen**, nicht
-mehr im Eingang. Der Vertrag steht in `insilo/docs/WEBHOOKS.md` und wird
-eingehalten, nicht neu erfunden.
+Insilos Protokolle landen **unter Besprechungen**, nicht im Eingang
+(seit 0.10.0). Zwei Wege führen dorthin, und beide treffen über Insilos
+Besprechungskennung dieselbe Zeile — kommt ein Gespräch auf beiden, bleibt
+es eines:
 
-### Einrichten
+| | Gemeinsamer Ordner (seit 0.11.0) | Webhook (seit 0.10.0) |
+|---|---|---|
+| Wann | Insilo auf **derselben** Box | Insilo auf einer anderen Box, oder Protokolle nur für Beacon |
+| Einrichtung | keine | Quelle anlegen, in Insilo eintragen, auf automatisch stellen |
+| Wer die Protokolle sieht | jede App der Box mit `appCommon` (Relay, ComfyUI, Ollama …) | nur Beacon, signiert |
+| Löschen, Ändern | Datei weg bzw. neu geschrieben | eigene Ereignisse |
+| Tempo | alle 2 Minuten | sofort |
+
+### Über den gemeinsamen Ordner — wie Relay
+
+Insilo legt seit 0.1.93 jedes fertige Protokoll als Datei in den geteilten
+Olares-Ordner, `/olares/rootfs/Common/insilo-meetings` auf der Box
+(`insilo/backend/app/relay_drop.py`). Relay liest dort mit, Beacon seit
+0.11.0 auch (`app/insilo_ablage.py`). Das Chart hängt **nur diesen
+Unterordner** ein, **nur lesend**, unter `/app/insilo`; geschrieben wird
+er allein von Insilo.
+
+- **Vertrag, schema 1**: eine Datei je Besprechung,
+  `<YYYY-MM-DD>T<HH>_<MM>--<id8>.md`. Vorne ein Kopf (`insilo_id`, Titel,
+  Aufnahmezeit, Dauer, Teilnehmer, Schlagworte, Vorlage), dahinter Insilos
+  Markdown **ohne Wortlaut** mit eigenem Kopf. Ein anderes Schema liest
+  Beacon nicht und zählt die Datei als „unbekanntes Format".
+- **Keine strukturierte Zusammenfassung.** Die Vorlagenfelder stehen nur
+  als Abschnitte im Markdown; „Anwesende", „Kunde", „Mandant" liest
+  `_zusammenfassung_aus` zurück — genug für den Vorschlag über Namen.
+- **Welche Organisation liest.** Der Ordner gehört der Box.
+  `org_settings.insilo_ablage` = an/aus; nicht eingestellt heißt: an, wenn
+  Beacon auf der Box genau eine Organisation hat, sonst aus. So braucht
+  der Normalfall nichts, und bei zwei Organisationen landen die Gespräche
+  nicht still bei beiden.
+- **Unverändert wird nicht neu gelesen** (`ablage_stand` =
+  Änderungszeit:Größe). **Eine Datei, die fehlt, heißt „in Insilo
+  gelöscht"** — Besprechung und Aktivität werden weich gelöscht. **Ein
+  leerer Ordner löscht nichts**: Er sieht genauso aus wie einer, der nach
+  einer Neuinstallation noch nicht gefüllt ist.
+- **Einstellungen › KI und Programme › Insilo auf dieser Box** zeigt, wie
+  viele Protokolle im Ordner liegen, wie viele übernommen sind und wann
+  zuletzt gelesen wurde. „Jetzt lesen" beweist die Einrichtung. Dort
+  steht auch die Adresse von Insilo für „In Insilo öffnen" — die Datei
+  trägt keine (`source_url` ist leer).
+- **Altbestand**: Insilo exportiert nur, was nach 0.1.93 fertig wurde. Am
+  15.9.2026 lag genau eine Datei im Ordner. Ältere Besprechungen schreibt
+  Insilos Nachzug `POST /api/v1/meetings/export-backfill` (Inhaber oder
+  Verwaltung, höchstens 500 je Aufruf).
+- **Auf der Box gemessen, 15.9.2026**: Insilos `userspace.appCommon` ist
+  `/olares/rootfs/Common` — **ohne Nutzernamen**, also für die ganze Box.
+  Relay hängt `…/Common/insilo-meetings` lesend ein. Dass eine
+  Bestandsinstallation die neue Berechtigung per Markt-Upgrade bekommt,
+  spricht Insilos Helm-Historie (Upgrade von 0.1.88 bis 0.1.98 ohne
+  Neuinstallation, danach `appCommon` gesetzt); belegt ist es für Beacon
+  erst nach dem Upgrade auf 0.11.0. Das Chart liest den Wert deshalb
+  bedingt: Fehlt er, bleibt der Weg aus und der Block sagt es.
+
+### Über einen Webhook
+
+Nach einer Besprechung schickt Insilo ein signiertes Ereignis mit dem
+fertigen Protokoll. Der Vertrag steht in `insilo/docs/WEBHOOKS.md` und
+wird eingehalten, nicht neu erfunden. Im Insilo-Pod löst Beacons Adresse
+auf die LAN-Adresse der Box auf (`192.168.1.17`), der Aufruf geht also
+nicht über den FRP-Server nach draußen (gemessen 15.9.2026).
+
+#### Einrichten
 
 1. In Beacon unter *Einstellungen › KI und Programme › Verbundene
    Programme* eine Quelle der Art „Insilo — Besprechungen" anlegen.
@@ -239,7 +300,7 @@ eingehalten, nicht neu erfunden.
    mit „In Insilo öffnen" nach `/m/<kennung>`.
 4. In Insilo „Test" drücken — Beacon antwortet 200 und legt nichts an.
 
-### Gemessen am 15. September 2026
+#### Gemessen am 15. September 2026
 
 Der Webhook scheiterte am 5.9. an der Login-Umleitung des
 `internal`-Eingangs (siehe unten). Seit 0.6.9 ist Beacons Eingang

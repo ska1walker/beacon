@@ -142,7 +142,7 @@ export default function BesprechungenSeite() {
           ) : (
             <Leer
               titel="Noch keine Besprechung"
-              text="Gespräche kommen aus Insilo, sobald dort ein Webhook auf Beacon zeigt — Einstellungen › KI und Programme › Verbundene Programme."
+              text="Gespräche kommen aus Insilo — auf derselben Box von selbst über den gemeinsamen Ordner, sonst über einen Webhook. Beides unter Einstellungen › KI und Programme."
             />
           )
         )}

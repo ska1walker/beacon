@@ -230,6 +230,16 @@ spec:
             - name: APP_DATA_DIR
               value: "/app/data"
 
+            {{- if (.Values.userspace).appCommon }}
+            # Insilos Besprechungen im gemeinsamen Ordner der Box
+            # (backend/app/insilo_ablage.py). Bedingt, weil eine Box, die
+            # Beacon vor dieser Berechtigung installiert hat, den Wert beim
+            # Upgrade nicht zwingend bekommt — dann bleibt der Weg aus,
+            # statt dass der Pod an einem leeren hostPath scheitert.
+            - name: INSILO_ABLAGE_DIR
+              value: "/app/insilo"
+            {{- end }}
+
             # Auf der Box setzt Envoy den Kopf X-Bfl-User. Leer heißt: Wer
             # ohne Kopf anklopft, wird abgewiesen statt erfunden.
             - name: DEV_USER
@@ -237,6 +247,11 @@ spec:
           volumeMounts:
             - name: app-data
               mountPath: /app/data
+            {{- if (.Values.userspace).appCommon }}
+            - name: insilo-ablage
+              mountPath: /app/insilo
+              readOnly: true
+            {{- end }}
           resources:
 {{ toYaml .Values.resources.backend | indent 12 }}
           readinessProbe:
@@ -257,6 +272,14 @@ spec:
           hostPath:
             path: {{ .Values.userspace.appData }}
             type: DirectoryOrCreate
+        {{- if (.Values.userspace).appCommon }}
+        # Nur Insilos Unterordner, nicht der ganze gemeinsame Ordner: Was
+        # andere Apps dort ablegen, geht Beacon nichts an.
+        - name: insilo-ablage
+          hostPath:
+            path: {{ .Values.userspace.appCommon }}/insilo-meetings
+            type: DirectoryOrCreate
+        {{- end }}
         - name: sql
           configMap:
             name: beacon-migrations

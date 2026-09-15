@@ -47,7 +47,7 @@ Der Weg vom ersten Kontakt bis zum Abschluss ist durchgängig da.
 | Qualifizierung | sechs Felder, gerechnete Punktzahl, Verlustgründe |
 | Prognose | gewichtet, Trefferquote, Verlustanalyse, nach Produkt |
 | KI | Notiz→Struktur, Tagesbriefing, Fragen an den Bestand, Angebotsvorschlag, Qualifizierung aus dem Verlauf, Anschreiben |
-| Insilo-Kopplung | signierter Empfang; Besprechungen als eigener Bereich mit Vorschlag, nie automatisch zugeordnet; Protokoll ohne Wortlaut (seit 0.10.0, `docs/BETRIEB.md` „Insilo anschließen") |
+| Insilo-Kopplung | auf derselben Box über Insilos gemeinsamen Ordner wie Relay (seit 0.11.0, `app/insilo_ablage.py`), sonst signierter Webhook; Besprechungen als eigener Bereich mit Vorschlag, nie automatisch zugeordnet; Protokoll ohne Wortlaut (`docs/BETRIEB.md` „Insilo anschließen") |
 | Zusammenarbeit | Sitzplätze am geteilten Olares-Zugang, Besitz, Filter „Nur meine" |
 | Eigene Eigenschaften | je Objekt: Text, Zahl, Datum, Ja/Nein, Auswahl — geprüft beim Schreiben |
 | Pipelines | mehrere nebeneinander, Stufen anlegen/ändern/ordnen/löschen mit Zielangabe |

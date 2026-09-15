@@ -189,17 +189,8 @@ async def empfangen(
         return {"status": "angenommen", "besprechung_id": str(zeile["id"]) if zeile else None}
 
     if ereignis == "meeting.deleted" and extern:
-        zeile = await conn.fetchrow(
-            "update public.besprechungen set deleted_at = now(), updated_at = now() "
-            "where external_id = $1 and deleted_at is null returning id, activity_id",
-            extern,
-        )
-        if zeile and zeile["activity_id"]:
-            await conn.execute(
-                "update public.activities set deleted_at = now() where id = $1",
-                zeile["activity_id"],
-            )
-        return {"status": "angenommen", "besprechung_id": str(zeile["id"]) if zeile else None}
+        besprechung_id = await entfernen(conn, extern)
+        return {"status": "angenommen", "besprechung_id": str(besprechung_id) if besprechung_id else None}
 
     return {"status": "quittiert"}
 
@@ -211,6 +202,21 @@ def _schlagworte(besprechung: dict[str, Any]) -> list[str] | None:
     return [str(t.get("name") if isinstance(t, dict) else t) for t in roh if t]
 
 
+async def entfernen(conn: asyncpg.Connection, extern: str) -> UUID | None:
+    """In Insilo gelöscht: Besprechung und ihre Aktivität weich löschen."""
+    zeile = await conn.fetchrow(
+        "update public.besprechungen set deleted_at = now(), updated_at = now() "
+        "where external_id = $1 and deleted_at is null returning id, activity_id",
+        extern,
+    )
+    if zeile and zeile["activity_id"]:
+        await conn.execute(
+            "update public.activities set deleted_at = now() where id = $1",
+            zeile["activity_id"],
+        )
+    return zeile["id"] if zeile else None
+
+
 async def _fertig(
     conn: asyncpg.Connection,
     org_id: UUID,
@@ -219,10 +225,45 @@ async def _fertig(
     besprechung: dict[str, Any],
     daten: dict[str, Any],
 ) -> dict[str, Any]:
-    markdown = daten.get("markdown") or ""
     zusammenfassung = (daten.get("summary") or {}).get("content") or {}
-    if not isinstance(zusammenfassung, dict):
-        zusammenfassung = {}
+    return await speichern(
+        conn,
+        org_id,
+        source_id,
+        extern,
+        titel=besprechung.get("title"),
+        recorded_at=_zeitpunkt(besprechung.get("recorded_at")),
+        dauer_sek=besprechung.get("duration_sec") if isinstance(besprechung.get("duration_sec"), int) else None,
+        vorlage=besprechung.get("template_name"),
+        schlagworte=_schlagworte(besprechung) or [],
+        markdown=daten.get("markdown") or "",
+        zusammenfassung=zusammenfassung if isinstance(zusammenfassung, dict) else {},
+    )
+
+
+async def speichern(
+    conn: asyncpg.Connection,
+    org_id: UUID,
+    source_id: UUID | None,
+    extern: str,
+    *,
+    titel: str | None,
+    recorded_at: datetime | None,
+    dauer_sek: int | None,
+    vorlage: str | None,
+    schlagworte: list[str],
+    markdown: str,
+    zusammenfassung: dict[str, Any],
+) -> dict[str, Any]:
+    """Legt eine fertige Besprechung an oder frischt sie auf.
+
+    Zwei Wege führen hierher: der Webhook (`source_id` gesetzt) und der
+    gemeinsame Ordner der Box (`app/insilo_ablage.py`, ohne Quelle). Beide
+    tragen dieselbe Insilo-Kennung, und über sie trifft eine Besprechung,
+    die auf beiden Wegen kommt, dieselbe Zeile. Eine Quelle, die schon
+    dasteht, bleibt stehen — sonst verlöre die Besprechung ihren Link zu
+    Insilo, sobald der Ordner sie ein zweites Mal liest.
+    """
     sprecher = sprecher_aus(markdown)
 
     zeile = await conn.fetchrow(
@@ -232,7 +273,7 @@ async def _fertig(
            schlagworte, sprecher, beteiligte, zusammenfassung, protokoll)
         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)
         on conflict (org_id, external_id) do update set
-          source_id = excluded.source_id,
+          source_id = coalesce(excluded.source_id, public.besprechungen.source_id),
           titel = excluded.titel,
           recorded_at = coalesce(excluded.recorded_at, public.besprechungen.recorded_at),
           dauer_sek = coalesce(excluded.dauer_sek, public.besprechungen.dauer_sek),
@@ -249,11 +290,11 @@ async def _fertig(
         org_id,
         source_id,
         extern,
-        besprechung.get("title"),
-        _zeitpunkt(besprechung.get("recorded_at")),
-        besprechung.get("duration_sec") if isinstance(besprechung.get("duration_sec"), int) else None,
-        besprechung.get("template_name"),
-        _schlagworte(besprechung) or [],
+        titel,
+        recorded_at,
+        dauer_sek,
+        vorlage,
+        schlagworte,
         sprecher,
         beteiligte_aus(sprecher, zusammenfassung),
         orjson.dumps(zusammenfassung).decode(),

@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     # die .env auf einen Ordner im Repo.
     app_data_dir: str = "/app/data"
 
+    # Insilos Ablage im gemeinsamen Ordner der Box (appCommon), nur lesend
+    # eingehängt. Leer heißt: nicht eingehängt, der Weg ist aus. Lokal auf
+    # einen Ordner mit Beispieldateien zeigen lassen.
+    insilo_ablage_dir: str = ""
+    # Wie oft nachgesehen wird. Relay nimmt zehn Minuten; ein Protokoll, das
+    # gerade fertig wurde, soll im CRM stehen, bevor der Kaffee kalt ist.
+    insilo_ablage_sekunden: float = 120.0
+
     # Wie viele Sicherungen aufgehoben werden. Vierzehn Tage sind lang
     # genug, um einen Fehler zu bemerken, und kurz genug, dass die Ablage
     # einer Box das trägt.

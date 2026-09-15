@@ -27,7 +27,7 @@ metadata:
   title: Beacon
   description: Sales CRM that runs entirely on your own box — companies, contacts, deals and an AI assistant that never phones home.
   icon: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
-  version: 0.10.0
+  version: 0.11.0
   categories:
     - AI
 
@@ -98,9 +98,14 @@ permission:
   # Ausfuhrpfad dorthin ist der erste Punkt der nächsten Ausbaustufe
   # (siehe docs/BETRIEB.md).
   appData: true
+  # Der gemeinsame Ordner der Box. Beacon liest darin nur einen Unterordner:
+  # die Besprechungen, die Insilo dort ablegt (`insilo-meetings`, Insilo
+  # ab 0.1.93) — derselbe Weg, den Relay geht. Eingehängt wird er nur
+  # lesend; geschrieben wird er allein von Insilo.
+  appCommon: true
 
 spec:
-  versionName: '0.10.0'
+  versionName: '0.11.0'
 
   featuredImage: https://raw.githubusercontent.com/ska1walker/beacon/main/icon.png
   promoteImage:

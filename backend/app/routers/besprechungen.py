@@ -13,9 +13,9 @@ import orjson
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app import audit, besprechungen
-from app.auth import CurrentUser, get_current_user
-from app.db import acquire_as
+from app import audit, besprechungen, insilo_ablage
+from app.auth import CurrentUser, get_current_user, verwaltet
+from app.db import acquire, acquire_as
 
 router = APIRouter(prefix="/api/besprechungen", tags=["besprechungen"])
 
@@ -223,6 +223,109 @@ async def anzahl(user: CurrentUser = Depends(get_current_user)) -> Anzahl:
     return Anzahl(**dict(z))
 
 
+class Ablage(BaseModel):
+    """Insilos gemeinsamer Ordner, aus Sicht dieser Organisation."""
+
+    eingehaengt: bool
+    ordner_da: bool
+    dateien: int
+    einstellung: bool | None
+    aktiv: bool
+    organisationen: int
+    adresse: str | None = None
+    uebernommen: int
+    zuletzt: datetime | None = None
+    fehler: str | None = None
+
+
+class AblageIn(BaseModel):
+    aktiv: bool | None = None
+    adresse: str | None = Field(default=None, max_length=300)
+
+
+async def _organisationen() -> int:
+    # Dieselbe Zählung wie die Schleife in main.py: Organisationen mit
+    # Eigentümer. `orgs` steht nicht unter FORCE, ein Kontext ist unnötig.
+    async with acquire() as conn:
+        return await conn.fetchval(
+            "select count(distinct o.id) from public.orgs o "
+            "join public.user_org_roles r on r.org_id = o.id and r.role = 'owner' "
+            "where o.deleted_at is null"
+        )
+
+
+@router.get("/ablage", response_model=Ablage)
+async def ablage(user: CurrentUser = Depends(get_current_user)) -> Ablage:
+    ordner = insilo_ablage.verzeichnis()
+    dateien, ordner_da = 0, False
+    if ordner is not None:
+        try:
+            dateien = sum(1 for _ in ordner.glob("*.md"))
+            ordner_da = ordner.is_dir()
+        except OSError:
+            pass
+    anzahl_orgs = await _organisationen()
+    async with acquire_as(user.user_id) as conn:
+        einstellung = await conn.fetchrow(
+            "select insilo_ablage, insilo_adresse from public.org_settings where org_id = $1", user.org_id
+        )
+        uebernommen = await conn.fetchval(
+            "select count(*) from public.besprechungen where ablage_datei is not null and deleted_at is null"
+        )
+    wert = einstellung["insilo_ablage"] if einstellung else None
+    stand = insilo_ablage.STAND.get(str(user.org_id), {})
+    return Ablage(
+        eingehaengt=ordner is not None,
+        ordner_da=ordner_da,
+        dateien=dateien,
+        einstellung=wert,
+        aktiv=ordner is not None and insilo_ablage.wirksam(wert, anzahl_orgs),
+        organisationen=anzahl_orgs,
+        adresse=einstellung["insilo_adresse"] if einstellung else None,
+        uebernommen=uebernommen,
+        zuletzt=stand.get("zuletzt"),
+        fehler=stand.get("fehler"),
+    )
+
+
+@router.put("/ablage", response_model=Ablage)
+async def ablage_einstellen(payload: AblageIn, user: CurrentUser = Depends(verwaltet)) -> Ablage:
+    felder = payload.model_dump(exclude_unset=True)
+    if "adresse" in felder:
+        adresse = (felder["adresse"] or "").strip() or None
+        if adresse and not adresse.startswith(("http://", "https://")):
+            raise HTTPException(422, "Die Adresse von Insilo beginnt mit https://")
+        felder["adresse"] = adresse
+    async with acquire_as(user.user_id) as conn:
+        await conn.execute(
+            "insert into public.org_settings (org_id) values ($1) on conflict do nothing", user.org_id
+        )
+        if "aktiv" in felder:
+            await conn.execute(
+                "update public.org_settings set insilo_ablage = $1, updated_at = now() where org_id = $2",
+                felder["aktiv"], user.org_id,
+            )
+        if "adresse" in felder:
+            await conn.execute(
+                "update public.org_settings set insilo_adresse = $1, updated_at = now() where org_id = $2",
+                felder["adresse"], user.org_id,
+            )
+    return await ablage(user)
+
+
+@router.post("/ablage/lesen")
+async def ablage_lesen(user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
+    """Liest jetzt, statt auf den Takt zu warten — der Knopf, der die
+    Einrichtung beweist. Liest auch, wenn die Organisation den Weg noch
+    nicht eingeschaltet hat: Wer drückt, will es.
+    """
+    try:
+        bilanz = await insilo_ablage.lesen_und_vorschlagen(user.user_id, user.org_id)
+    except insilo_ablage.AblageFehlt as exc:
+        raise HTTPException(409, f"Insilos Ordner ist nicht erreichbar: {exc}") from exc
+    return {k: v for k, v in bilanz.items() if k != "vorschlagen"}
+
+
 @router.get("/{besprechung_id}", response_model=BesprechungVoll)
 async def eine(besprechung_id: UUID, user: CurrentUser = Depends(get_current_user)) -> BesprechungVoll:
     async with acquire_as(user.user_id) as conn:
@@ -232,8 +335,10 @@ async def eine(besprechung_id: UUID, user: CurrentUser = Depends(get_current_use
         if zeile is None:
             raise HTTPException(404, "Besprechung nicht gefunden")
         mehr = await conn.fetchrow(
-            "select b.protokoll, b.zusammenfassung, b.sprecher, b.external_id, s.oberflaeche_url "
+            "select b.protokoll, b.zusammenfassung, b.sprecher, b.external_id, "
+            "coalesce(s.oberflaeche_url, o.insilo_adresse) as oberflaeche_url "
             "from public.besprechungen b left join public.webhook_sources s on s.id = b.source_id "
+            "left join public.org_settings o on o.org_id = b.org_id "
             "where b.id = $1",
             besprechung_id,
         )

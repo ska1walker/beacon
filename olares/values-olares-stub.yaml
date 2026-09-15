@@ -14,5 +14,6 @@ user:
 userspace:
   appData: /olares/userdata/Cache/pruefer/beacon
   appCache: /olares/userdata/Cache/pruefer/beacon-cache
+  appCommon: /olares/rootfs/Common
 cluster:
   arch: amd64

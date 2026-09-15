@@ -1250,3 +1250,18 @@ export interface Besprechungsanzahl {
   zugeordnet: number;
   alle: number;
 }
+
+/** Insilos gemeinsamer Ordner auf der Box, aus Sicht dieser Organisation. */
+export interface InsiloAblage {
+  eingehaengt: boolean;
+  ordner_da: boolean;
+  dateien: number;
+  /** null: nicht eingestellt — dann liest die einzige Organisation der Box. */
+  einstellung: boolean | null;
+  aktiv: boolean;
+  organisationen: number;
+  adresse: string | null;
+  uebernommen: number;
+  zuletzt: string | null;
+  fehler: string | null;
+}

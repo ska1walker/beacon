@@ -12,6 +12,7 @@ import { Fehler, Laedt } from "@/components/zustaende";
 import { Erklaerung } from "@/components/erklaerung";
 import { Sicherungsblock } from "@/components/sicherung";
 import { Absenderblock } from "@/components/absender";
+import { InsiloAblageblock } from "@/components/insilo-ablage";
 import { Quellenblock } from "@/components/quellen";
 import { Postfachblock } from "@/components/postfach";
 import { Mitgliederblock, Passwortblock } from "@/components/mitglieder";
@@ -207,6 +208,7 @@ function Inhalt() {
             <KIBlock e={e} />
             <Sprachausgabeblock e={e} />
             <AnreicherungEinstellungen einstellungen={e} />
+            <InsiloAblageblock />
             <Quellenblock />
           </>
         )}

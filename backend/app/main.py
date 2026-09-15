@@ -340,6 +340,43 @@ async def _sitzungsschleife() -> None:
         await asyncio.sleep(86400)
 
 
+async def _insiloschleife() -> None:
+    """Liest Insilos gemeinsamen Ordner — alle zwei Minuten ein Blick.
+
+    Nur, wenn das Chart den Ordner einhängt (`INSILO_ABLAGE_DIR`). Welche
+    Organisation liest, steht in `insilo_ablage.wirksam`. Ein Ordner, der
+    fehlt, steht in den Einstellungen, nicht bei jedem Takt im Protokoll.
+    """
+    from app import insilo_ablage
+
+    if insilo_ablage.verzeichnis() is None:
+        return
+    while True:
+        await asyncio.sleep(settings.insilo_ablage_sekunden)
+        try:
+            organisationen = await _organisationen()
+            for org in organisationen:
+                async with acquire_as(org["user_id"]) as conn:
+                    einstellung = await conn.fetchval(
+                        "select insilo_ablage from public.org_settings where org_id = $1",
+                        org["org_id"],
+                    )
+                if not insilo_ablage.wirksam(einstellung, len(organisationen)):
+                    continue
+                try:
+                    bilanz = await insilo_ablage.lesen_und_vorschlagen(org["user_id"], org["org_id"])
+                except insilo_ablage.AblageFehlt:
+                    continue
+                if bilanz["neu"] or bilanz["geaendert"] or bilanz["entfernt"]:
+                    print(
+                        f"Insilo-Ablage: {bilanz['neu']} neu, {bilanz['geaendert']} geändert, "
+                        f"{bilanz['entfernt']} entfernt",
+                        flush=True,
+                    )
+        except Exception as exc:
+            print(f"Insilo-Ablage fehlgeschlagen: {exc}", flush=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
@@ -359,8 +396,9 @@ async def lifespan(app: FastAPI):
     ausgang = asyncio.create_task(_versandschleife())
     podcasts = asyncio.create_task(_podcastschleife())
     sitzungen = asyncio.create_task(_sitzungsschleife())
+    insilo = asyncio.create_task(_insiloschleife())
     yield
-    for aufgabe in (schleife, post, ausgang, podcasts, sitzungen):
+    for aufgabe in (schleife, post, ausgang, podcasts, sitzungen, insilo):
         aufgabe.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await aufgabe
