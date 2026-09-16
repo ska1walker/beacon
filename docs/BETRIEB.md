@@ -246,6 +246,20 @@ er allein von Insilo.
   Aufnahmezeit, Dauer, Teilnehmer, Schlagworte, Vorlage), dahinter Insilos
   Markdown **ohne Wortlaut** mit eigenem Kopf. Ein anderes Schema liest
   Beacon nicht und zählt die Datei als „unbekanntes Format".
+- **Nur Kundengespräche (seit 0.12.0, Insilo ab 0.1.102).** Der Kopf trägt
+  `crm: true|false`, festgelegt in Insilo an der Vorlage (*Einstellungen ›
+  Vorlagen für Zusammenfassungen*, Voreinstellung: Mandanten-, Vertriebs-
+  und Jahresgespräch ja; Allgemeine Besprechung, Schnellnotiz und eigene
+  Vorlagen nein). Beacon übernimmt nur `true`; der Webhook trägt dasselbe
+  als `meeting.crm`. Gefiltert wird **nicht am Vorlagennamen** — den kann
+  eine Organisation in Insilo umbenennen. Fehlt der Schlüssel (älteres
+  Insilo), wird wie bisher übernommen; ein unbekannter Wert gilt nicht als
+  nein. Schon übernommen und nicht mehr markiert: weich gelöscht
+  (`besprechungen.nicht_fuers_crm`), kehrt zurück, wenn die Vorlage wieder
+  markiert wird — **außer schon einem Kunden zugeordnet**, das bleibt. Nicht
+  markierte Dateien merkt sich der Lauf im Speicher und liest sie
+  unverändert nicht erneut. „Jetzt lesen" zählt sie als „nicht als
+  Kundengespräch markiert".
 - **Keine strukturierte Zusammenfassung.** Die Vorlagenfelder stehen nur
   als Abschnitte im Markdown; „Anwesende", „Kunde", „Mandant" liest
   `_zusammenfassung_aus` zurück — genug für den Vorschlag über Namen.
