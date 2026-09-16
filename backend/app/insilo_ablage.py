@@ -15,6 +15,13 @@ als JSON —, dahinter Insilos kanonisches Markdown, **ohne** den Wortlaut.
 Das Markdown trägt seinen eigenen Kopf mit den Sprechern, genau wie im
 Webhook; `besprechungen.speichern` liest es deshalb unverändert.
 
+**Nur Kundengespräche** (seit Insilo 0.1.102). Der Kopf trägt
+`crm: true|false`, festgelegt in Insilo an der Vorlage. Übernommen wird nur
+`true`; was schon angelegt, aber nicht mehr markiert ist, zieht
+`besprechungen.nicht_fuers_crm` zurück — außer es ist bereits einem Kunden
+zugeordnet. Fehlt der Schlüssel, ist die Datei älter, und sie wird wie
+bisher übernommen.
+
 **Was fehlt gegenüber dem Webhook.** Die Vorlagenfelder kommen nicht als
 JSON, nur als Abschnitte im Markdown. Die Abschnitte, in denen Menschen
 stehen („Anwesende", „Kunde", „Mandant"), liest `_zusammenfassung_aus`
@@ -69,6 +76,13 @@ ABSCHNITT_ZU_FELD = {
 # „noch nicht gelesen", bis die Schleife das erste Mal da war.
 STAND: dict[str, dict[str, Any]] = {}
 
+# Dateien, die nicht fürs CRM markiert sind, mit dem Stand, in dem sie so
+# gelesen wurden — je Organisation. Ohne sie läse jeder Lauf alle internen
+# Besprechungen erneut, denn eine übersprungene Datei hat keine Zeile, an
+# der ihr Stand stehen könnte. Im Speicher: nach einem Neustart genügt ein
+# einziger Lauf, um sie wieder zu kennen.
+NICHT_FUERS_CRM: dict[str, dict[str, str]] = {}
+
 
 class AblageFehlt(Exception):  # noqa: N818 — ein Zustand, kein Fehlerfall im Sinne von „Error"
     """Der Ordner ist nicht eingehängt oder nicht lesbar."""
@@ -100,6 +114,9 @@ class Datei:
     schlagworte: list[str]
     markdown: str
     zusammenfassung: dict[str, Any] = field(default_factory=dict)
+    # `True`/`False` aus `crm:`, `None`, wenn die Datei den Schlüssel nicht
+    # trägt (Insilo vor 0.1.102).
+    crm: bool | None = None
 
 
 def _wert(roh: str) -> Any:
@@ -149,7 +166,21 @@ def lesen(text: str) -> Datei | None:
         schlagworte=[str(t) for t in kopf.get("tags") or [] if str(t).strip()],
         markdown=markdown,
         zusammenfassung=_zusammenfassung_aus(markdown),
+        crm=_markierung(kopf.get("crm")),
     )
+
+
+def _markierung(wert: Any) -> bool | None:
+    """`crm: true|false` — alles andere heißt: nicht angegeben.
+
+    Ein unbekannter Wert wird nicht als `false` gelesen. Sonst verschwände
+    bei einem Tippfehler in Insilo still jede Besprechung aus dem Archiv.
+    """
+    if wert == "true":
+        return True
+    if wert == "false":
+        return False
+    return None
 
 
 def _zusammenfassung_aus(markdown: str) -> dict[str, Any]:
@@ -215,14 +246,28 @@ async def einlesen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, Any]:
         )
     }
 
-    bilanz: dict[str, Any] = {"dateien": len(dateien), "neu": 0, "geaendert": 0, "entfernt": 0, "unlesbar": 0}
+    bilanz: dict[str, Any] = {
+        "dateien": len(dateien),
+        "neu": 0,
+        "geaendert": 0,
+        "entfernt": 0,
+        "unlesbar": 0,
+        # Nicht fürs CRM markiert: übersprungen, und davon die, die schon
+        # übernommen waren und jetzt zurückgezogen wurden.
+        "nicht_crm": 0,
+        "zurueckgezogen": 0,
+    }
     vorschlagen: list[UUID] = []
+    uebersprungen = NICHT_FUERS_CRM.setdefault(str(org_id), {})
 
     # Älteste zuerst: Liegen nach einer geänderten Aufnahmezeit zwei Dateien
     # derselben Besprechung da, gewinnt die jüngere.
     for name, (pfad, stand) in sorted(dateien.items(), key=lambda e: e[1][1]):
         vorher = bekannt.get(name)
         if vorher is not None and vorher["ablage_stand"] == stand and vorher["deleted_at"] is None:
+            continue
+        if uebersprungen.get(name) == stand:
+            bilanz["nicht_crm"] += 1
             continue
         try:
             datei = lesen(pfad.read_text(encoding="utf-8"))
@@ -232,6 +277,14 @@ async def einlesen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, Any]:
         if datei is None:
             bilanz["unlesbar"] += 1
             continue
+
+        if datei.crm is False:
+            if await besprechungen.nicht_fuers_crm(conn, org_id, datei.insilo_id) == "zurueckgezogen":
+                bilanz["zurueckgezogen"] += 1
+            bilanz["nicht_crm"] += 1
+            uebersprungen[name] = stand
+            continue
+        uebersprungen.pop(name, None)
 
         ergebnis = await besprechungen.speichern(
             conn,

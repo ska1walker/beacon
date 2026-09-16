@@ -15,6 +15,15 @@ Zwei Regeln, beide mit Kai und Marc am 15.9.2026 festgelegt:
   Insilo kennt von den Beteiligten nur Namen — keine E-Mail, keine Kennung
   —, und zwei Kontakte heißen Meyer. Ein Protokoll am falschen Kunden ist
   schlimmer als eines, das auf einen Klick wartet.
+
+Und seit Insilo 0.1.102 eine dritte:
+
+* **Nur Kundengespräche.** Insilo legt an der Vorlage fest, was ins CRM
+  gehört, und schreibt es als `crm: true|false` in die Datei und in den
+  Webhook. Beacon übernimmt nur `crm: true`. Gefiltert wird nicht am
+  Vorlagennamen — den kann eine Organisation in Insilo umbenennen. Fehlt der
+  Schlüssel, stammt die Besprechung von einem älteren Insilo, und Beacon
+  übernimmt sie wie bisher (`nicht_fuers_crm`).
 """
 
 from __future__ import annotations
@@ -217,6 +226,43 @@ async def entfernen(conn: asyncpg.Connection, extern: str) -> UUID | None:
     return zeile["id"] if zeile else None
 
 
+async def nicht_fuers_crm(conn: asyncpg.Connection, org_id: UUID, extern: str) -> str:
+    """Eine Besprechung, die Insilo nicht fürs CRM markiert hat.
+
+    Nie angelegt: bleibt es dabei. Schon angelegt (vor der Markierung, oder
+    die Vorlage wurde in Insilo umgestellt), aber **noch keinem Kunden
+    zugeordnet**: weich gelöscht — sie gehört nicht in dieses Archiv, und
+    wird die Vorlage wieder umgestellt, holt `speichern` sie zurück.
+
+    **Schon zugeordnet: bleibt stehen.** Das hat ein Mensch bestätigt, und
+    eine Einstellung in einer anderen App nimmt keine Entscheidung zurück,
+    die hier jemand getroffen hat. Das ist dieselbe Regel wie beim
+    Zuordnen, nur in die andere Richtung: nichts geschieht an einem Kunden,
+    ohne dass es jemand gesehen hat. Außerdem hinge an ihr eine Aktivität in
+    der Zeitleiste des Kunden, und die käme beim Zurückholen nicht mit.
+
+    Gibt zurück, was geschehen ist: `"nicht_angelegt"`, `"zurueckgezogen"`,
+    `"behalten"` oder `"schon_weg"`.
+    """
+    zeile = await conn.fetchrow(
+        "select id, status, activity_id, deleted_at from public.besprechungen "
+        "where org_id = $1 and external_id = $2",
+        org_id,
+        extern,
+    )
+    if zeile is None:
+        return "nicht_angelegt"
+    if zeile["status"] == "zugeordnet" or zeile["activity_id"] is not None:
+        return "behalten"
+    if zeile["deleted_at"] is not None:
+        return "schon_weg"
+    await conn.execute(
+        "update public.besprechungen set deleted_at = now(), updated_at = now() where id = $1",
+        zeile["id"],
+    )
+    return "zurueckgezogen"
+
+
 async def _fertig(
     conn: asyncpg.Connection,
     org_id: UUID,
@@ -225,6 +271,15 @@ async def _fertig(
     besprechung: dict[str, Any],
     daten: dict[str, Any],
 ) -> dict[str, Any]:
+    # `is False`, nicht `not`: fehlt der Schlüssel, kommt der Webhook von
+    # einem Insilo vor 0.1.102 — dann wie bisher übernehmen.
+    if besprechung.get("crm") is False:
+        folge = await nicht_fuers_crm(conn, org_id, extern)
+        return {
+            "status": "quittiert",
+            "hinweis": "In Insilo nicht als Kundengespräch markiert — nicht übernommen.",
+            "folge": folge,
+        }
     zusammenfassung = (daten.get("summary") or {}).get("content") or {}
     return await speichern(
         conn,

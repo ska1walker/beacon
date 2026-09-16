@@ -39,7 +39,15 @@ export function InsiloAblageblock() {
   });
   const lesen = useMutation({
     mutationFn: () =>
-      api.post<{ dateien: number; neu: number; geaendert: number; entfernt: number; unlesbar: number }>(
+      api.post<{
+        dateien: number;
+        neu: number;
+        geaendert: number;
+        entfernt: number;
+        unlesbar: number;
+        nicht_crm?: number;
+        zurueckgezogen?: number;
+      }>(
         "/api/besprechungen/ablage/lesen",
       ),
     onSuccess: () => {
@@ -106,6 +114,12 @@ export function InsiloAblageblock() {
             </dl>
             {s.fehler && <Fehler text={s.fehler} />}
 
+            <p className="feld-hinweis">
+              Übernommen werden nur Kundengespräche: welche Vorlagen dazu zählen, legt man in Insilo
+              unter Einstellungen › Vorlagen für Zusammenfassungen fest. Interne Runden und Notizen bleiben draußen. Was schon
+              einem Kunden zugeordnet ist, bleibt auch dann, wenn die Vorlage später umgestellt wird.
+            </p>
+
             <Schalter
               an={s.aktiv}
               umschalten={(an) => einstellen.mutate({ aktiv: an })}
@@ -129,6 +143,10 @@ export function InsiloAblageblock() {
                     ? `${lesen.data.neu} neu, ${lesen.data.geaendert} geändert, ${lesen.data.entfernt} entfernt`
                     : "Nichts Neues."}
                   {lesen.data.unlesbar > 0 && ` ${anzahl(lesen.data.unlesbar, "Datei", "Dateien")} in einem unbekannten Format übersprungen.`}
+                  {(lesen.data.nicht_crm ?? 0) > 0 &&
+                    ` ${anzahl(lesen.data.nicht_crm ?? 0, "Besprechung", "Besprechungen")} in Insilo nicht als Kundengespräch markiert.`}
+                  {(lesen.data.zurueckgezogen ?? 0) > 0 &&
+                    ` Davon ${lesen.data.zurueckgezogen} zurückgezogen.`}
                 </span>
               )}
             </div>

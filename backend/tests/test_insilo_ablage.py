@@ -27,7 +27,11 @@ def ablagedatei(
     abschnitte: str = "",
     schema: int = 1,
     recorded_at: str = "2026-09-15T07:20:41.370000+00:00",
+    crm: bool | str | None = None,
+    vorlage: str = "Vertriebsgespräch",
 ) -> str:
+    # `crm=None`: eine Datei von einem Insilo vor 0.1.102, ohne den Schlüssel.
+    markierung = [] if crm is None else [f"crm: {str(crm).lower()}"]
     return "\n".join(
         [
             "---",
@@ -38,7 +42,8 @@ def ablagedatei(
             'language: "de"',
             'participants: ["Katrin Lohse", "SPEAKER_01"]',
             'tags: ["Wartung"]',
-            'template: "Vertriebsgespräch"',
+            f'template: "{vorlage}"',
+            *markierung,
             "source_url: ''",
             f"schema: {schema}",
             "---",
@@ -271,3 +276,118 @@ async def test_fremde_organisation_sieht_nichts(datenbank, ordner):
         await k.post("/api/besprechungen/ablage/lesen")
     async with klient_fuer("ablage-i") as andere:
         assert (await andere.get("/api/besprechungen")).json()["gesamt"] == 0
+
+
+# ── Nur Kundengespräche (Insilo 0.1.102) ────────────────────────────────
+
+
+def test_markierung_aus_dem_kopf():
+    assert insilo_ablage.lesen(ablagedatei("x", "T", crm=True)).crm is True
+    assert insilo_ablage.lesen(ablagedatei("x", "T", crm=False)).crm is False
+    assert insilo_ablage.lesen(ablagedatei("x", "T")).crm is None, "älteres Insilo: kein Schlüssel"
+
+
+def test_ein_unbekannter_wert_ist_kein_nein():
+    """Sonst verschwände bei einem Tippfehler still jede Besprechung."""
+    assert insilo_ablage.lesen(ablagedatei("x", "T", crm="ja")).crm is None
+
+
+async def test_nicht_markiertes_wird_nicht_uebernommen(datenbank, ordner):
+    async with klient_fuer("crm-a") as k:
+        _legen(ordner, "2026-09-16T08_00--kund0000.md", ablagedatei(str(uuid4()), "Kundentermin", crm=True))
+        _legen(
+            ordner,
+            "2026-09-16T09_00--intr0000.md",
+            ablagedatei(str(uuid4()), "Teamrunde", crm=False, vorlage="Allgemeine Besprechung"),
+        )
+
+        bilanz = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (bilanz["neu"], bilanz["nicht_crm"]) == (1, 1)
+        assert [b["titel"] for b in (await k.get("/api/besprechungen")).json()["eintraege"]] == ["Kundentermin"]
+
+        nochmal = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (nochmal["neu"], nochmal["geaendert"], nochmal["nicht_crm"]) == (0, 0, 1)
+
+
+async def test_ohne_schluessel_wie_bisher(datenbank, ordner):
+    """Ein älteres Insilo schreibt keine Markierung — dann bleibt alles, wie es war."""
+    async with klient_fuer("crm-b") as k:
+        _legen(ordner, "2026-09-16T08_00--altt0000.md", ablagedatei(str(uuid4()), "Von früher"))
+        bilanz = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (bilanz["neu"], bilanz["nicht_crm"]) == (1, 0)
+
+
+async def test_umgestellte_vorlage_zieht_zurueck_und_wieder_hervor(datenbank, ordner):
+    """In Insilo umgestellt: Insilo schreibt die Datei neu, Beacon folgt."""
+    async with klient_fuer("crm-c") as k:
+        kennung = str(uuid4())
+        name = "2026-09-16T08_00--umst0000.md"
+        _legen(ordner, name, ablagedatei(kennung, "Runde"))
+        await k.post("/api/besprechungen/ablage/lesen")
+        assert (await k.get("/api/besprechungen")).json()["gesamt"] == 1
+
+        _legen(ordner, name, ablagedatei(kennung, "Runde", crm=False) + "\n")
+        bilanz = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert bilanz["zurueckgezogen"] == 1
+        assert bilanz["entfernt"] == 0, "zurückgezogen ist nicht in Insilo gelöscht"
+        assert (await k.get("/api/besprechungen")).json()["gesamt"] == 0
+
+        _legen(ordner, name, ablagedatei(kennung, "Runde", crm=True) + "\n\n")
+        bilanz = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (await k.get("/api/besprechungen")).json()["gesamt"] == 1, "wieder markiert: wieder da"
+
+
+async def test_zugeordnetes_bleibt_stehen(datenbank, ordner):
+    """Was ein Mensch einem Kunden zugeordnet hat, nimmt keine Einstellung in Insilo zurück."""
+    async with klient_fuer("crm-d") as k:
+        firma = (await k.post("/api/companies", json={"name": "Meyer Präzisionstechnik"})).json()
+        kennung = str(uuid4())
+        name = "2026-09-16T08_00--zuge0000.md"
+        _legen(ordner, name, ablagedatei(kennung, "Jahresgespräch Meyer", crm=True))
+        await k.post("/api/besprechungen/ablage/lesen")
+        [b] = (await k.get("/api/besprechungen")).json()["eintraege"]
+        await k.post(f"/api/besprechungen/{b['id']}/zuordnen", json={"company_id": firma["id"]})
+
+        _legen(ordner, name, ablagedatei(kennung, "Jahresgespräch Meyer", crm=False) + "\n")
+        bilanz = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert bilanz["zurueckgezogen"] == 0
+        [geblieben] = (await k.get("/api/besprechungen")).json()["eintraege"]
+        assert geblieben["id"] == b["id"]
+        assert geblieben["status"] == "zugeordnet"
+
+
+async def test_webhook_uebernimmt_nur_markiertes(datenbank):
+    async with klient_fuer("crm-e") as k:
+        quelle = (await k.post("/api/quellen", json={"name": "Insilo", "kind": "insilo"})).json()
+
+        async def senden(kennung: str, titel: str, crm):
+            besprechung = {"id": kennung, "title": titel, "recorded_at": "2026-09-16T09:00:00+00:00"}
+            if crm is not None:
+                besprechung["crm"] = crm
+            koerper = json.dumps(
+                {
+                    "id": uuid4().hex,
+                    "event": "meeting.ready",
+                    "meeting": besprechung,
+                    "markdown": f"# {titel}\n",
+                    "summary": {"content": {}},
+                }
+            ).encode()
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as maschine:
+                return await maschine.post(
+                    f"/api/eingang/{quelle['id']}",
+                    content=koerper,
+                    headers={
+                        "X-Insilo-Event": "meeting.ready",
+                        "X-Insilo-Delivery-ID": uuid4().hex,
+                        "X-Insilo-Signature": "sha256="
+                        + hmac.new(quelle["secret"].encode(), koerper, hashlib.sha256).hexdigest(),
+                    },
+                )
+
+        assert (await senden(str(uuid4()), "Kundentermin", True)).status_code == 200
+        assert (await senden(str(uuid4()), "Teamrunde", False)).status_code == 200
+        assert (await senden(str(uuid4()), "Von früher", None)).status_code == 200
+
+        titel = sorted(b["titel"] for b in (await k.get("/api/besprechungen")).json()["eintraege"])
+        assert titel == ["Kundentermin", "Von früher"]
