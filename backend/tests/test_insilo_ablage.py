@@ -391,3 +391,54 @@ async def test_webhook_uebernimmt_nur_markiertes(datenbank):
 
         titel = sorted(b["titel"] for b in (await k.get("/api/besprechungen")).json()["eintraege"])
         assert titel == ["Kundentermin", "Von früher"]
+
+
+async def test_was_ein_aelteres_beacon_schon_gelesen_hat_wird_neu_geprueft(datenbank, ordner, monkeypatch):
+    """Die Regression von Kais Box, 16.9.2026.
+
+    Insilo 0.1.102 schrieb die Dateien mit `crm: false` neu. Das noch
+    laufende Beacon 0.11.0 las sie Minuten später, kannte die Markierung
+    nicht, übernahm sie und speicherte den neuen Stand. Beacon 0.12.0 hielt
+    sie danach für unverändert und prüfte die Markierung nie — alle 14
+    internen Besprechungen blieben stehen. Genau die empfohlene Reihenfolge:
+    erst Insilo, dann Beacon.
+    """
+    import dataclasses
+
+    async with klient_fuer("crm-f") as k:
+        kennung = str(uuid4())
+        name = "2026-09-16T07_05--altb0000.md"
+        _legen(ordner, name, ablagedatei(kennung, "Teamrunde"))
+        await k.post("/api/besprechungen/ablage/lesen")
+
+        # Insilo schreibt die Datei mit der Markierung neu …
+        _legen(ordner, name, ablagedatei(kennung, "Teamrunde", crm=False) + "\n")
+
+        # … und das alte Beacon liest sie: Markierung unbekannt, keine Fassung.
+        echt_lesen = insilo_ablage.lesen
+        monkeypatch.setattr(
+            insilo_ablage, "lesen", lambda text: dataclasses.replace(echt_lesen(text), crm=None)
+        )
+        monkeypatch.setattr(insilo_ablage, "LESEFASSUNG", None)
+        alt = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert alt["geaendert"] == 1, "das alte Beacon hat die neue Datei übernommen"
+
+        # Jetzt läuft das neue Beacon.
+        monkeypatch.setattr(insilo_ablage, "lesen", echt_lesen)
+        monkeypatch.setattr(insilo_ablage, "LESEFASSUNG", 2)
+        neu = (await k.post("/api/besprechungen/ablage/lesen")).json()
+
+        assert neu["zurueckgezogen"] == 1, "gleicher Stand, aber mit alten Regeln gelesen — muss neu"
+        assert (await k.get("/api/besprechungen")).json()["gesamt"] == 0
+
+        # Und danach gilt „unverändert" wieder: nicht noch einmal gelesen.
+        danach = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (danach["neu"], danach["geaendert"], danach["zurueckgezogen"]) == (0, 0, 0)
+
+
+async def test_mit_jetziger_fassung_gelesenes_bleibt_unveraendert(datenbank, ordner):
+    async with klient_fuer("crm-g") as k:
+        _legen(ordner, "2026-09-16T08_00--fass0000.md", ablagedatei(str(uuid4()), "Kunde", crm=True))
+        assert (await k.post("/api/besprechungen/ablage/lesen")).json()["neu"] == 1
+        zweiter = (await k.post("/api/besprechungen/ablage/lesen")).json()
+        assert (zweiter["neu"], zweiter["geaendert"]) == (0, 0)

@@ -269,7 +269,14 @@ er allein von Insilo.
   der Normalfall nichts, und bei zwei Organisationen landen die Gespräche
   nicht still bei beiden.
 - **Unverändert wird nicht neu gelesen** (`ablage_stand` =
-  Änderungszeit:Größe). **Eine Datei, die fehlt, heißt „in Insilo
+  Änderungszeit:Größe) — **seit 0.12.1 nur, wenn auch die Lesefassung
+  passt** (`ablage_fassung`, `insilo_ablage.LESEFASSUNG`). Auf Kais Box am
+  16.9.2026: Insilo 0.1.102 schrieb die Dateien mit `crm:` neu, das noch
+  laufende Beacon 0.11.0 las sie, kannte die Markierung nicht und
+  speicherte den neuen Stand; 0.12.0 hielt sie danach für unverändert und
+  zog keine der 14 internen Besprechungen zurück. Wer ändert, *wie* eine
+  Datei gelesen wird, hebt `LESEFASSUNG` — dann liest das neue Beacon nach
+  dem Update einmal alles. **Eine Datei, die fehlt, heißt „in Insilo
   gelöscht"** — Besprechung und Aktivität werden weich gelöscht. **Ein
   leerer Ordner löscht nichts**: Er sieht genauso aus wie einer, der nach
   einer Neuinstallation noch nicht gefüllt ist.

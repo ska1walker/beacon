@@ -57,6 +57,16 @@ log = logging.getLogger(__name__)
 
 SCHEMA = 1
 
+# Welche Fassung der Leseregeln eine Zeile zuletzt gelesen hat. Eine Datei
+# gilt nur als unverändert, wenn Stand **und** Fassung passen — sonst liest
+# ein neues Beacon nach einem Update nie, was ein altes schon gesehen hat
+# (Migration 0032). Bei jeder Änderung daran, *wie* eine Datei gelesen
+# wird, um eins heben.
+#
+#   1  bis 0.12.0 (implizit, Spalte leer)
+#   2  seit 0.12.1: die Markierung `crm:` entscheidet mit
+LESEFASSUNG = 2
+
 # Abschnitte in Insilos Markdown, in denen Menschen stehen — rückwärts zu
 # den Vorlagenfeldern, die `besprechungen.beteiligte_aus` kennt
 # (insilo/backend/app/exports/markdown.py, `_SECTION_TITLES`).
@@ -240,7 +250,7 @@ async def einlesen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, Any]:
     bekannt = {
         z["ablage_datei"]: z
         for z in await conn.fetch(
-            "select id, external_id, ablage_datei, ablage_stand, deleted_at "
+            "select id, external_id, ablage_datei, ablage_stand, ablage_fassung, deleted_at "
             "from public.besprechungen where org_id = $1 and ablage_datei is not null",
             org_id,
         )
@@ -264,7 +274,12 @@ async def einlesen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, Any]:
     # derselben Besprechung da, gewinnt die jüngere.
     for name, (pfad, stand) in sorted(dateien.items(), key=lambda e: e[1][1]):
         vorher = bekannt.get(name)
-        if vorher is not None and vorher["ablage_stand"] == stand and vorher["deleted_at"] is None:
+        if (
+            vorher is not None
+            and vorher["ablage_stand"] == stand
+            and vorher["ablage_fassung"] == LESEFASSUNG
+            and vorher["deleted_at"] is None
+        ):
             continue
         if uebersprungen.get(name) == stand:
             bilanz["nicht_crm"] += 1
@@ -301,9 +316,11 @@ async def einlesen(conn: asyncpg.Connection, org_id: UUID) -> dict[str, Any]:
         )
         besprechung_id = UUID(ergebnis["besprechung_id"])
         await conn.execute(
-            "update public.besprechungen set ablage_datei = $1, ablage_stand = $2 where id = $3",
+            "update public.besprechungen set ablage_datei = $1, ablage_stand = $2, "
+            "ablage_fassung = $3 where id = $4",
             name,
             stand,
+            LESEFASSUNG,
             besprechung_id,
         )
         bilanz["neu" if ergebnis["neu"] else "geaendert"] += 1
